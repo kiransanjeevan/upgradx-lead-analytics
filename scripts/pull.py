@@ -27,11 +27,18 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "data", "universe.json")
 qs  = urllib.parse.urlencode({"accessKey": ACCESS, "secretKey": SECRET})
 URL = f"{HOST}/LeadManagement.svc/Leads.Get?{qs}"
 
+# Only the fields the dashboard needs — keeps each page ~14 fields instead of 640,
+# which makes the pull ~4-5x faster and the payload far smaller (critical for wide date windows).
+COLS = ("ProspectID,CreatedOn,mx_First_Call_Date_and_Time,mx_Assignment_Date_Current_Owner,"
+        "OwnerIdName,ProspectActivityDate_Max,mx_Follow_Up_Date,mx_Reached_Out_Attempts,"
+        "mx_Interacted_Count,ProspectStage,mx_Highest_Qualification,Source")
+
 
 def pull(lookup):
     out, page = [], 1
     while page <= 200:
         body = {"Parameter": {"LookupName": lookup, "LookupValue": START, "SqlOperator": ">="},
+                "Columns": {"Include_CSV": COLS},
                 "Sorting": {"ColumnName": lookup, "Direction": "0"},
                 "Paging": {"PageIndex": page, "PageSize": 1000}}
         req = urllib.request.Request(URL, data=json.dumps(body).encode(),
