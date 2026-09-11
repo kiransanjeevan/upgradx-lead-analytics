@@ -1,0 +1,8 @@
+.lsq_creds
+.env
+.env.local
+.vercel
+.DS_Store
+__pycache__/
+*.pyc
+node_modules/

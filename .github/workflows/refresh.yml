@@ -1,0 +1,46 @@
+name: Daily LSQ refresh
+
+# Runs early every morning IST and commits the fresh data file.
+# Vercel is git-connected, so the commit triggers a redeploy automatically.
+on:
+  schedule:
+    # 01:30 UTC = 07:00 IST — after the ~6 PM IST Internshala batch + overnight automations settle
+    - cron: "30 1 * * *"
+  workflow_dispatch: {}   # lets you trigger a refresh manually from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lsq-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Pull LeadSquared data
+        env:
+          LSQ_HOST: ${{ secrets.LSQ_HOST }}
+          LSQ_ACCESS: ${{ secrets.LSQ_ACCESS }}
+          LSQ_SECRET: ${{ secrets.LSQ_SECRET }}
+          LSQ_START: ${{ vars.LSQ_START }}   # optional; defaults to 2026-09-01 in the script
+        run: python scripts/pull.py
+
+      - name: Commit refreshed data
+        run: |
+          git config user.name  "lsq-refresh-bot"
+          git config user.email "actions@github.com"
+          git add data/universe.json
+          if git diff --staged --quiet; then
+            echo "No data change."
+          else
+            git commit -m "chore: daily LSQ data refresh"
+            git push
+          fi

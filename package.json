@@ -1,0 +1,6 @@
+{
+  "name": "upgradx-lead-analytics",
+  "version": "1.0.0",
+  "private": true,
+  "description": "upGradX Lead Analytics dashboard — static SPA fed by a daily LeadSquared pull."
+}
