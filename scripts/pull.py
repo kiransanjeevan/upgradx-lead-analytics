@@ -17,9 +17,9 @@ from datetime import datetime, timezone
 HOST   = os.environ.get("LSQ_HOST", "https://api-in21.leadsquared.com/v2").rstrip("/")
 ACCESS = os.environ["LSQ_ACCESS"]
 SECRET = os.environ["LSQ_SECRET"]
-START  = os.environ.get("LSQ_START", "2026-09-01") + " 00:00:00"
-BASE_DATE = os.environ.get("LSQ_START", "2026-09-01")
-BASE   = datetime.strptime(BASE_DATE + " 00:00:00", "%Y-%m-%d %H:%M:%S")
+BASE_DATE = os.environ.get("LSQ_START") or "2026-09-01"   # empty env var -> default
+START  = BASE_DATE + " 00:00:00"
+BASE   = datetime.strptime(START, "%Y-%m-%d %H:%M:%S")
 IST    = 330  # API returns UTC; dashboard buckets days in IST (+5:30)
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "data", "universe.json")
