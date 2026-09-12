@@ -149,6 +149,9 @@ td.owncol{white-space:nowrap;}
 .hero-eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);}
 .hero-h1{font-size:clamp(26px,4vw,38px);margin:10px 0 0;letter-spacing:-.025em;font-weight:800;text-wrap:balance;}
 .hero-sub{color:var(--ink-2);font-size:15.5px;max-width:70ch;margin:12px 0 0;line-height:1.55;}
+.dmyecho{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px;letter-spacing:.02em;}
+.kpinote{margin:10px 2px 0;font-size:12.5px;color:var(--muted);}
+.kpinote b{color:var(--ink-2);}
 .mdbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin:22px 0 4px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);}
 .mdbar .fld{display:flex;flex-direction:column;gap:5px;}
 .mdbar .fl{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
@@ -212,6 +215,7 @@ td.owncol{white-space:nowrap;}
   <div class="mature" id="h-mature" hidden></div>
 
   <div class="kpistrip" id="kpis"></div>
+  <p class="kpinote" id="kpinote"></p>
 
   <div class="mdsect"><span class="sh">Quick health check</span><span class="note" id="hcnote"></span></div>
   <div class="hcrow" id="health"></div>
@@ -2387,15 +2391,29 @@ function init_home(){
   }
   const pool=DATA.leads.filter(r=>{ if(r[11]!==1) return false;
     const d=di(r[1]); return d!=null && d>=lo && d<=hi; }).length;   // window-scoped, like every other tile
-  const scope=window.__EXPOOL?"worked leads":"all leads incl. unworked pool";
 
   // ---- KPI row (spec: Master_Dashboard r5) ----
-  const kpi=[["Total leads ("+scope+")",num(S.length)],["Leads attempted",num(att)],["Connected",num(con)],
+  const kpi=[["Leads created",num(S.length)],["Leads attempted",num(att)],["Connected",num(con)],
     ["Connect %",pct(con,att)],["Avg attempts / lead",(attSum/n).toFixed(2)],
     ["Avg speed to lead",dur(med(spd))],["SLA compliance %",pct(slaHit,slaBase)],
     ["Revenue collected",cr(rev)],
     [(window.__EXPOOL?"Unworked pool (excluded)":"Unworked pool (included)"),num(pool)]];
   document.getElementById("kpis").innerHTML=kpi.map(k=>`<div class="kpi"><div class="n">${k[1]}</div><div class="l">${k[0]}</div></div>`).join("");
+  // Basis + nesting. Every tile counts leads CREATED in the window — not leads worked
+  // in it. Attempted/Connected are genuine subsets; Counselled/Enrolled are not.
+  const enrNoCoun=S.filter(r=>stageCls(r[9])==="won"&&r[16]!==1).length;
+  const counNoCon=S.filter(r=>r[16]===1&&(r[8]||0)<=0).length;
+  document.getElementById("kpinote").innerHTML=
+    `Every tile counts leads <b>created</b> between ${dmyHome(lo)} and ${dmyHome(hi)} — not leads worked on during it. `
+    +`A lead created in June and called yesterday is <b>not</b> counted here. `
+    +`<b>Attempted</b> and <b>Connected</b> are strict subsets of Leads created. `
+    +(enrNoCoun||counNoCon
+      ? `<b>Counselled and Enrolled are not</b> — they come from separate LeadSquared fields, so `
+        +`${num(enrNoCoun)} enrolled lead${enrNoCoun===1?" was":"s were"} never flagged counselled`
+        +(counNoCon?`, and ${num(counNoCon)} counselled never registered a connect`:"")
+        +`. Funnel / Stage has the full path-integrity breakdown.`
+      : `Counselled and Enrolled nest cleanly in this window.`)
+    +(window.__EXPOOL?"":" <b>The unworked pool is currently included</b>, which dilutes every rate above.");
 
   // ---- quick health check (spec: r9) ----
   const hc=[["0 attempts",b[0],b[0]/n>0.25?"bad":""],["1\u20132 attempts",b[1],""],["3\u20135 attempts",b[2],""],
@@ -2480,6 +2498,7 @@ function show(key){
     view.innerHTML=document.getElementById("tpl-home").innerHTML;
     init_home();
     const strip=view.querySelector("#kpis"); if(strip) strip.insertAdjacentHTML("beforebegin", refreshBanner());
+    stampDates();
     crumb.innerHTML=""; window.scrollTo(0,0);
     location.hash=""; return;
   }
@@ -2487,9 +2506,27 @@ function show(key){
   VIEWS[key].init();
   // one banner, every report: the pool exclusion must never be invisible
   const lede=view.querySelector(".lede"); if(lede) lede.insertAdjacentHTML("afterend", refreshBanner()+poolBanner());
+  stampDates();
   crumb.innerHTML=" / <b>"+VIEWS[key].title+"</b>";
   window.scrollTo(0,0); location.hash=key;
 }
+// <input type="date"> renders in the BROWSER's locale — a US-locale browser shows
+// 08/13/2026 for 13 Aug, which contradicts the DD-MM-YYYY used everywhere else and
+// is genuinely ambiguous for any day <= 12. The format cannot be forced from HTML,
+// so echo the unambiguous form directly under every date field.
+function stampDates(){
+  document.querySelectorAll('input[type=date]').forEach(el=>{
+    let e=el.nextElementSibling;
+    if(!e || !e.classList || !e.classList.contains('dmyecho')){
+      e=document.createElement('div'); e.className='dmyecho';
+      el.insertAdjacentElement('afterend', e);
+    }
+    e.textContent=el.value?isoToDMY(el.value):'\u2014';
+  });
+}
+document.addEventListener('change', ev=>{
+  if(ev.target && ev.target.matches && ev.target.matches('input[type=date]')) stampDates();
+});
 // ---- refresh status: last run, next run, and whether one was missed ----
 // All arithmetic is on absolute instants; IST wall-clock is derived by shifting +5:30
 // and reading UTC fields, so the result is identical in any viewer timezone.
