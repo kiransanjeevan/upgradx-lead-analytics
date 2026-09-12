@@ -2404,15 +2404,19 @@ function init_home(){
   const enrNoCoun=S.filter(r=>stageCls(r[9])==="won"&&r[16]!==1).length;
   const counNoCon=S.filter(r=>r[16]===1&&(r[8]||0)<=0).length;
   document.getElementById("kpinote").innerHTML=
-    `Every tile counts leads <b>created</b> between ${dmyHome(lo)} and ${dmyHome(hi)} — not leads worked on during it. `
-    +`A lead created in June and called yesterday is <b>not</b> counted here. `
-    +`<b>Attempted</b> and <b>Connected</b> are strict subsets of Leads created. `
+    `<b>Basis.</b> Every tile counts leads <b>created</b> between ${dmyHome(lo)} and ${dmyHome(hi)} — `
+    +`not leads worked on during it. A lead created in June and called yesterday is not here. `
+    +`All five funnel tiles are subsets of Leads created. `
+    +`<b>Chain.</b> Created \u2283 Attempted \u2283 Connected holds exactly. Below that it breaks — `
     +(enrNoCoun||counNoCon
-      ? `<b>Counselled and Enrolled are not</b> — they come from separate LeadSquared fields, so `
+      ? `Counselled and Enrolled come from separate LeadSquared fields, so `
         +`${num(enrNoCoun)} enrolled lead${enrNoCoun===1?" was":"s were"} never flagged counselled`
-        +(counNoCon?`, and ${num(counNoCon)} counselled never registered a connect`:"")
-        +`. Funnel / Stage has the full path-integrity breakdown.`
-      : `Counselled and Enrolled nest cleanly in this window.`)
+        +(counNoCon?` and ${num(counNoCon)} counselled never registered a connect`:"")
+        +`. Funnel / Stage has the full breakdown. `
+      : `not in this window: Counselled and Enrolled nest cleanly here. `)
+    +`<b>Timing.</b> Counselled and Enrolled are measured <b>as of the last refresh</b>, so the `
+    +`counselling or payment may have happened after this window closed. That is deliberate — it is `
+    +`how a cohort converts, not how much counselling happened in the period.`
     +(window.__EXPOOL?"":" <b>The unworked pool is currently included</b>, which dilutes every rate above.");
 
   // ---- quick health check (spec: r9) ----
