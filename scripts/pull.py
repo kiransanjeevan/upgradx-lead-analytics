@@ -126,22 +126,42 @@ def money(v):
         return 0
 
 
+# Source buckets. This is an explicit table, not a substring waterfall, because the
+# old waterfall put 70.6% of revenue into "Other": affiliate networks had no bucket,
+# walk-ins were swallowed by "organic", and inbound calls fell through. Order matters
+# below — walk-in is matched BEFORE organic, and Internshala is matched on the full
+# name so a future "Internal Referral" is not captured by a bare "intern".
+AFFILIATES = {
+    "collectcent", "vertozad", "flymedia", "nextgen", "prudentads", "cuelinks",
+    "digitalmediafeed", "famapp", "affiliates", "midfunnel", "netambit", "vipl1",
+    "adcanopus", "icubeswire", "adzberg",
+}
+
+
 def grp(s):
-    s = (s or "").lower()
-    if not s:
+    t = (s or "").strip().lower()
+    if not t:
         return "Unknown"
-    if "intern" in s:
+    if t in AFFILIATES:
+        return "Affiliate/Partner"
+    if "walk" in t:                                    # before organic — walk-ins are
+        return "Walk-in"                               # the highest-intent offline source
+    if "incoming call" in t or t in ("inbound", "ivr"):
+        return "Inbound Call"
+    if "internshala" in t:
         return "Internshala"
-    if "google" in s:
+    if "google" in t:
         return "Google"
-    if "meta" in s or s in ("fb", "ig") or "facebook" in s or "instagram" in s:
+    if "meta" in t or t in ("fb", "ig") or "facebook" in t or "instagram" in t:
         return "Meta"
-    if "seminar" in s:
+    if t in ("li", "linkedin") or "linkedin" in t:
+        return "LinkedIn"
+    if "seminar" in t:
         return "Seminar"
-    if "website" in s or "organic" in s or "walk" in s:
-        return "Website/Organic"
-    if "referral" in s:
+    if "referral" in t:
         return "Referral"
+    if "website" in t or "organic" in t or "web" in t:
+        return "Website/Organic"
     return "Other"
 
 
@@ -171,11 +191,17 @@ def main():
             arr.append(v)
         return d[v]
 
-    leads = []
+    leads, unmapped = [], {}
     for L in uni.values():
         owner = L.get("OwnerIdName") or "Unassigned"
+        raw = (L.get("Source") or "").strip()
+        bucket = grp(raw)
+        if bucket == "Other" and raw:
+            a = unmapped.setdefault(raw, [0, 0])
+            a[0] += 1
+            a[1] += money(L.get("mx_Total_Amount_Paid"))
         leads.append([
-            idxof(grp(L.get("Source")), srcs, sidx),
+            idxof(bucket, srcs, sidx),
             mins(L.get("CreatedOn")), mins(L.get("mx_First_Call_Date_and_Time")),
             mins(L.get("mx_Assignment_Date_Current_Owner")),
             idxof(owner, owns, oidx),
@@ -193,6 +219,13 @@ def main():
             money(L.get("mx_Total_Amount_Paid")),                         # 17 revenue
             mins(L.get("mx_Assignment_Date_Current_Owner")),              # 18 current-owner assign
         ])
+
+    # Any raw Source landing in "Other" with real volume or real money should get its
+    # own bucket — surface it here rather than letting it hide in the catch-all.
+    for raw, (cnt, rev) in sorted(unmapped.items(), key=lambda kv: -kv[1][1])[:10]:
+        if cnt >= 50 or rev >= 100000:
+            print(f"  WARNING: source '{raw}' is unmapped -> 'Other' "
+                  f"({cnt} leads, Rs {rev:,} collected) — add it to grp()")
 
     # Flag any *other* account that looks like an unworked pool, so a new bot/bulk
     # owner surfaces in the CI log instead of silently re-entering the denominators.
