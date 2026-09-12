@@ -6,21 +6,44 @@ Reads credentials from environment variables (set as GitHub Secrets in CI):
   LSQ_ACCESS  access key
   LSQ_SECRET  secret key
 Optional:
-  LSQ_START   window start (default 2026-09-01); widen to pull more history.
+  LSQ_START   window start, an IST calendar date (default 2026-09-01); widen for more history.
+  LSQ_POOLS   comma-separated owner names that are unworked holding/bot pools
+              (default "Avtar LCoffline"). Their leads are flagged pool=1 so the
+              dashboard can keep them out of rate denominators.
+  LSQ_REFRESH_IST  the daily schedule as HH:MM IST (default 07:00), written into the
+              data file so the dashboard can show "next refresh in ...". Keep it in
+              sync with the cron in .github/workflows/refresh.yml.
 
 Read-only: only calls Leads.Get (a search). Never creates/updates/deletes.
 Stdlib only — no pip install needed.
 """
 import json, os, sys, urllib.request, urllib.parse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 HOST   = os.environ.get("LSQ_HOST", "https://api-in21.leadsquared.com/v2").rstrip("/")
 ACCESS = os.environ["LSQ_ACCESS"]
 SECRET = os.environ["LSQ_SECRET"]
 BASE_DATE = os.environ.get("LSQ_START") or "2026-09-01"   # empty env var -> default
-START  = BASE_DATE + " 00:00:00"
-BASE   = datetime.strptime(START, "%Y-%m-%d %H:%M:%S")
+BASE   = datetime.strptime(BASE_DATE + " 00:00:00", "%Y-%m-%d %H:%M:%S")
 IST    = 330  # API returns UTC; dashboard buckets days in IST (+5:30)
+ISTTZ  = timezone(timedelta(minutes=IST))
+
+# LeadSquared filters in the SAME timezone it returns — UTC. BASE_DATE is an IST
+# calendar date, so filtering at "BASE_DATE 00:00" UTC silently drops everything
+# created in the first 5h30m of that IST day. Start the window 330 minutes earlier
+# so IST day 0 is complete; mins() already maps those rows to day 0 correctly, and
+# the reports' own `day >= 0` guard discards the sliver that falls on the prior day.
+START  = (BASE - timedelta(minutes=IST)).strftime("%Y-%m-%d %H:%M:%S")
+
+# Bulk/bot accounts that hold leads without working them. Their leads are real and
+# still counted as Created, but including them in rate denominators (coverage, avg
+# attempts, connect %, enrolment %) understates what counsellors actually do.
+POOL_OWNERS = {o.strip().lower() for o in
+               (os.environ.get("LSQ_POOLS") or "Avtar LCoffline").split(",") if o.strip()}
+
+# Daily refresh time (IST), surfaced to the dashboard so it can show the next run and
+# flag a missed one. The workflow passes this from the same place the cron is defined.
+REFRESH_IST = (os.environ.get("LSQ_REFRESH_IST") or "07:00").strip()
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "data", "universe.json")
 
@@ -74,6 +97,24 @@ def num(v):
     return int(v) if v.lstrip("-").isdigit() else 0
 
 
+# Stage lifecycle class, so every report shares one definition of "still open".
+#   won  = closed-won            lost = closed-lost / disqualified
+#   test = test data (excluded)  open = genuinely live pipeline
+LOST_KEYS = ("junk", "not intere", "interetsed", "did not pick", "dnp",
+             "cold", "disqualified", "lost")
+
+
+def stage_class(label):
+    s = (label or "").lower()
+    if "enrol" in s:
+        return "won"
+    if "dummy" in s or s.strip() == "test":
+        return "test"
+    if any(k in s for k in LOST_KEYS):
+        return "lost"
+    return "open"
+
+
 def grp(s):
     s = (s or "").lower()
     if not s:
@@ -118,27 +159,53 @@ def main():
 
     leads = []
     for L in uni.values():
+        owner = L.get("OwnerIdName") or "Unassigned"
         leads.append([
             idxof(grp(L.get("Source")), srcs, sidx),
             mins(L.get("CreatedOn")), mins(L.get("mx_First_Call_Date_and_Time")),
             mins(L.get("mx_Assignment_Date_Current_Owner")),
-            idxof(L.get("OwnerIdName") or "Unassigned", owns, oidx),
+            idxof(owner, owns, oidx),
             mins(L.get("ProspectActivityDate_Max")), mins(L.get("mx_Follow_Up_Date")),
             num(L.get("mx_Reached_Out_Attempts")), num(L.get("mx_Interacted_Count")),
             idxof(L.get("ProspectStage"), stgs, stidx),
             idxof(L.get("mx_Highest_Qualification"), quals, qidx),
+            1 if owner.strip().lower() in POOL_OWNERS else 0,
         ])
 
-    stamp = datetime.now(timezone.utc).astimezone().isoformat()
+    # Flag any *other* account that looks like an unworked pool, so a new bot/bulk
+    # owner surfaces in the CI log instead of silently re-entering the denominators.
+    seen = {}
+    for x in leads:
+        if x[1] is None or x[1] < 0:
+            continue                      # created-cohort only (what the reports render)
+        a = seen.setdefault(x[4], [0, 0, 0])
+        a[0] += 1
+        a[1] += x[7]
+        a[2] += 1 if x[2] is not None else 0
+    for oi, (n, att, con) in sorted(seen.items(), key=lambda kv: -kv[1][0]):
+        if n >= 300 and att / n < 0.05 and con / n < 0.05 and owns[oi].strip().lower() not in POOL_OWNERS:
+            print(f"  WARNING: '{owns[oi]}' looks like an unworked pool "
+                  f"({n} leads, {att/n:.2f} avg attempts, {100*con/n:.1f}% contacted) "
+                  f"— consider adding it to LSQ_POOLS")
+
+    # stamp in IST explicitly — CI runners are UTC, and a raw +00:00 timestamp in a
+    # file labelled tz:"IST" is exactly the kind of thing that gets misread later.
+    stamp = datetime.now(timezone.utc).astimezone(ISTTZ).isoformat()
     out = {"base": BASE_DATE, "tz": "IST", "generated_at": stamp,
            "sources": srcs, "owners": owns, "stages": stgs, "quals": quals,
+           # lifecycle class per stage index — one shared definition of "still open"
+           "stage_class": [stage_class(s) for s in stgs],
+           "pools": sorted(o for o in owns if o.strip().lower() in POOL_OWNERS),
+           "refresh_ist": REFRESH_IST,   # daily schedule, HH:MM IST
            "cols": ["src", "created", "firstcall", "assign", "owner", "lastactivity",
-                    "followup", "attempts", "interacted", "stage", "qual"],
+                    "followup", "attempts", "interacted", "stage", "qual", "pool"],
            "leads": leads}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
         json.dump(out, f, separators=(",", ":"))
+    npool = sum(x[11] for x in leads)
     print(f"wrote {OUT}: {len(leads)} leads | {len(srcs)} src | {len(owns)} owners "
+          f"| {npool} pool-flagged ({', '.join(out['pools']) or 'none'}) "
           f"| {os.path.getsize(OUT)//1024} KB")
 
 

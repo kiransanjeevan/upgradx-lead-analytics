@@ -4,9 +4,17 @@ name: Daily LSQ refresh
 # Vercel is git-connected, so the commit triggers a redeploy automatically.
 on:
   schedule:
-    # 01:30 UTC = 07:00 IST — after the ~6 PM IST Internshala batch + overnight automations settle
+    # 01:30 UTC = 07:00 IST — after the ~6 PM IST Internshala batch + overnight automations settle.
+    # NOTE: GitHub runs scheduled workflows on a best-effort basis; the first scheduled
+    # run here started 4h31m late. On-the-hour/half-hour crons are the most contended,
+    # so an odd minute (e.g. "17 2 * * *") tends to start closer to on time.
     - cron: "30 1 * * *"
   workflow_dispatch: {}   # lets you trigger a refresh manually from the Actions tab
+
+# The dashboard reads this to show "next refresh in ..." and to flag a missed run.
+# It is NOT what schedules the job — keep it equal to the cron above.
+env:
+  LSQ_REFRESH_IST: "07:00"   # = cron 30 1 * * * UTC
 
 permissions:
   contents: write
