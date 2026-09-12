@@ -529,6 +529,7 @@ letter-spacing:.14em;color:var(--muted);}
         <tr>
           <th data-k="name">Source</th>
           <th data-k="created">Lead Created</th>
+          <th data-k="poolpct">% in pool</th>
           <th data-k="attempted">Attempted</th>
           <th data-k="connected">Connected*</th>
           <th data-k="connpct">Connect %</th>
@@ -1390,8 +1391,13 @@ function slaThresh(){ const v=+document.getElementById("sla").value; return isFi
 // ---- compute one row per source over the created window ----
 function compute(){
   const sla=slaThresh();
-  const rows=SRC.map((name,i)=>({idx:i,name,created:0,attempted:0,connected:0,attSum:0,speeds:[],slaHit:0,rev:0,paid:0}));
+  const rows=SRC.map((name,i)=>({idx:i,name,created:0,attempted:0,connected:0,attSum:0,speeds:[],slaHit:0,rev:0,paid:0,pooled:0}));
   for(const L of DATA.leads){
+    // Count pooled leads per source BEFORE skipping them. A source can look strong
+    // purely because most of it is parked and only the worked sliver reaches the table.
+    if(L[11]===1){ const d0=dayIdx(L[1]);
+      if(d0!=null && d0>=startIdx && d0<=endIdx && rows[L[0]]) rows[L[0]].pooled++;
+      continue; }
     if(poolSkip(L)) continue;
     const d=dayIdx(L[1]);
     if(d==null||d<startIdx||d>endIdx) continue;   // created-window filter (also enforces dayIdx>=0 via startIdx>=0)
@@ -1409,6 +1415,7 @@ function compute(){
     }
   }
   for(const r of rows){
+    r.poolpct = (r.pooled+r.created) ? r.pooled/(r.pooled+r.created)*100 : 0;
     r.connpct = r.attempted ? r.connected/r.attempted*100 : null;
     r.avgatt  = r.created ? r.attSum/r.created : 0;
     r.speed   = med(r.speeds);
@@ -1465,10 +1472,14 @@ function render(){
     const paidCell=r.paid
       ? `${r.paid.toLocaleString("en-IN")}<span class="muted-pct">(${r.paidpct.toFixed(1)}%)</span>`
       : `<span style="color:var(--muted);">0</span>`;
+    const poolCell=x=> x.poolpct>0.05
+      ? `<span class="cov ${x.poolpct>=50?"r":x.poolpct>=20?"a":"g"}" title="${x.pooled.toLocaleString("en-IN")} leads from this source sit in the unworked pool and are not in Lead Created — the rates to the right describe only the worked remainder">${x.poolpct.toFixed(0)}%</span>`
+      : '<span style="color:var(--muted)">\u2014</span>';
     const barW=Math.round(56*r.created/maxCreated);
     return `<tr>
       <td class="dim">${r.name}</td>
       <td><span class="bar" style="width:${barW}px"></span>&nbsp;${r.created.toLocaleString("en-IN")}</td>
+      <td>${poolCell(r)}</td>
       <td>${r.attempted.toLocaleString("en-IN")}</td>
       <td>${r.connected.toLocaleString("en-IN")}</td>
       <td>${connpct}</td>
@@ -1478,7 +1489,7 @@ function render(){
       <td>${paidCell}</td>
       <td>${money(r.rev,r.paid)}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:18px;">No sources match the current filters.</td></tr>`;
+  }).join("") || `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:18px;">No sources match the current filters.</td></tr>`;
 
   // total row reflects the CURRENTLY SHOWN rows
   const st=totals(rows);
@@ -2444,8 +2455,14 @@ function init_home(){
     } else { slaBase++; }                  // never called = an SLA miss, not an exclusion
     const sk=r[0], S1=bySrc.get(sk)||{n:0,att:0,con:0,a:0,rev:0}; S1.n++; S1.att+=isAtt?1:0; S1.con+=isCon?1:0; S1.a+=a; S1.rev+=r[17]||0; bySrc.set(sk,S1);
   }
-  const pool=DATA.leads.filter(r=>{ if(r[11]!==1) return false;
-    const d=di(r[1]); return d!=null && d>=lo && d<=hi; }).length;   // window-scoped, like every other tile
+  // window-scoped pool count, and the same split per source — a source can look like a
+  // strong performer purely because most of it is parked and only the worked sliver shows
+  const poolRows=DATA.leads.filter(r=>{ if(r[11]!==1) return false;
+    const d=di(r[1]); return d!=null && d>=lo && d<=hi; });
+  const pool=poolRows.length;
+  const poolBySrc=new Map();
+  for(const r of poolRows) poolBySrc.set(r[0],(poolBySrc.get(r[0])||0)+1);
+  const poolPct=k=>{ const p=poolBySrc.get(k)||0, w=(bySrc.get(k)||{n:0}).n; return p+w? 100*p/(p+w) : 0; };
 
   // ---- KPI row (spec: Master_Dashboard r5) ----
   const kpi = MODE==="cohort"
@@ -2551,9 +2568,12 @@ function init_home(){
   } else {
   document.querySelector("#msrc").closest(".tblwrap").previousElementSibling.querySelector(".sh").textContent="Source performance";
   document.querySelector("#msrc").closest("table").querySelector("thead tr").innerHTML=
-    "<th>Source</th><th>Lead base</th><th>Connect %</th><th>Avg att.</th><th>Revenue</th>";
+    "<th>Source</th><th>Lead base</th><th>% in pool</th><th>Connect %</th><th>Avg att.</th><th>Revenue</th>";
   document.getElementById("msrc").innerHTML=[...bySrc.entries()].sort((a,c)=>c[1].n-a[1].n).map(([k,v])=>
-    `<tr><td class="dim">${DATA.sources[k]}</td><td>${num(v.n)}</td><td><span class="cov ${v.att&&100*v.con/v.att>=50?"g":v.att&&100*v.con/v.att>=25?"a":"r"}">${pct(v.con,v.att)}</span></td><td>${(v.a/(v.n||1)).toFixed(2)}</td><td>${v.rev?cr(v.rev):"\u2014"}</td></tr>`).join("");
+    (()=>{ const pp=poolPct(k);
+      const cls=pp>=50?"r":pp>=20?"a":"";
+      const ptxt=pp>0.05?`<span class="cov ${cls||"g"}" title="${num(poolBySrc.get(k)||0)} of this source's leads sit in the unworked pool and are not in Lead base">${pp.toFixed(0)}%</span>`:'<span style="color:var(--muted)">\u2014</span>';
+      return `<tr><td class="dim">${DATA.sources[k]}</td><td>${num(v.n)}</td><td>${ptxt}</td><td><span class="cov ${v.att&&100*v.con/v.att>=50?"g":v.att&&100*v.con/v.att>=25?"a":"r"}">${pct(v.con,v.att)}</span></td><td>${(v.a/(v.n||1)).toFixed(2)}</td><td>${v.rev?cr(v.rev):"\u2014"}</td></tr>`;})()).join("");
   }
 
   // ---- what to look at: derived, not hardcoded ----
