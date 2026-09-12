@@ -160,7 +160,15 @@ td.owncol{white-space:nowrap;}
 .actrow .t{font-size:13.5px;font-weight:650;color:var(--ink);}
 .actrow .d{font-size:11.5px;color:var(--muted);margin-top:2px;}
 .actrow .v{font-size:21px;font-weight:750;font-variant-numeric:tabular-nums;color:var(--accent-2);}
-.dmyecho{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px;letter-spacing:.02em;}
+.dwrap{display:inline-flex;align-items:stretch;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);overflow:hidden;}
+.dwrap:focus-within{border-color:var(--accent);}
+.dwrap .dtext{border:none;border-radius:0;background:transparent;width:104px;padding:8px 0 8px 11px;font-variant-numeric:tabular-nums;}
+.dwrap .dtext:focus{outline:none;}
+.dwrap .dtext.bad{color:var(--crit);}
+.dcal{position:relative;display:grid;place-items:center;width:32px;cursor:pointer;color:var(--muted);border-left:1px solid var(--line);}
+.dcal:hover{color:var(--accent);background:var(--surface-2);}
+.dcal svg{width:15px;height:15px;pointer-events:none;}
+.dcal input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;padding:0;border:0;pointer-events:none;}
 .kpinote{margin:10px 2px 0;font-size:12.5px;color:var(--muted);}
 .kpinote b{color:var(--ink-2);}
 .mdbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin:22px 0 4px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);}
@@ -2596,7 +2604,7 @@ function show(key){
     view.innerHTML=document.getElementById("tpl-home").innerHTML;
     init_home();
     const strip=view.querySelector("#kpis"); if(strip) strip.insertAdjacentHTML("beforebegin", refreshBanner());
-    stampDates();
+    upgradeDates();
     crumb.innerHTML=""; window.scrollTo(0,0);
     location.hash=""; return;
   }
@@ -2604,26 +2612,73 @@ function show(key){
   VIEWS[key].init();
   // one banner, every report: the pool exclusion must never be invisible
   const lede=view.querySelector(".lede"); if(lede) lede.insertAdjacentHTML("afterend", refreshBanner()+poolBanner());
-  stampDates();
+  upgradeDates();
   crumb.innerHTML=" / <b>"+VIEWS[key].title+"</b>";
   window.scrollTo(0,0); location.hash=key;
 }
-// <input type="date"> renders in the BROWSER's locale — a US-locale browser shows
-// 08/13/2026 for 13 Aug, which contradicts the DD-MM-YYYY used everywhere else and
-// is genuinely ambiguous for any day <= 12. The format cannot be forced from HTML,
-// so echo the unambiguous form directly under every date field.
-function stampDates(){
-  document.querySelectorAll('input[type=date]').forEach(el=>{
-    let e=el.nextElementSibling;
-    if(!e || !e.classList || !e.classList.contains('dmyecho')){
-      e=document.createElement('div'); e.className='dmyecho';
-      el.insertAdjacentElement('afterend', e);
-    }
-    e.textContent=el.value?isoToDMY(el.value):'\u2014';
+// <input type="date"> renders in the viewer's BROWSER/OS locale — a US-region Mac
+// shows 08/13/2026 for 13 Aug, which is ambiguous for any day <= 12 and cannot be
+// overridden from HTML or CSS. So the native field stops being what the user reads:
+// it is collapsed behind a calendar button and keeps holding the ISO value (every
+// report still reads el.value), while a text field in front shows and accepts
+// DD-MM-YYYY. Same format for every viewer on every machine.
+const CAL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>';
+
+function parseDMY(v){
+  const m=/^\s*(\d{1,2})\s*[-\/. ]\s*(\d{1,2})\s*[-\/. ]\s*(\d{4})\s*$/.exec(v||"");
+  if(!m) return null;
+  const d=+m[1], mo=+m[2], y=+m[3];
+  if(mo<1||mo>12||d<1||d>31) return null;
+  const dt=new Date(Date.UTC(y,mo-1,d));
+  // rejects 31-02-2026 etc: the Date rolls over, so the parts stop matching
+  if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d) return null;
+  return dt.toISOString().slice(0,10);
+}
+
+function upgradeDates(){
+  document.querySelectorAll('input[type=date]').forEach(nat=>{
+    if(nat.closest('.dwrap')) return;                       // already upgraded
+    const wrap=document.createElement('span'); wrap.className='dwrap';
+    const txt=document.createElement('input');
+    txt.type='text'; txt.className='dtext'; txt.placeholder='DD-MM-YYYY';
+    txt.setAttribute('inputmode','numeric');
+    txt.setAttribute('aria-label',(nat.getAttribute('aria-label')||'date')+' (DD-MM-YYYY)');
+    const cal=document.createElement('span'); cal.className='dcal'; cal.innerHTML=CAL_SVG;
+    cal.title='Pick from a calendar';
+    nat.parentNode.insertBefore(wrap, nat);
+    wrap.appendChild(txt); wrap.appendChild(cal); cal.appendChild(nat);
+
+    const commit=()=>{
+      const iso=parseDMY(txt.value);
+      if(!iso){ txt.classList.add('bad'); return; }
+      let v=iso;
+      if(nat.min && v<nat.min) v=nat.min;
+      if(nat.max && v>nat.max) v=nat.max;
+      txt.classList.remove('bad');
+      if(v!==nat.value){ nat.value=v; nat.dispatchEvent(new Event('change',{bubbles:true})); }
+      txt.value=isoToDMY(nat.value);
+    };
+    txt.addEventListener('blur', ()=>{ if(!parseDMY(txt.value)){ txt.classList.remove('bad'); txt.value=isoToDMY(nat.value); } else commit(); });
+    txt.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); txt.blur(); } });
+    txt.addEventListener('input', ()=>txt.classList.remove('bad'));
+    // Safari only opens the popover from its own glyph, which is invisible here, so
+    // always drive it explicitly. showPicker needs user activation — a click is one.
+    cal.addEventListener('click', ()=>{
+      try{ nat.showPicker(); }
+      catch(_){ nat.style.pointerEvents='auto'; nat.focus(); nat.click(); nat.style.pointerEvents=''; }
+    });
+  });
+  syncDateText();
+}
+// keep the visible text in step with programmatic .value changes made by reports
+function syncDateText(){
+  document.querySelectorAll('.dwrap').forEach(w=>{
+    const nat=w.querySelector('input[type=date]'), txt=w.querySelector('.dtext');
+    if(nat&&txt&&document.activeElement!==txt) txt.value=nat.value?isoToDMY(nat.value):'';
   });
 }
 document.addEventListener('change', ev=>{
-  if(ev.target && ev.target.matches && ev.target.matches('input[type=date]')) stampDates();
+  if(ev.target && ev.target.matches && ev.target.matches('input[type=date]')) setTimeout(syncDateText,0);
 });
 // ---- refresh status: last run, next run, and whether one was missed ----
 // All arithmetic is on absolute instants; IST wall-clock is derived by shifting +5:30
