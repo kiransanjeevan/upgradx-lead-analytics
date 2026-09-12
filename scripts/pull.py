@@ -52,9 +52,12 @@ URL = f"{HOST}/LeadManagement.svc/Leads.Get?{qs}"
 
 # Only the fields the dashboard needs — keeps each page ~14 fields instead of 640,
 # which makes the pull ~4-5x faster and the payload far smaller (critical for wide date windows).
-COLS = ("ProspectID,CreatedOn,mx_First_Call_Date_and_Time,mx_Assignment_Date_Current_Owner,"
+COLS = ("ProspectID,CreatedOn,mx_First_Call_Date_and_Time,mx_Date_of_Lead_Assignment,"
         "OwnerIdName,ProspectActivityDate_Max,mx_Follow_Up_Date,mx_Reached_Out_Attempts,"
-        "mx_Interacted_Count,ProspectStage,mx_Highest_Qualification,Source")
+        "mx_Interacted_Count,ProspectStage,mx_Highest_Qualification,Source,"
+        # report-architecture fields required by LSQ_Sales_Report_Master_Dashboard.xlsx
+        "mx_Program,mx_SA_Allocation_City,mx_Offline_Centre_Name,mx_First_Interaction_Date,"
+        "mx_Is_Counselled_Lead,mx_Total_Amount_Paid,mx_Assignment_Date_Current_Owner")
 
 
 def pull(lookup):
@@ -115,6 +118,14 @@ def stage_class(label):
     return "open"
 
 
+def money(v):
+    v = str(v or "").replace(",", "").strip()
+    try:
+        return round(float(v))
+    except ValueError:
+        return 0
+
+
 def grp(s):
     s = (s or "").lower()
     if not s:
@@ -147,6 +158,9 @@ def main():
 
     srcs, sidx = [], {}
     owns, oidx = [], {}
+    progs, pidx = [], {}
+    citys, cidx = [], {}
+    ctrs, ctidx = [], {}
     stgs, stidx = [], {}
     quals, qidx = [], {}
 
@@ -170,6 +184,14 @@ def main():
             idxof(L.get("ProspectStage"), stgs, stidx),
             idxof(L.get("mx_Highest_Qualification"), quals, qidx),
             1 if owner.strip().lower() in POOL_OWNERS else 0,
+            # --- 12..18: report-architecture fields (see xlsx) ---
+            idxof(L.get("mx_Program"), progs, pidx),                      # 12 program
+            idxof(L.get("mx_SA_Allocation_City"), citys, cidx),           # 13 city (100% filled)
+            idxof(L.get("mx_Offline_Centre_Name"), ctrs, ctidx),          # 14 centre (~22% filled)
+            mins(L.get("mx_First_Interaction_Date")),                     # 15 first CONNECT
+            1 if str(L.get("mx_Is_Counselled_Lead") or "").strip().lower() in ("yes", "true", "1") else 0,
+            money(L.get("mx_Total_Amount_Paid")),                         # 17 revenue
+            mins(L.get("mx_Assignment_Date_Current_Owner")),              # 18 current-owner assign
         ])
 
     # Flag any *other* account that looks like an unworked pool, so a new bot/bulk
@@ -193,17 +215,28 @@ def main():
     stamp = datetime.now(timezone.utc).astimezone(ISTTZ).isoformat()
     out = {"base": BASE_DATE, "tz": "IST", "generated_at": stamp,
            "sources": srcs, "owners": owns, "stages": stgs, "quals": quals,
+           "programs": progs, "cities": citys, "centres": ctrs,
            # lifecycle class per stage index — one shared definition of "still open"
            "stage_class": [stage_class(s) for s in stgs],
            "pools": sorted(o for o in owns if o.strip().lower() in POOL_OWNERS),
            "refresh_ist": REFRESH_IST,   # daily schedule, HH:MM IST
+           # `assign` is now mx_Date_of_Lead_Assignment (the original, near-immutable
+           # assignment). mx_Assignment_Date_Current_Owner is kept as `assign_cur`, but it
+           # post-dates the first call for ~41% of leads because reassignment overwrites it.
            "cols": ["src", "created", "firstcall", "assign", "owner", "lastactivity",
-                    "followup", "attempts", "interacted", "stage", "qual", "pool"],
+                    "followup", "attempts", "interacted", "stage", "qual", "pool",
+                    "program", "city", "centre", "firstconnect", "counselled", "revenue",
+                    "assign_cur"],
            "leads": leads}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
         json.dump(out, f, separators=(",", ":"))
     npool = sum(x[11] for x in leads)
+    nconn = sum(1 for x in leads if x[15] is not None)
+    ncoun = sum(x[16] for x in leads)
+    nrev  = sum(1 for x in leads if x[17] > 0)
+    print(f"  new fields: first-connect {nconn} | counselled {ncoun} | with revenue {nrev} "
+          f"| programs {len(progs)} | cities {len(citys)} | centres {len(ctrs)}")
     print(f"wrote {OUT}: {len(leads)} leads | {len(srcs)} src | {len(owns)} owners "
           f"| {npool} pool-flagged ({', '.join(out['pools']) or 'none'}) "
           f"| {os.path.getsize(OUT)//1024} KB")

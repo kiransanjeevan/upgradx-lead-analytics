@@ -148,6 +148,19 @@ td.owncol{white-space:nowrap;}
 .hero-eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);}
 .hero-h1{font-size:clamp(26px,4vw,38px);margin:10px 0 0;letter-spacing:-.025em;font-weight:800;text-wrap:balance;}
 .hero-sub{color:var(--ink-2);font-size:15.5px;max-width:70ch;margin:12px 0 0;line-height:1.55;}
+.mdsect{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:30px 2px 10px;}
+.mdsect .note{font-size:11.5px;color:var(--muted);}
+.hcrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;}
+.hc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow);}
+.hc .n{font-size:19px;font-weight:750;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1;}
+.hc .l{font-size:11.5px;color:var(--muted);margin-top:6px;}
+.hc.bad .n{color:var(--crit);} .hc.bad{border-color:var(--crit-line);}
+.hc.warn .n{color:var(--warn);} .hc.warn{border-color:var(--warn-line);}
+.mdgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:20px;align-items:start;}
+.watch{display:grid;gap:8px;}
+.wi{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--line-2);border-radius:9px;padding:10px 13px;font-size:13px;color:var(--ink-2);}
+.wi.bad{border-left-color:var(--crit);} .wi.warn{border-left-color:var(--warn);} .wi.ok{border-left-color:var(--good);}
+.wi b{color:var(--ink);}
 .kpistrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:26px 0 6px;}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:15px 17px;box-shadow:var(--shadow);}
 .kpi .n{font-size:24px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1;color:var(--accent-2);}
@@ -178,6 +191,28 @@ td.owncol{white-space:nowrap;}
   <h1 class="hero-h1">Lead Analytics</h1>
   <p class="hero-sub">A single place to analyse lead performance across the upGradX offline vertical — response speed, ageing, counsellor effort, source quality and pipeline stage. All reports run live off LeadSquared (read-only, IST). Pick a report below.</p>
   <div class="kpistrip" id="kpis"></div>
+
+  <div class="mdsect"><span class="sh">Quick health check</span><span class="note" id="hcnote"></span></div>
+  <div class="hcrow" id="health"></div>
+
+  <div class="mdgrid">
+    <div>
+      <div class="mdsect"><span class="sh">Funnel snapshot</span></div>
+      <div class="funnel" id="mfunnel"></div>
+      <p class="xnote" id="mfnote"></p>
+    </div>
+    <div>
+      <div class="mdsect"><span class="sh">Source performance</span></div>
+      <div class="tblwrap"><table><thead><tr><th>Source</th><th>Lead base</th><th>Connect %</th><th>Avg att.</th><th>Revenue</th></tr></thead><tbody id="msrc"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="mdsect"><span class="sh">Team view — top counsellors by lead base</span><span class="note" id="teamnote"></span></div>
+  <div class="tblwrap"><table><thead><tr><th>RM / Counsellor</th><th>Lead base</th><th>Attempts</th><th>Avg speed</th><th>Avg att. / lead</th></tr></thead><tbody id="mteam"></tbody></table></div>
+
+  <div class="mdsect"><span class="sh">What to look at</span></div>
+  <div class="watch" id="watch"></div>
+
   <div class="sectlabel">Reports</div>
   <div class="cardgrid"><button class="rcard" onclick="show('speed')"><div class="ic">⏱️</div><div class="t">Speed to Lead</div><div class="d">Time from creation / first-call / assignment to first contact — by source and owner, with SLA compliance.</div><div class="go">Open report →</div></button>
 <button class="rcard" onclick="show('ageing')"><div class="ic">📅</div><div class="t">Lead Ageing</div><div class="d">How long leads sit unworked, with pending-first-attempt, no-activity and overdue-follow-up flags across age buckets.</div><div class="go">Open report →</div></button>
@@ -188,11 +223,9 @@ td.owncol{white-space:nowrap;}
 <button class="rcard" onclick="show('funnel')"><div class="ic">🪜</div><div class="t">Funnel / Stage</div><div class="d">Created → Contacted → Connected → Enrolled funnel plus the full ProspectStage distribution.</div><div class="go">Open report →</div></button></div>
   <div class="homefoot" id="homefoot"></div>
 </div></template>
-<template id="tpl-speed">
-  
-  <div class="eyebrow">LSQ · Speed to Lead</div>
+<template id="tpl-speed">  <div class="eyebrow">LSQ · Speed to Lead</div>
   <h1>Speed to Lead</h1>
-  <p class="lede">Time from the cohort anchor to first logged call. Set the four filters in order, then break the result down by source or by lead owner.</p>
+  <p class="lede">Time from the cohort anchor to the <b>first logged attempt</b>, and separately to the <b>first actual connect</b>. Set the four filters in order, then break the result down by source, lead owner, program or location.</p>
 
   <div class="panel">
     <div class="lvl">
@@ -230,6 +263,7 @@ td.owncol{white-space:nowrap;}
       <div>
         <div class="lname">SLA target</div>
         <div><input id="sla" type="number" value="120" min="1" step="10"> <span style="font-size:13px;color:var(--muted)">minutes</span></div>
+        <div class="datehint">The SLA is measured on the <b>first attempt</b> clock. Time to first connect is reported alongside it, but is not scored against this target.</div>
       </div>
     </div>
   </div>
@@ -238,19 +272,23 @@ td.owncol{white-space:nowrap;}
 
   <div class="tiles">
     <div class="tile hi"><div class="n" id="t-leads">—</div><div class="l" id="t-leads-l">Leads (selected)</div></div>
-    <div class="tile unc"><div class="n" id="t-unc">—</div><div class="l">Uncalled · 0 contact</div></div>
-    <div class="tile"><div class="n" id="t-cov">—</div><div class="l">Contacted (coverage)</div></div>
-    <div class="tile"><div class="n" id="t-med">—</div><div class="l">Median speed</div></div>
-    <div class="tile"><div class="n" id="t-p90">—</div><div class="l">P90 speed</div></div>
+    <div class="tile unc"><div class="n" id="t-unc">—</div><div class="l">Uncalled · 0 attempts</div></div>
+    <div class="tile"><div class="n" id="t-cov">—</div><div class="l">Attempted (coverage)</div></div>
+    <div class="tile"><div class="n" id="t-med">—</div><div class="l">Median time to <b>first attempt</b></div></div>
+    <div class="tile"><div class="n" id="t-p90">—</div><div class="l">P90 time to <b>first attempt</b></div></div>
+    <div class="tile"><div class="n" id="t-conn">—</div><div class="l" id="t-conn-l">Connected (reached)</div></div>
+    <div class="tile"><div class="n" id="t-cmed">—</div><div class="l" id="t-cmed-l">Median time to <b>first connect</b></div></div>
     <div class="tile sla"><div class="n" id="t-sla">—</div><div class="l" id="t-sla-l">Within SLA</div></div>
   </div>
 
   <div class="shrow">
-    <span class="sh">Breakdown</span>
-    <div class="seg" id="seg"><button data-dim="source" class="on">By source</button><button data-dim="owner">By lead owner</button></div>
-    <input id="ownfilter" placeholder="Filter owner name…" style="display:none">
+    <span class="sh">Break down by</span>
+    <div class="seg" id="seg"><button data-dim="source" class="on">Source</button><button data-dim="owner">Lead owner</button><button data-dim="program">Program</button><button data-dim="location">Location</button></div>
+    <div class="seg" id="locseg" style="display:none"><button data-loc="city" class="on">City</button><button data-loc="centre">Centre</button></div>
+    <input id="dimfilter" class="rowfilter" placeholder="Filter name…" style="display:none">
   </div>
-  <div class="tblwrap"><table><thead><tr><th id="th0">Source</th><th>Leads</th><th>Uncalled</th><th>Contacted</th><th>Median</th><th>P90</th><th>SLA % (all)</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <div class="xnote" id="dimnote" style="display:none"></div>
+  <div class="tblwrap"><table><thead><tr><th id="th0">Source</th><th>Leads</th><th>Uncalled</th><th>Attempted</th><th>Med. 1st attempt</th><th>P90 1st attempt</th><th class="grp">Connected</th><th>Med. 1st connect</th><th>SLA % (all)</th></tr></thead><tbody id="rows"></tbody></table></div>
   <div class="trunc" id="trunc"></div>
 
   <footer id="foot"></footer>
@@ -373,12 +411,11 @@ td.owncol{white-space:nowrap;}
   <footer id="footer"></footer>
 </template>
 <template id="tpl-source">
-  
   <div class="eyebrow">LSQ · SOURCE PERFORMANCE</div>
   <h1>Source Performance</h1>
-  <p class="lede">One row per lead source for the pulled cohort — volume created, how many were attempted and connected, connect rate, calling effort, and speed to first touch. Connected and Revenue carry data caveats (see notes). Cross-check every count in LSQ Manage Leads (Source + Created On).</p>
+  <p class="lede">One row per lead source for the pulled cohort — volume created, how many were attempted and connected, connect rate, calling effort, speed to first touch, and revenue collected. Connected is a proxy and revenue is cash received to date on a thin paying base, so both carry caveats (see notes). Cross-check every count in LSQ Manage Leads (Source + Created On).</p>
 
-  
+
   <div class="panel">
     <div class="lvl">
       <div class="num">1</div>
@@ -390,7 +427,7 @@ td.owncol{white-space:nowrap;}
           <label style="font-size:12.5px;color:var(--muted);">End&nbsp;
             <input type="date" id="endd"></label>
         </div>
-        <div class="datehint">The pulled cohort is complete. Leads counted where <b>Created On</b> falls in the window. Default is the full range.</div>
+        <div class="datehint">The pulled cohort is complete. Leads counted where <b>Created On</b> falls in the window — including their revenue, which is attributed to the lead&rsquo;s created date, not the date the payment landed. Default is the full range.</div>
       </div>
     </div>
     <div class="lvl">
@@ -412,15 +449,15 @@ td.owncol{white-space:nowrap;}
         <div class="lname">SLA threshold <span class="side">bonus column — speed-to-lead ≤ N min</span></div>
         <label style="font-size:12.5px;color:var(--muted);">First call within&nbsp;
           <input type="number" id="sla" value="120" min="1" step="10" style="width:88px;">&nbsp;minutes</label>
-        <div class="datehint">Speed and SLA are clocked from <b>assignment to this owner</b>, not from lead creation — reassignment is ~fully automated, so a creation clock mostly measures how old an inherited lead was. SLA % = share of the owner&rsquo;s <b>measurable</b> leads called within the threshold: an uncalled lead is a miss, while leads first called <i>before</i> this assignment are unmeasurable and leave the denominator (count shown below).</div>
+        <div class="datehint">This report judges the <b>source</b>, not the counsellor, so speed and SLA are clocked from <b>lead creation</b> to first call — the lead&rsquo;s full end-to-end wait, including time parked in the central pool. SLA % = share of <b>all leads created</b> in the window that were called within the threshold: a lead never called is a <b>miss</b>, not an exclusion.</div>
       </div>
     </div>
   </div>
 
-  
+
   <div class="tiles" id="tiles"></div>
 
-  
+
   <div class="shrow">
     <h2 class="sh">Per-source breakdown</h2>
     <input type="text" id="rowfilter" class="txt rowfilter" placeholder="Filter sources…">
@@ -437,7 +474,8 @@ td.owncol{white-space:nowrap;}
           <th data-k="avgatt">Avg Attempts / Lead</th>
           <th data-k="speed">Median Speed to Lead</th>
           <th data-k="sla">SLA % (all)</th>
-          <th data-k="rev">Revenue</th>
+          <th data-k="paid" class="grp">Paying Leads</th>
+          <th data-k="rev" class="grp">Revenue Collected</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -447,18 +485,22 @@ td.owncol{white-space:nowrap;}
   <div class="trunc" id="trunc"></div>
 
   <div class="xnote">
-    <b>Connected is a proxy</b> (mx_Interacted_Count &gt; 0) — won't exactly match LSQ telephony "connected calls".
-    <b>Revenue needs a converted-lead pull</b> (0% populated in this cohort). Cross-check Lead Created per source in LSQ
-    <b>Manage Leads</b> (Source + Created On). Attempts are under-logged — treat Avg Attempts / Lead as a floor.
+    <b>Connected is a proxy</b> (mx_Interacted_Count &gt; 0) — won&rsquo;t exactly match LSQ telephony &ldquo;connected calls&rdquo;.
+    <b>Revenue is cash collected, not contract value.</b> It reads mx_Total_Amount_Paid, which is populated on roughly
+    <b>4.7%</b> of leads — about 405 fully PAID plus 162 on PART_PAYMENT, so part-payers contribute only what has landed
+    so far and the total will keep rising as instalments clear. Always read the <b>Paying Leads</b> column next to
+    Revenue: on most sources the money rests on a two-digit denominator. For the same reason there is no revenue-per-lead
+    column — the only per-lead figure shown is <b>per paying lead</b>, and it is labelled as such. Hover any revenue
+    figure for the exact rupee amount. Cross-check Lead Created per source in LSQ <b>Manage Leads</b> (Source + Created On),
+    and revenue against a converted-lead export. Attempts are under-logged — treat Avg Attempts / Lead as a floor.
   </div>
 
   <footer id="foot"></footer>
 </template>
 <template id="tpl-attempts">
-  
   <div class="eyebrow">LSQ · AVERAGE ATTEMPTS</div>
   <h1>Average Attempts</h1>
-  <p class="lede">Logged reach-out attempts (mx_Reached_Out_Attempts) per lead, broken down by lead owner or source. Shows total attempts, attempts per lead, and attempts spent on leads that actually connected — plus how attempts are distributed across the 0 / 1–2 / 3–5 / 6+ buckets.</p>
+  <p class="lede">Logged reach-out attempts (mx_Reached_Out_Attempts) per lead, broken down by lead owner, source or location. Shows total attempts, attempts per lead, and attempts spent on leads that actually connected — plus how attempts are distributed across the 0 / 1–2 / 3–5 / 6+ buckets.</p>
 
   <div class="panel">
     <div class="lvl">
@@ -482,11 +524,12 @@ td.owncol{white-space:nowrap;}
     <div class="lvl">
       <div class="num">3</div>
       <div>
-        <div class="lname">Break down by</div>
+        <div class="lname">Break down by <span class="side">Location = lead city, coarsely bucketed</span></div>
         <div class="segwrap">
           <div class="seg" id="segBy">
             <button data-v="src" class="on">Source</button>
             <button data-v="owner">Lead owner</button>
+            <button data-v="city">Location</button>
           </div>
         </div>
       </div>
@@ -515,7 +558,7 @@ td.owncol{white-space:nowrap;}
   <div class="trunc" id="trunc"></div>
 
   <div class="xnote">
-    <b>Read with care.</b> Attempts here are <b>logged</b> reach-outs (mx_Reached_Out_Attempts) and are <b>under-logged</b> — treat every count as a floor, not a true dial count. <b>"Connected"</b> is a proxy: leads with mx_Interacted_Count &gt; 0, not a verified conversation. A low "Avg attempts on connected" can mean efficient outreach <i>or</i> that attempts simply weren't logged. Cross-check any owner or source that looks off directly in LSQ before acting on it.
+    <b>Read with care.</b> Attempts here are <b>logged</b> reach-outs (mx_Reached_Out_Attempts) and are <b>under-logged</b> — treat every count as a floor, not a true dial count. <b>"Connected"</b> is a proxy: leads with mx_Interacted_Count &gt; 0, not a verified conversation. A low "Avg attempts on connected" can mean efficient outreach <i>or</i> that attempts simply weren't logged. <b>Location</b> is the lead's <b>city</b> field: it is populated on every lead, but the majority of leads fall into the catch-all <b>"Rest Of India"</b> bucket (flagged in the table), so it is a coarse geographic cut — not a centre-level one. The true <b>centre</b> field is finer but sits on only about a fifth of leads, which is why it isn't offered as a breakdown here. Cross-check any owner, source or location that looks off directly in LSQ before acting on it.
   </div>
 
   <footer id="footer"></footer>
@@ -591,10 +634,9 @@ td.owncol{white-space:nowrap;}
   <footer id="footer"></footer>
 </template>
 <template id="tpl-funnel">
-  
   <div class="eyebrow">LSQ · Funnel / Stage Distribution</div>
   <h1>Funnel &amp; Stage Distribution</h1>
-  <p class="lede">The <b>honest, measurable</b> funnel from this pull — Created → Contacted → Connected → Enrolled — plus the full <b>ProspectStage</b> distribution (the spine of this report). Counselled/Paid legs are not in the data; see the note below. pulled cohort, IST.</p>
+  <p class="lede">The spec funnel — <b>Lead created → Attempted → Connected → Counselled → Enrolled</b>, with <b>L2C / C2P / L2P</b> — broken out by source, lead owner and programme, plus the full <b>ProspectStage</b> distribution. These five steps come from five independent LSQ fields and <b>do not nest cleanly</b>; section B shows exactly where they don't. Pulled cohort, IST.</p>
 
   <div class="panel">
     <div class="lvl">
@@ -618,30 +660,53 @@ td.owncol{white-space:nowrap;}
     <div class="lvl">
       <div class="num">3</div>
       <div>
-        <div class="lname">Stage-distribution breakdown</div>
+        <div class="lname">Breakdowns</div>
         <div class="segwrap">
-          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Show stage table as</div><div class="seg" id="segbreak"><button data-b="overall" class="on">Overall</button><button data-b="source">By source</button><button data-b="owner">By lead owner</button></div></div>
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Funnel &amp; ratios by (section C)</div><div class="seg" id="segdim"><button data-d="source" class="on">Source</button><button data-d="owner">Lead owner</button><button data-d="program">Programme</button></div></div>
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Stage table as (section D)</div><div class="seg" id="segbreak"><button data-b="overall" class="on">Overall</button><button data-b="source">By source</button><button data-b="owner">By lead owner</button><button data-b="program">By programme</button></div></div>
         </div>
-        <div class="datehint">Overall = one row per stage. <b>By source</b> = stage (rows) × source (columns) heat matrix. <b>By lead owner</b> = owner (rows) × stage (columns) heat matrix, with a name filter. The funnel above always reflects the date + source filters.</div>
+        <div class="datehint"><b>Section C</b> gives one row per source / owner / programme with the full funnel and the L2C, C2P, L2P ratios. <b>Section D</b> is the raw ProspectStage distribution — overall, or as a stage × source / owner × stage / stage × programme heat matrix. Everything on this page obeys the date + source filters above.</div>
       </div>
     </div>
   </div>
 
   <div class="tiles">
-    <div class="tile hi"><div class="n" id="t-tot">—</div><div class="l">Total leads (Sep cohort, selected)</div></div>
+    <div class="tile hi"><div class="n" id="t-tot">—</div><div class="l">Leads created (selected)</div></div>
+    <div class="tile"><div class="n" id="t-att">—</div><div class="l">Attempted (attempts &gt; 0)</div></div>
     <div class="tile"><div class="n" id="t-contacted">—</div><div class="l">Contacted (first call logged)</div></div>
-    <div class="tile good"><div class="n" id="t-enr">—</div><div class="l">Enrolled</div></div>
-    <div class="tile warn"><div class="n" id="t-rate">—</div><div class="l">Lead → Enrolled %</div></div>
+    <div class="tile"><div class="n" id="t-con">—</div><div class="l">Connected (interacted &gt; 0)</div></div>
+    <div class="tile"><div class="n" id="t-cns">—</div><div class="l">Counselled</div></div>
+    <div class="tile good"><div class="n" id="t-enr">—</div><div class="l">Enrolled / paid</div></div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><div class="n" id="t-l2c">—</div><div class="l">L2C · lead → counselled</div></div>
+    <div class="tile"><div class="n" id="t-c2p">—</div><div class="l">C2P · counselled → paid</div></div>
+    <div class="tile warn"><div class="n" id="t-rate">—</div><div class="l">L2P · lead → paid</div></div>
   </div>
 
   <div class="shrow">
-    <span class="sh">A · Measurable funnel</span>
-    <span style="font-size:11.5px;color:var(--muted)">bars = % of Created · badge = step-to-step conversion</span>
+    <span class="sh">A · Spec funnel</span>
+    <span style="font-size:11.5px;color:var(--muted)">bar length = as-reported count · <b>solid</b> = cleared every step above it · <b>faded</b> = skipped an earlier step · badge = step conversion</span>
   </div>
   <div class="funnel" id="funnel"></div>
 
   <div class="shrow">
-    <span class="sh" id="btitle">B · ProspectStage distribution</span>
+    <span class="sh">B · Path integrity — where the funnel does not nest</span>
+    <span style="font-size:11.5px;color:var(--muted)">five independent LSQ fields, not one sequence</span>
+  </div>
+  <div class="tblwrap"><table><thead id="leakhead"></thead><tbody id="leakrows"></tbody></table></div>
+  <div class="trunc" id="leaknote"></div>
+
+  <div class="shrow">
+    <span class="sh" id="ctitle">C · Funnel by source</span>
+    <input class="rowfilter" id="rowfilter2" placeholder="Filter name…">
+  </div>
+  <div class="tblwrap"><table><thead id="dhead"></thead><tbody id="drows"></tbody></table></div>
+  <div class="trunc" id="trunc2"></div>
+
+  <div class="shrow">
+    <span class="sh" id="btitle">D · ProspectStage distribution</span>
     <input class="rowfilter" id="rowfilter" placeholder="Filter owner name…">
   </div>
   <div class="tblwrap"><table><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
@@ -680,14 +745,17 @@ function stageCls(i){ const a=window.__DATA.stage_class; return (a && a[i]) || "
 function init_speed(){
 
 const DATA = window.__DATA;
-// leads: [srcIdx, createdMin, firstCallMin, assignMin, ownerIdx] — minutes since base (IST); null = missing date
+// leads are positional arrays; the indices this report uses:
+//  0 src · 1 created · 2 firstAttempt · 3 assign · 4 owner · 11 pool
+// 12 program · 13 city · 14 centre (~22% filled) · 15 firstConnect (null = never connected)
 const BASE = new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
-let ANCHOR="created", DIM="source"; const SEL=new Set(); const OWNCAP=60;
+const PROGRAMS = DATA.programs||[], CITIES = DATA.cities||[], CENTRES = DATA.centres||[];
+let ANCHOR="created", DIM="source", LOC="city"; const SEL=new Set(); const OWNCAP=60;
 const anchorField={created:1,firstcall:2,assign:3};
 const clockStart ={created:1,firstcall:1,assign:3};
 const EXPLAIN={
-  created:"<b>Created On analysis.</b> Cohort = every lead <b>created</b> in your date range. The clock runs creation → first call, so it captures the lead's full end-to-end wait — including time spent in the central pool before a counsellor picks it up. Answers: <span class='q'>how fast does a brand-new lead hear from us?</span>",
-  firstcall:"<b>First Call analysis.</b> Cohort = every lead whose <b>first call</b> lands in your date range, regardless of when it was created. Everyone here was contacted, so there are no uncalled leads. The clock still runs from creation, so aged leads and reactivations lift the medians. Answers: <span class='q'>of everything we dialled, how long had those leads been waiting?</span>",
+  created:"<b>Created On analysis.</b> Cohort = every lead <b>created</b> in your date range. The clock runs creation → first attempt, so it captures the lead's full end-to-end wait — including time spent in the central pool before a counsellor picks it up. Answers: <span class='q'>how fast does a brand-new lead hear from us?</span>",
+  firstcall:"<b>First Call analysis.</b> Cohort = every lead whose <b>first attempt</b> lands in your date range, regardless of when it was created. Everyone here was dialled, so there are no unattempted leads. The clock still runs from creation, so aged leads and reactivations lift the medians. Answers: <span class='q'>of everything we dialled, how long had those leads been waiting?</span>",
   assign:"<b>Assignment analysis.</b> Cohort = every lead <b>assigned</b> to its current owner in your date range. The clock starts at assignment, not creation — stripping out central-pool lag to isolate the counsellor's own response. This is the fair SLA measure. Answers: <span class='q'>once a lead lands on a counsellor's desk, how fast do they call?</span>"
 };
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
@@ -696,69 +764,129 @@ function idxToStr(i){ return new Date(BASE.getTime()+i*DAYMS).toISOString().slic
 function dmy(i){ return isoToDMY(idxToStr(i)); }   // display only; inputs stay ISO
 function fm(m){ if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
 function cc(c){return c>=50?"g":(c>=25?"a":"r");}
+function nf(n){ return n.toLocaleString("en-IN"); }
 function med(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
 function p90(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length*.9)]; }
-// SLA has two honest denominators. `sla` = of the leads we actually called;
-// `slaAll` = of every lead in the cohort (uncalled leads are SLA misses too).
-// The headline uses slaAll — an uncalled lead is not a neutral outcome.
+// ---- breakdown dimension: one bucket key + one label array, no per-dim special cases ----
+function bucketBy(L){
+  switch(DIM){
+    case "owner":    return L[4];
+    case "program":  return L[12];
+    case "location": return LOC==="centre" ? L[14] : L[13];
+    default:         return L[0];
+  }
+}
+function labelsFor(){
+  switch(DIM){
+    case "owner":    return DATA.owners;
+    case "program":  return PROGRAMS;
+    case "location": return LOC==="centre" ? CENTRES : CITIES;
+    default:         return DATA.sources;
+  }
+}
+function lab(k){ const a=labelsFor(); return (a && a[k]!=null) ? a[k] : "—"; }
+function dimTitle(){ return DIM==="source"?"Source":DIM==="owner"?"Lead owner":DIM==="program"?"Program":(LOC==="centre"?"Centre":"City"); }
+function dimNoun(){ return DIM==="source"?"source":DIM==="owner"?"owner":DIM==="program"?"program":(LOC==="centre"?"centre":"city"); }
+// SLA has two honest denominators. `sla` = of the leads we actually attempted;
+// `slaAll` = of every lead in the cohort (unattempted leads are SLA misses too).
+// The headline uses slaAll — an unattempted lead is not a neutral outcome.
 function stt(a,sla,total){ if(!a.length) return {n:0,hits:0,sla:0,slaAll:0};
   const hits=a.filter(x=>x<=sla).length;
   return {n:a.length,hits,med:med(a),p90:p90(a),sla:100*hits/a.length,
           slaAll:total?100*hits/total:0}; }
-function blank(){ return {total:0,contacted:0,speeds:[],unmeas:0}; }
+function blank(){ return {total:0,contacted:0,speeds:[],unmeas:0,connected:0,cspeeds:[],cunmeas:0}; }
 // A contacted lead whose call predates the anchor (reassignment) is neither a hit
 // nor a miss — it is unmeasurable, and is removed from the SLA denominator.
-function add(rec,fc,st){ rec.total++;
-  if(fc==null) return;                      // uncalled: counts as an SLA miss
+// The connect clock obeys the same rules: null firstConnect = never connected
+// (never a fast connect, never in the median); a negative clock is unmeasurable.
+function add(rec,fc,cn,st){ rec.total++;
+  if(cn!=null){ rec.connected++;
+    if(st==null){ rec.cunmeas++; }
+    else { const c=cn-st; if(c>=0) rec.cspeeds.push(c); else rec.cunmeas++; } }
+  if(fc==null) return;                      // unattempted: counts as an SLA miss
   rec.contacted++;
   if(st==null){ rec.unmeas++; return; }
   const m=fc-st; if(m>=0) rec.speeds.push(m); else rec.unmeas++; }
-// single pass: source buckets (all sources) + owner buckets (only source∈SEL) + selected aggregate
+// single pass: source buckets (all sources) + breakdown buckets (only source∈SEL)
+// + the selected aggregate + the centre fill-rate counter
 function compute(){
   const af=anchorField[ANCHOR], cf=clockStart[ANCHOR];
   const lo=Math.min(dateToIdx(document.getElementById("d0").value),dateToIdx(document.getElementById("d1").value));
   const hi=Math.max(dateToIdx(document.getElementById("d0").value),dateToIdx(document.getElementById("d1").value));
   const srcB={}; DATA.sources.forEach((s,i)=>srcB[i]=blank());
-  const ownB={};
+  const dimB={}, agg=blank();
+  let cohort=0, centreKnown=0;
   for(const L of DATA.leads){
     if(poolSkip(L)) continue;
     const anc=L[af]; if(anc==null) continue;
     const di=dayIdx(anc); if(di<lo||di>hi) continue;
-    const fc=L[2], st=L[cf];
-    add(srcB[L[0]],fc,st);
-    if(SEL.has(L[0])){ const o=L[4]; (ownB[o]=ownB[o]||blank()); add(ownB[o],fc,st); }
+    const fc=L[2], cn=(L[15]==null?null:L[15]), st=L[cf];
+    add(srcB[L[0]],fc,cn,st);
+    if(SEL.has(L[0])){
+      add(agg,fc,cn,st); cohort++;
+      const ct=CENTRES[L[14]]; if(ct && ct!=="—") centreKnown++;
+      if(DIM!=="source"){ const k=bucketBy(L); (dimB[k]=dimB[k]||blank()); add(dimB[k],fc,cn,st); }
+    }
   }
-  return {srcB,ownB,lo,hi};
+  return {srcB,dimB,agg,lo,hi,cohort,centreKnown};
 }
 function render(){
   const sla=Math.max(1,parseFloat(document.getElementById("sla").value)||120);
-  const {srcB,ownB,lo,hi}=compute();
+  const {srcB,dimB,agg,lo,hi,cohort,centreKnown}=compute();
   document.getElementById("explain").innerHTML=EXPLAIN[ANCHOR];
   const days=hi-lo+1;
   document.getElementById("dcount").textContent = lo===hi ? dmy(lo) : `${days} days · ${dmy(lo)} → ${dmy(hi)}`;
-  const clk={created:"first call − created",firstcall:"first call − created",assign:"first call − <b>assignment</b>"}[ANCHOR];
+  const clkA={created:"first attempt − created",firstcall:"first attempt − created",assign:"first attempt − <b>assignment</b>"}[ANCHOR];
+  const clkC={created:"first connect − created",firstcall:"first connect − created",assign:"first connect − <b>assignment</b>"}[ANCHOR];
   const coh={created:"created",firstcall:"first-called",assign:"assigned"}[ANCHOR];
-  document.getElementById("clockline").innerHTML=`Cohort: leads <b>${coh}</b> in window · Clock: <b>${clk}</b>${DIM==="owner"?" · owner rows are within the selected sources only":""}`;
+  document.getElementById("clockline").innerHTML=`Cohort: leads <b>${coh}</b> in window · Attempt clock: <b>${clkA}</b> · Connect clock: <b>${clkC}</b>${DIM!=="source"?" · "+dimNoun()+" rows are within the selected sources only":""}`;
   document.getElementById("t-leads-l").textContent=`Leads ${coh} (selected)`;
-  // tiles: aggregate over selected sources (== all owner buckets)
-  let tot=0,con=0,sp=[],unm=0; SEL.forEach(k=>{ if(srcB[k]){tot+=srcB[k].total; con+=srcB[k].contacted; unm+=srcB[k].unmeas; sp=sp.concat(srcB[k].speeds);} });
-  const st=stt(sp,sla,tot-unm), cov=tot?100*con/tot:0, unc=tot-con;
-  document.getElementById("t-leads").textContent=tot;
-  document.getElementById("t-unc").textContent=unc+(tot?"  ("+(100*unc/tot).toFixed(0)+"%)":"");
+  // tiles: aggregate over the selected sources
+  const tot=agg.total, con=agg.contacted, unm=agg.unmeas, cnn=agg.connected;
+  const st=stt(agg.speeds,sla,tot-unm), cov=tot?100*con/tot:0, unc=tot-con;
+  const cmed=med(agg.cspeeds), cp90=p90(agg.cspeeds), connPct=tot?100*cnn/tot:0;
+  document.getElementById("t-leads").textContent=nf(tot);
+  document.getElementById("t-unc").textContent=nf(unc)+(tot?"  ("+(100*unc/tot).toFixed(0)+"%)":"");
   document.getElementById("t-cov").textContent=tot?cov.toFixed(0)+"%":"—";
   document.getElementById("t-med").textContent=st.n?fm(st.med):"—";
   document.getElementById("t-p90").textContent=st.n?fm(st.p90):"—";
+  document.getElementById("t-conn").textContent=tot?connPct.toFixed(0)+"%":"—";
+  document.getElementById("t-conn-l").innerHTML='Connected (reached)'+(tot?'<br><span style="opacity:.75">'+nf(cnn)+" of "+nf(tot)+" leads</span>":"");
+  document.getElementById("t-cmed").textContent=cmed!=null?fm(cmed):"—";
+  document.getElementById("t-cmed-l").innerHTML='Median time to <b>first connect</b>'+(cmed!=null?'<br><span style="opacity:.75">P90 '+fm(cp90)+" · of the "+nf(agg.cspeeds.length)+" measurable</span>":"");
   document.getElementById("t-sla").textContent=st.n?st.slaAll.toFixed(0)+"%":"—";
-  document.getElementById("t-sla-l").innerHTML="Within "+sla+" min <span style=\"opacity:.8\">· of all leads</span>"
-    +(st.n?'<br><span style="opacity:.75">'+st.sla.toFixed(0)+"% of those contacted</span>":"");
+  document.getElementById("t-sla-l").innerHTML="First attempt within "+sla+" min <span style=\"opacity:.8\">· of all leads</span>"
+    +(st.n?'<br><span style="opacity:.75">'+st.sla.toFixed(0)+"% of those attempted</span>":"");
   // table
-  document.getElementById("th0").textContent = DIM==="source"?"Source":"Lead owner";
-  document.getElementById("ownfilter").style.display = DIM==="owner"?"":"none";
+  document.getElementById("th0").textContent = dimTitle();
+  const filt=document.getElementById("dimfilter");
+  filt.style.display = DIM==="source"?"none":"";
+  filt.placeholder = "Filter "+dimNoun()+" name…";
+  document.getElementById("locseg").style.display = DIM==="location"?"":"none";
+  // the centre field is sparse — say so out loud rather than letting a short list mislead
+  const note=document.getElementById("dimnote");
+  if(DIM==="location"){
+    const fp=cohort?100*centreKnown/cohort:0;
+    note.style.display="";
+    note.innerHTML = LOC==="centre"
+      ? `<b>Centre is only ${fp.toFixed(0)}% populated</b> in this window (${nf(centreKnown)} of ${nf(cohort)} leads). The remaining ${(100-fp).toFixed(0)}% carry no centre and are grouped in the <b>—</b> row, which will usually be the largest row on the table. Read centre rows as a partial view, not a full split of the cohort.`
+      : `City is recorded for every lead, so this is the complete location split. The <b>Centre</b> view is available from the toggle above, but centre is filled for only <b>${fp.toFixed(0)}%</b> of the leads in this window (${nf(centreKnown)} of ${nf(cohort)}) — the rest fall into a single <b>—</b> bucket.`;
+  } else note.style.display="none";
   const rows=document.getElementById("rows"); rows.innerHTML=""; let truncMsg="";
   const rowHtml=(name,d,clickable,k)=>{
     const s=stt(d.speeds,sla,d.total-d.unmeas), c=d.total?100*d.contacted/d.total:0, u=d.total-d.contacted;
+    const cm=med(d.cspeeds), cp=d.total?100*d.connected/d.total:0;
     const on = clickable ? SEL.has(k) : true;
-    return `<tr class="${on?'on':'off'}"><td class="dim${clickable?' clk':''}" ${clickable?`data-k="${k}"`:''}><span class="dot"></span>${name}</td><td>${d.total}</td><td class="unc">${u}${d.total?' <span style="color:var(--muted);font-weight:400">('+(100*u/d.total).toFixed(0)+'%)</span>':''}</td><td>${d.total?'<span class="cov '+cc(c)+'">'+c.toFixed(0)+'%</span>':'—'}</td><td>${s.n?fm(s.med):"—"}</td><td>${s.n?fm(s.p90):"—"}</td><td>${s.n?s.slaAll.toFixed(0)+"%":"—"}</td></tr>`;
+    const mu=(v)=>d.total?' <span style="color:var(--muted);font-weight:400">('+v+'%)</span>':'';
+    return `<tr class="${on?'on':'off'}"><td class="dim${clickable?' clk':''}" ${clickable?`data-k="${k}"`:''}><span class="dot"></span>${name}</td>`
+      +`<td>${nf(d.total)}</td>`
+      +`<td class="unc">${nf(u)}${mu((100*u/(d.total||1)).toFixed(0))}</td>`
+      +`<td>${d.total?'<span class="cov '+cc(c)+'">'+c.toFixed(0)+'%</span>':'—'}</td>`
+      +`<td>${s.n?fm(s.med):"—"}</td>`
+      +`<td>${s.n?fm(s.p90):"—"}</td>`
+      +`<td class="grp">${nf(d.connected)}${mu(cp.toFixed(0))}</td>`
+      +`<td>${cm!=null?fm(cm):"—"}</td>`
+      +`<td>${s.n?s.slaAll.toFixed(0)+"%":"—"}</td></tr>`;
   };
   if(DIM==="source"){
     Object.keys(srcB).map(Number).sort((x,y)=>srcB[y].total-srcB[x].total).forEach(k=>{
@@ -766,17 +894,18 @@ function render(){
       rows.insertAdjacentHTML("beforeend",rowHtml(DATA.sources[k],srcB[k],true,k));
     });
   } else {
-    const q=document.getElementById("ownfilter").value.trim().toLowerCase();
-    let list=Object.keys(ownB).map(Number).filter(o=>DATA.owners[o].toLowerCase().includes(q)).sort((x,y)=>ownB[y].total-ownB[x].total);
-    const full=list.length;
-    truncMsg = q ? `${full} owner${full!==1?'s':''} matching “${q}”.` : `All ${full} owners with leads in this window, ranked by volume.`;
-    list.forEach(o=>rows.insertAdjacentHTML("beforeend",rowHtml(DATA.owners[o],ownB[o],false,o)));
-    if(!list.length) rows.insertAdjacentHTML("beforeend",`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No owners match.</td></tr>`);
+    const q=document.getElementById("dimfilter").value.trim().toLowerCase();
+    let list=Object.keys(dimB).map(Number).filter(k=>String(lab(k)).toLowerCase().includes(q)).sort((x,y)=>dimB[y].total-dimB[x].total);
+    const full=list.length, noun=dimNoun();
+    truncMsg = q ? `${full} ${noun}${full!==1?'s':''} matching “${q}”.` : `All ${full} ${noun}${full!==1?'s':''} with leads in this window, ranked by volume.`;
+    list.forEach(k=>rows.insertAdjacentHTML("beforeend",rowHtml(lab(k),dimB[k],false,k)));
+    if(!list.length) rows.insertAdjacentHTML("beforeend",`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No ${noun} rows match.</td></tr>`);
   }
   if(DIM==="source") rows.querySelectorAll(".dim.clk").forEach(el=>el.onclick=()=>{const k=+el.dataset.k; SEL.has(k)?SEL.delete(k):SEL.add(k); sync(); render();});
   document.getElementById("trunc").textContent=truncMsg;
   const span=lo===hi?dmy(lo):dmy(lo)+" → "+dmy(hi);
-  document.getElementById("foot").innerHTML=`Window: ${span} (IST). Pulled live from the LeadSquared v2 API — covering universe from ${isoToDMY(DATA.base)}; all dates and times shown in IST (normalised UTC→IST to match the LSQ dashboard. Owner = current lead owner (OwnerIdName). Uncalled = no first-call logged &mdash; counted as an SLA <b>miss</b>. ${unm?unm.toLocaleString("en-IN")+" contacted lead(s) were <b>unmeasurable</b> (first call predates the anchor, i.e. the lead was reassigned after being called) and are excluded from the SLA denominator and the median.":"No unmeasurable rows in this window."}`;
+  const never=tot-cnn;
+  document.getElementById("foot").innerHTML=`Window: ${span} (IST). Pulled live from the LeadSquared v2 API — covering universe from ${isoToDMY(DATA.base)}; all dates and times shown in IST (normalised UTC→IST to match the LSQ dashboard. Owner = current lead owner (OwnerIdName). Uncalled = no first attempt logged &mdash; counted as an SLA <b>miss</b>. ${unm?nf(unm)+" contacted lead(s) were <b>unmeasurable</b> (first attempt predates the anchor, i.e. the lead was reassigned after being called) and are excluded from the SLA denominator and the median.":"No unmeasurable rows in this window."} <b>First connect</b> is a separate, stricter event than first attempt: ${nf(never)} lead(s) in this window were <b>never connected</b> and are excluded from the connect median (they are not fast connects)${agg.cunmeas?", and "+nf(agg.cunmeas)+" connected lead(s) had a connect timestamp predating the anchor and are unmeasurable":""}. Attempt and connect logging are both under-recorded in LSQ, so treat both as floors.`;
 }
 function sync(){document.querySelectorAll("#srcs .chk").forEach(c=>c.classList.toggle("on",SEL.has(+c.dataset.k)));}
 function srcOrder(){ const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++; return Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]); }
@@ -784,7 +913,11 @@ function chips(){ const box=document.getElementById("srcs"); box.innerHTML=""; s
 function resetSel(){ SEL.clear(); DATA.sources.forEach((s,i)=>SEL.add(i)); }
 document.querySelectorAll(".abtn").forEach(bt=>bt.onclick=()=>{ ANCHOR=bt.dataset.a; document.querySelectorAll(".abtn").forEach(x=>x.classList.toggle("on",x===bt)); render(); });
 document.querySelectorAll("#seg button").forEach(bt=>bt.onclick=()=>{ DIM=bt.dataset.dim; document.querySelectorAll("#seg button").forEach(x=>x.classList.toggle("on",x===bt)); render(); });
-document.getElementById("ownfilter").oninput=render;
+document.querySelectorAll("#locseg button").forEach(bt=>bt.onclick=()=>{ LOC=bt.dataset.loc; document.querySelectorAll("#locseg button").forEach(x=>x.classList.toggle("on",x===bt)); render(); });
+// hide a breakdown the current data file cannot serve
+if(!PROGRAMS.length){ const b=document.querySelector('#seg button[data-dim="program"]'); if(b) b.style.display="none"; }
+if(!CITIES.length){ const b=document.querySelector('#seg button[data-dim="location"]'); if(b) b.style.display="none"; }
+document.getElementById("dimfilter").oninput=render;
 document.getElementById("s-all").onclick=()=>{ resetSel(); sync(); render(); };
 document.getElementById("s-exint").onclick=()=>{ SEL.clear(); DATA.sources.forEach((s,i)=>{ if(s!=="Internshala") SEL.add(i); }); sync(); render(); };
 document.getElementById("sla").oninput=render;
@@ -1169,6 +1302,22 @@ const SRC=DATA.sources||[];
 // Internshala-style source rows (partner-link sources) to hide under the "exclude" preset
 const isInternshala = (name)=> /internshala/i.test(name||"");
 
+// ---- money (INR) ----
+// Exact rupees, en-IN grouping: ₹1,23,45,678 — used for tooltips and for small amounts.
+function inrFull(v){ return "₹"+Math.round(+v||0).toLocaleString("en-IN"); }
+// Compact, unit always printed so it can never be misread: ₹1.23 Cr / ₹4.52 L / ₹45,000
+function inr(v){
+  v=+v||0;
+  if(v>=1e7) return "₹"+(v/1e7).toFixed(2)+" Cr";
+  if(v>=1e5) return "₹"+(v/1e5).toFixed(2)+" L";
+  return inrFull(v);
+}
+function money(v,paid){
+  if(!v) return `<span style="color:var(--muted);">₹0</span>`;
+  const n=paid|0;
+  return `<span title="${inrFull(v)} collected from ${n.toLocaleString("en-IN")} paying lead${n===1?"":"s"}">${inr(v)}</span>`;
+}
+
 // control state
 let startIdx=0, endIdx=maxDay;
 let sortKey="created", sortDir=-1;               // default: Lead Created desc
@@ -1180,7 +1329,7 @@ function slaThresh(){ const v=+document.getElementById("sla").value; return isFi
 // ---- compute one row per source over the created window ----
 function compute(){
   const sla=slaThresh();
-  const rows=SRC.map((name,i)=>({idx:i,name,created:0,attempted:0,connected:0,attSum:0,speeds:[],slaHit:0}));
+  const rows=SRC.map((name,i)=>({idx:i,name,created:0,attempted:0,connected:0,attSum:0,speeds:[],slaHit:0,rev:0,paid:0}));
   for(const L of DATA.leads){
     if(poolSkip(L)) continue;
     const d=dayIdx(L[1]);
@@ -1191,6 +1340,8 @@ function compute(){
     if(att>0) r.attempted++;
     if((L[8]|0)>0) r.connected++;
     r.attSum+=att;
+    const rv=+L[17]||0;                           // mx_Total_Amount_Paid, rupees collected to date
+    if(rv>0){ r.rev+=rv; r.paid++; }              // attributed to the lead's CREATED date, not the payment date
     if(L[2]!=null && L[1]!=null){                 // contacted → has a first-call time
       const spd=L[2]-L[1];                        // source quality = end-to-end wait, so clock from creation
       if(spd>=0){ r.speeds.push(spd); if(spd<=sla) r.slaHit++; }
@@ -1201,21 +1352,22 @@ function compute(){
     r.avgatt  = r.created ? r.attSum/r.created : 0;
     r.speed   = med(r.speeds);
     r.sla     = r.created ? r.slaHit/r.created*100 : null;   // of all created, not just contacted
+    r.paidpct = r.created ? r.paid/r.created*100 : null;     // how thin the revenue base is for this source
   }
   return rows;
 }
 
 function totals(rows){
-  const t={created:0,attempted:0,connected:0,attSum:0,speeds:[],slaHit:0,contacted:0};
-  for(const r of rows){ t.created+=r.created; t.attempted+=r.attempted; t.connected+=r.connected; t.attSum+=r.attSum; t.speeds=t.speeds.concat(r.speeds); t.slaHit+=r.slaHit; t.contacted+=r.speeds.length; }
+  const t={created:0,attempted:0,connected:0,attSum:0,speeds:[],slaHit:0,contacted:0,rev:0,paid:0};
+  for(const r of rows){ t.created+=r.created; t.attempted+=r.attempted; t.connected+=r.connected; t.attSum+=r.attSum; t.speeds=t.speeds.concat(r.speeds); t.slaHit+=r.slaHit; t.contacted+=r.speeds.length; t.rev+=r.rev; t.paid+=r.paid; }
   t.connpct=t.attempted?t.connected/t.attempted*100:null;
   t.avgatt=t.created?t.attSum/t.created:0;
   t.speed=med(t.speeds);
   t.sla=t.created?t.slaHit/t.created*100:null;
+  t.paidpct=t.created?t.paid/t.created*100:null;
+  t.perPaid=t.paid?t.rev/t.paid:0;                 // per PAYING lead — never per created lead
   return t;
 }
-
-const NA='<span class="na" title="Needs a converted-lead pull — Revenue / mx_ fields are 0% populated in this cohort">n/a</span>';
 
 function render(){
   const all=compute();
@@ -1223,9 +1375,13 @@ function render(){
 
   // tiles
   const connPct = t.connpct==null?"—":t.connpct.toFixed(1)+"%";
+  const paidPct = t.paidpct==null?"—":t.paidpct.toFixed(1)+"%";
   document.getElementById("tiles").innerHTML=`
-    <div class="tile hi"><div class="n">${t.created.toLocaleString()}</div><div class="l">Total leads created</div></div>
-    <div class="tile"><div class="n">${t.attempted.toLocaleString()}</div><div class="l">Attempted (attempts &gt; 0)</div></div>
+    <div class="tile hi"><div class="n">${t.created.toLocaleString("en-IN")}</div><div class="l">Total leads created</div></div>
+    <div class="tile good" title="${inrFull(t.rev)} collected to date across ${t.paid.toLocaleString("en-IN")} paying leads">
+      <div class="n">${inr(t.rev)}</div>
+      <div class="l">Revenue collected · ${t.paid.toLocaleString("en-IN")} paying leads (${paidPct} of created)</div></div>
+    <div class="tile"><div class="n">${t.attempted.toLocaleString("en-IN")}</div><div class="l">Attempted (attempts &gt; 0)</div></div>
     <div class="tile ${t.connpct!=null&&t.connpct<25?'warn':''}"><div class="n">${connPct}</div><div class="l">Connect % (proxy, of attempted)</div></div>
     <div class="tile"><div class="n">${fm(t.speed)}</div><div class="l">Median speed to lead</div></div>`;
 
@@ -1245,37 +1401,44 @@ function render(){
     const cls=r.connpct==null?"a":cc(r.connpct);
     const connpct=r.connpct==null?'<span class="cov a">—</span>':`<span class="cov ${cls}">${r.connpct.toFixed(1)}%</span>`;
     const slaCell=r.sla==null?'<span class="cov a">—</span>':`<span class="cov ${cc(r.sla)}">${r.sla.toFixed(0)}%</span>`;
+    const paidCell=r.paid
+      ? `${r.paid.toLocaleString("en-IN")}<span class="muted-pct">(${r.paidpct.toFixed(1)}%)</span>`
+      : `<span style="color:var(--muted);">0</span>`;
     const barW=Math.round(56*r.created/maxCreated);
     return `<tr>
       <td class="dim">${r.name}</td>
-      <td><span class="bar" style="width:${barW}px"></span>&nbsp;${r.created.toLocaleString()}</td>
-      <td>${r.attempted.toLocaleString()}</td>
-      <td>${r.connected.toLocaleString()}</td>
+      <td><span class="bar" style="width:${barW}px"></span>&nbsp;${r.created.toLocaleString("en-IN")}</td>
+      <td>${r.attempted.toLocaleString("en-IN")}</td>
+      <td>${r.connected.toLocaleString("en-IN")}</td>
       <td>${connpct}</td>
       <td>${r.avgatt.toFixed(2)}</td>
       <td>${fm(r.speed)}</td>
       <td>${slaCell}</td>
-      <td>${NA}</td>
+      <td>${paidCell}</td>
+      <td>${money(r.rev,r.paid)}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px;">No sources match the current filters.</td></tr>`;
+  }).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:18px;">No sources match the current filters.</td></tr>`;
 
   // total row reflects the CURRENTLY SHOWN rows
   const st=totals(rows);
   document.getElementById("tfoot").innerHTML=`<tr class="totrow">
     <td>Total (${rows.length} source${rows.length===1?"":"s"})</td>
-    <td>${st.created.toLocaleString()}</td>
-    <td>${st.attempted.toLocaleString()}</td>
-    <td>${st.connected.toLocaleString()}</td>
+    <td>${st.created.toLocaleString("en-IN")}</td>
+    <td>${st.attempted.toLocaleString("en-IN")}</td>
+    <td>${st.connected.toLocaleString("en-IN")}</td>
     <td>${st.connpct==null?"—":st.connpct.toFixed(1)+"%"}</td>
     <td>${st.avgatt.toFixed(2)}</td>
     <td>${fm(st.speed)}</td>
     <td>${st.sla==null?"—":st.sla.toFixed(0)+"%"}</td>
-    <td>${NA}</td>
+    <td>${st.paid.toLocaleString("en-IN")}${st.paidpct==null?"":`<span class="muted-pct">(${st.paidpct.toFixed(1)}%)</span>`}</td>
+    <td>${money(st.rev,st.paid)}</td>
   </tr>`;
 
   document.getElementById("trunc").innerHTML=
     `Window <b>${dmy(startIdx)}</b> → <b>${dmy(endIdx)}</b> · showing ${rows.length} of ${SRC.length} sources · `+
-    `Connected* = mx_Interacted_Count &gt; 0 (proxy). Revenue = n/a (needs converted-lead pull).`;
+    `Connected* = mx_Interacted_Count &gt; 0 (proxy) · `+
+    `Revenue = <b>${inrFull(t.rev)}</b> collected to date from <b>${t.paid.toLocaleString("en-IN")}</b> paying leads `+
+    `(avg <b>${inrFull(t.perPaid)}</b> per <i>paying</i> lead — not an ARPU across all ${t.created.toLocaleString("en-IN")} created leads).`;
 }
 
 // ---- source chips ----
@@ -1324,11 +1487,10 @@ sd.addEventListener("change",onDates); ed.addEventListener("change",onDates);
 // ---- SLA input ----
 document.getElementById("sla").addEventListener("input",render);
 
-// ---- sortable headers ----
+// ---- sortable headers (revenue and paying leads included) ----
 document.querySelectorAll("#tbl thead th").forEach(th=>{
   th.addEventListener("click",()=>{
-    const k=th.dataset.k;
-    if(k==="rev") return;                          // revenue is n/a — nothing to sort
+    const k=th.dataset.k; if(!k) return;
     if(sortKey===k) sortDir=-sortDir;
     else { sortKey=k; sortDir=(k==="name")?1:-1; } // text asc, numbers desc by default
     render();
@@ -1342,7 +1504,9 @@ document.getElementById("rowfilter").addEventListener("input",e=>{ rowQuery=e.ta
 document.getElementById("foot").innerHTML=
   `All dates &amp; times ${DATA.tz||"IST"} · cohort (created ${isoToDMY(DATA.base)}+) is complete · `+
   `Attempts (mx_Reached_Out_Attempts) are under-logged — Avg Attempts / Lead and Attempted counts are a floor · `+
-  `Connected uses mx_Interacted_Count &gt; 0 as a proxy · Revenue pending a converted-lead pull.`;
+  `Connected uses mx_Interacted_Count &gt; 0 as a proxy · `+
+  `Revenue = mx_Total_Amount_Paid — <b>cash collected to date, not contract value</b> (part-payments count at the amount received), `+
+  `populated for only ~4.7% of leads, and attributed to the lead&rsquo;s <b>created</b> date rather than the payment date.`;
 
 // ---- init ----
 buildChips(); initDates(); render();
@@ -1367,6 +1531,19 @@ function heat(v,max){ if(!v||!max) return ""; const pct=Math.min(52,Math.round(5
 const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>m)m=d; } return m; })();
 // ---- REPORT-SPECIFIC CODE: implement compute()/render(), wire controls, call render() ----
 
+// ---- breakdown dimensions ----
+// one place that defines every per-dimension difference, so ST.by never needs an if-chain
+const BY={
+  src:   { col:0,  labels:()=>DATA.sources||[], noun:"source",   head:"By source",                  lsq:"Source",     filter:false },
+  owner: { col:4,  labels:()=>DATA.owners||[],  noun:"owner",    head:"By lead owner",              lsq:"Lead Owner", filter:true, ph:"Filter owner name…" },
+  city:  { col:13, labels:()=>DATA.cities||[],  noun:"location", head:"By location (lead city)",    lsq:"City",       filter:true, ph:"Filter location…" }
+};
+function dim(){ return BY[ST.by] || BY.src; }
+
+// "Rest Of India" is a catch-all bucket in the city field, not a real location — flag it rather than let it read as one
+const CATCH_RE=/^rest\s*of\s*india$/i;
+const CATCH_IDX=(DATA.cities||[]).findIndex(c=>CATCH_RE.test(String(c||"")));
+
 // ---- state ----
 const ST={ d0:0, d1:maxDay, srcs:new Set((DATA.sources||[]).map((_,i)=>i)), by:"src", minVol:5, rowFilter:"", sortKey:"leads", sortDir:-1 };
 
@@ -1376,6 +1553,7 @@ const BUCKET_LABELS=["0","1–2","3–5","6+"];
 
 function fmtInt(n){ return n==null?"—":Math.round(n).toLocaleString("en-IN"); }
 function fmtAvg(n){ return n==null?"—":n.toFixed(2); }
+function fmtPct(n){ return n==null?"—":n.toFixed(0)+"%"; }
 
 // columns: key, label, group?(distribution), numeric getter for sort, cell renderer
 const COLS=[
@@ -1392,7 +1570,7 @@ const COLS=[
 ];
 
 function compute(){
-  const labels = ST.by==="owner" ? (DATA.owners||[]) : (DATA.sources||[]);
+  const D=dim(), labels=D.labels(), col=D.col;
   const map=new Map(); // key idx -> agg
   function agg(k){ let a=map.get(k); if(!a){ a={idx:k, name:labels[k]||"—", leads:0, total:0, conn:0, connAtt:0, b:[0,0,0,0]}; map.set(k,a); } return a; }
   let matched=0;
@@ -1403,7 +1581,7 @@ function compute(){
     if(d<ST.d0||d>ST.d1) continue;             // date-range window
     if(!ST.srcs.has(L[0])) continue;           // source filter
     matched++;
-    const key = ST.by==="owner" ? L[4] : L[0];
+    const key = L[col];
     const a=agg(key);
     const att=L[7]||0, inter=L[8]||0;
     a.leads++; a.total+=att; a.b[bucket(att)]++;
@@ -1413,18 +1591,21 @@ function compute(){
     idx:a.idx, name:a.name, leads:a.leads, total:a.total,
     avg: a.leads? a.total/a.leads : null,
     conn:a.conn, avgConn: a.conn? a.connAtt/a.conn : null,
-    b0:a.b[0], b1:a.b[1], b2:a.b[2], b3:a.b[3]
+    b0:a.b[0], b1:a.b[1], b2:a.b[2], b3:a.b[3],
+    isCatch: ST.by==="city" && CATCH_IDX>=0 && a.idx===CATCH_IDX
   }));
   // totals across ALL matched rows (before min-vol / name filter), so the Total row is a true grand total
   const tot={ leads:0, total:0, conn:0, connAtt:0, b0:0,b1:0,b2:0,b3:0 };
-  for(const r of rows){ tot.leads+=r.leads; tot.total+=r.total; tot.conn+=r.conn; tot.connAtt+=(r.avgConn!=null?r.avgConn*r.conn:0); tot.b0+=r.b0; tot.b1+=r.b1; tot.b2+=r.b2; tot.b3+=r.b3; }
+  let catchLeads=0;
+  for(const r of rows){ tot.leads+=r.leads; tot.total+=r.total; tot.conn+=r.conn; tot.connAtt+=(r.avgConn!=null?r.avgConn*r.conn:0); tot.b0+=r.b0; tot.b1+=r.b1; tot.b2+=r.b2; tot.b3+=r.b3; if(r.isCatch) catchLeads+=r.leads; }
   tot.avg = tot.leads? tot.total/tot.leads : null;
   tot.avgConn = tot.conn? tot.connAtt/tot.conn : null;
+  const catchPct = tot.leads? catchLeads/tot.leads*100 : null;
   // filters that only affect the displayed rows
   let hiddenN=0, hiddenRows=0;
   rows=rows.filter(r=>{
     if(r.leads<ST.minVol){ hiddenN+=r.leads; hiddenRows++; return false; }
-    if(ST.by==="owner" && ST.rowFilter && !r.name.toLowerCase().includes(ST.rowFilter.toLowerCase())) return false;
+    if(D.filter && ST.rowFilter && !String(r.name).toLowerCase().includes(ST.rowFilter.toLowerCase())) return false;
     return true;
   });
   // sort
@@ -1434,13 +1615,14 @@ function compute(){
     const xv=x[k]==null?-Infinity:x[k], yv=y[k]==null?-Infinity:y[k];
     return dir*(xv-yv);
   });
-  return {rows, tot, matched, hiddenN, hiddenRows};
+  return {rows, tot, matched, hiddenN, hiddenRows, catchLeads, catchPct};
 }
 
 function tile(n,l,cls){ return `<div class="tile ${cls||''}"><div class="n">${n}</div><div class="l">${l}</div></div>`; }
 
 function render(){
-  const {rows, tot, matched, hiddenN, hiddenRows}=compute();
+  const D=dim();
+  const {rows, tot, matched, hiddenN, hiddenRows, catchLeads, catchPct}=compute();
   // tiles
   document.getElementById("tiles").innerHTML =
     tile(fmtInt(tot.total), "Total attempts (logged)", "hi") +
@@ -1461,8 +1643,9 @@ function render(){
   let maxB=1; for(const r of rows){ maxB=Math.max(maxB,r.b0,r.b1,r.b2,r.b3); }
   const body = rows.map(r=>{
     const bcell=(v)=>`<td class="grp"><span class="cell" style="${heat(v,maxB)}">${fmtInt(v)}</span></td>`;
+    const tag = r.isCatch ? ' <span class="cov a" title="Catch-all bucket in the city field — not a real location">catch-all</span>' : "";
     return `<tr>
-      <td class="dim">${r.name}</td>
+      <td class="dim">${r.name}${tag}</td>
       <td>${fmtInt(r.leads)}</td>
       <td>${fmtInt(r.total)}</td>
       <td>${fmtAvg(r.avg)}</td>
@@ -1482,20 +1665,26 @@ function render(){
   </tr>`;
   document.getElementById("tbody").innerHTML = body + totRow;
 
-  document.getElementById("tblHead").textContent = ST.by==="owner" ? "By lead owner" : "By source";
-  const rf=document.getElementById("rowFilter"); rf.style.display = ST.by==="owner" ? "" : "none";
+  document.getElementById("tblHead").textContent = D.head;
+  const rf=document.getElementById("rowFilter");
+  rf.style.display = D.filter ? "" : "none";
+  if(D.filter && D.ph) rf.placeholder = D.ph;
 
   // truncation note
   const floor = ST.minVol;
-  let t=`Showing ${rows.length} ${ST.by==="owner"?"owner":"source"} row${rows.length===1?"":"s"} over ${fmtInt(matched)} leads created ${dmy(ST.d0)} → ${dmy(ST.d1)}.`;
+  let t=`Showing ${rows.length} ${D.noun} row${rows.length===1?"":"s"} over ${fmtInt(matched)} leads created ${dmy(ST.d0)} → ${dmy(ST.d1)}.`;
   if(hiddenRows) t+=` ${hiddenRows} row${hiddenRows===1?"":"s"} hidden (below min volume of ${floor} leads, ${fmtInt(hiddenN)} leads); Total row still counts them.`;
+  if(ST.by==="city" && catchPct!=null && catchLeads>0){
+    t+=` Location = the lead's city field (always populated), but ${fmtPct(catchPct)} of in-scope leads (${fmtInt(catchLeads)}) sit in the catch-all "Rest Of India" bucket — read this as a coarse city cut, not a centre-level one.`;
+  }
   document.getElementById("trunc").textContent=t;
 
   // footer
   document.getElementById("footer").innerHTML =
     `All dates &amp; times in <b>IST</b>. Cohort complete — rows count only leads created ≥ ${isoToDMY(DATA.base)} (dayIdx ≥ 0). ` +
     `Attempts field = <b>mx_Reached_Out_Attempts</b> (logged, under-logged floor). "Connected" = mx_Interacted_Count &gt; 0 (proxy). ` +
-    `<b>Cross-check in LSQ:</b> Manage Leads → filter Lead Created between ${dmy(ST.d0)} and ${dmy(ST.d1)} (IST), group by ${ST.by==="owner"?"Lead Owner":"Source"}; ` +
+    `<b>Location</b> = the lead's <b>city</b> field (100% populated, but heavily bucketed into "Rest Of India"); the true <b>centre</b> field is the finer cut and is only ~22% populated, so it is not offered as a breakdown here. ` +
+    `<b>Cross-check in LSQ:</b> Manage Leads → filter Lead Created between ${dmy(ST.d0)} and ${dmy(ST.d1)} (IST), group by ${D.lsq}; ` +
     `bucket counts map to mx_Reached_Out_Attempts = 0 / 1–2 / 3–5 / ≥6.`;
 }
 
@@ -1759,62 +1948,191 @@ function idxToStr(i){ return new Date(BASE.getTime()+i*DAYMS).toISOString().slic
 function dmy(i){ return isoToDMY(idxToStr(i)); }   // display only; inputs stay ISO
 function fm(m){ if(m==null)return "—"; if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
 function cc(c){return c>=50?"g":(c>=25?"a":"r");}
+function ccLeak(c){return c<=2?"g":(c<=10?"a":"r");}          // leakage: small = good
+function relCls(v,avg){ if(!avg) return "a"; return v>=avg*1.2?"g":(v<=avg*0.8?"r":"a"); }
 function med(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
 function p90(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length*.9)]; }
 function heat(v,max){ if(!v||!max) return ""; const pct=Math.min(52,Math.round(52*v/max)); return `background:color-mix(in srgb, var(--accent) ${pct}%, transparent)`; }
 const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>m)m=d; } return m; })();
 // ---- REPORT-SPECIFIC CODE ----
-let BREAK="overall";                 // overall | source | owner
+let BREAK="overall";                 // stage table: overall | source | owner | program
+let DIM="source";                    // funnel breakdown: source | owner | program
 let START=0, END=maxDay;             // created-window day indices
 let sortCol="count", sortDir=-1;     // overall stage table sort
 const SEL=new Set();                 // selected source indices
-// "Enrolled" = ProspectStage label contains "enrol" (case-insensitive). Discovered at runtime, never hardcoded.
-const EN=new Set(); DATA.stages.forEach((s,i)=>{ if(/enrol/i.test(s)) EN.add(i); });
+const PROGS = Array.isArray(DATA.programs)? DATA.programs : [];
+const HASPROG = PROGS.length>0;
+const NOPROG = -1;                   // synthetic key for leads with no program
+const PROGCAP = 14;                  // max program columns in the heat matrix
+// "Enrolled/paid" = ProspectStage whose class is "won", or whose label contains "enrol".
+// Discovered at runtime from DATA.stage_class / DATA.stages — never a hardcoded index.
+const EN=new Set(); DATA.stages.forEach((s,i)=>{ if(stageCls(i)==="won" || /enrol/i.test(s)) EN.add(i); });
 
 function pctStr(n,d){ return d? (100*n/d).toFixed(1)+"%" : "0%"; }
+function pctNum(n,d){ return d? 100*n/d : 0; }
+function pname(k){ return k===NOPROG ? "(no programme)" : (PROGS[k] || "(unknown)"); }
+function dimNames(){ return DIM==="owner" ? DATA.owners : (DIM==="program" ? PROGS : DATA.sources); }
+function dimLabel(k){ if(DIM==="program") return pname(k); const a=dimNames(); return a[k] || "(unknown)"; }
+function dimTitle(){ return DIM==="owner" ? "lead owner" : (DIM==="program" ? "programme" : "source"); }
 
 function compute(){
-  const f={created:0,contacted:0,connected:0,enrolled:0};
+  // f = AS-REPORTED counts: each condition evaluated independently on its own LSQ field.
+  // n = STRICT-PATH counts: cumulative AND down the spec order, so each step really is
+  //     a subset of the one above it. f - n = leads that skipped an earlier step.
+  const f={created:0,attempted:0,contacted:0,connected:0,counselled:0,enrolled:0};
+  const n={attempted:0,contacted:0,connected:0,counselled:0,enrolled:0};
+  const miss={enrNoAttempt:0,enrNoCall:0,enrNoConnect:0,enrNoCouns:0,cnsNoConnect:0,anyRev:0,rev:0};
   const stageCount=DATA.stages.map(()=>0);
-  const srcM = BREAK==="source" ? DATA.stages.map(()=>({})) : null;  // srcM[stage][src]=count
-  const ownM = BREAK==="owner"  ? {} : null;                          // ownM[owner][stage]=count
+  const srcM = BREAK==="source"  ? DATA.stages.map(()=>({})) : null;  // srcM[stage][src]=count
+  const ownM = BREAK==="owner"   ? {} : null;                         // ownM[owner][stage]=count
+  const proM = BREAK==="program" ? DATA.stages.map(()=>({})) : null;  // proM[stage][prog]=count
+  const dimM = {};                                                    // funnel rows by DIM key
   for(const L of DATA.leads){
     if(poolSkip(L)) continue;
     const d=dayIdx(L[1]); if(d==null||d<0||d<START||d>END) continue;
     if(!SEL.has(L[0])) continue;
     const st=L[9];
+    const at=(L[7]||0)>0;        // Attempted  — attempts > 0 (the spec's step 2)
+    const ct=L[2]!=null;         // Contacted  — first-call timestamp present (reference only)
+    const cn=(L[8]||0)>0;        // Connected  — interacted count > 0
+    const cs=L[16]===1;          // Counselled — counselling flag
+    const en=EN.has(st);         // Enrolled / paid
     f.created++;
-    if(L[2]!=null) f.contacted++;
-    if((L[8]||0)>0) f.connected++;
-    if(EN.has(st)) f.enrolled++;
+    if(at) f.attempted++;
+    if(ct) f.contacted++;
+    if(cn) f.connected++;
+    if(cs) f.counselled++;
+    if(en) f.enrolled++;
+    // strict nesting: created -> attempted -> connected -> counselled -> enrolled
+    if(at){ n.attempted++;
+      if(ct) n.contacted++;
+      if(cn){ n.connected++;
+        if(cs){ n.counselled++;
+          if(en) n.enrolled++; } } }
+    if(en){
+      if(!at) miss.enrNoAttempt++;
+      if(!ct) miss.enrNoCall++;
+      if(!cn) miss.enrNoConnect++;
+      if(!cs) miss.enrNoCouns++;
+      const r=L[17]||0; if(r>0){ miss.anyRev++; miss.rev+=r; }
+    }
+    if(cs && !cn) miss.cnsNoConnect++;
     stageCount[st]++;
+    const pk = (L[12]==null? NOPROG : L[12]);
     if(srcM){ const r=srcM[st]; r[L[0]]=(r[L[0]]||0)+1; }
     if(ownM){ const o=L[4]; (ownM[o]||(ownM[o]={}))[st]=(ownM[o][st]||0)+1; }
+    if(proM){ const r=proM[st]; r[pk]=(r[pk]||0)+1; }
+    const dk = DIM==="owner" ? L[4] : (DIM==="program" ? pk : L[0]);
+    const row = dimM[dk] || (dimM[dk]={leads:0,att:0,ct:0,con:0,cns:0,enr:0});
+    row.leads++; if(at)row.att++; if(ct)row.ct++; if(cn)row.con++; if(cs)row.cns++; if(en)row.enr++;
   }
-  return {f,stageCount,srcM,ownM};
+  return {f,n,miss,stageCount,srcM,ownM,proM,dimM};
 }
 
-function renderFunnel(f){
-  const steps=[
-    ["Created", f.created, "All leads created in the window"],
-    ["Contacted", f.contacted, "First call logged (mx_First_Call present)"],
-    ["Connected*", f.connected, "Interacted count &gt; 0 — proxy for a real connect"],
-    ["Enrolled", f.enrolled, "ProspectStage contains “enrol”"]
-  ];
+// ---- A · the spec funnel -----------------------------------------------------
+// Bars are drawn in two parts: the SOLID part is the strict-path count (this lead
+// cleared every earlier step too); the FADED part is the extra leads that satisfy
+// this step but skipped one above it. Bar total length = the as-reported count.
+function renderFunnel(f,n){
   const base=f.created||1;
+  const steps=[
+    {label:"Lead created",  val:f.created,    nest:f.created,    desc:"All leads created in the window (unworked bulk pool excluded)"},
+    {label:"Attempted",     val:f.attempted,  nest:n.attempted,  desc:"Call attempts &gt; 0 — the spec's step 2"},
+    {label:"Connected*",    val:f.connected,  nest:n.connected,  desc:"Interacted count &gt; 0 — proxy for a real connect"},
+    {label:"Counselled",    val:f.counselled, nest:n.counselled, desc:"Counselling-done flag on the lead"},
+    {label:"Enrolled / paid",val:f.enrolled,  nest:n.enrolled,   desc:"ProspectStage class “won” (or label contains “enrol”)"}
+  ];
+  const neutral='style="background:var(--surface-2);color:var(--ink-2)"';
   let html="";
   steps.forEach((s,i)=>{
-    const [label,val,desc]=s;
-    const pct=100*val/base;
-    let badge="";
-    if(i>0){ const prev=steps[i-1][1]; const conv=prev?Math.round(100*val/prev):0; badge=` <span class="cov ${cc(conv)}">&rarr; ${conv}% step</span>`; }
+    const solid=100*s.nest/base, extra=100*Math.max(0,s.val-s.nest)/base, pct=100*s.val/base;
+    const rSolid = extra>0 ? "5px 0 0 5px" : "5px";
+    const rExtra = solid>0 ? "0 5px 5px 0" : "5px";
+    let badges="";
+    if(i>0){
+      const prev=steps[i-1].val, conv=prev?Math.round(100*s.val/prev):0;
+      badges+=` <span class="cov ${cc(conv)}">&rarr; ${conv}% step</span>`;
+    }
+    if(s.label==="Counselled") badges+=` <span class="cov" ${neutral}>L2C ${pctStr(f.counselled,f.created)}</span>`;
+    if(s.label==="Enrolled / paid") badges+=` <span class="cov" ${neutral}>C2P ${pctStr(f.enrolled,f.counselled)}</span> <span class="cov" ${neutral}>L2P ${pctStr(f.enrolled,f.created)}</span>`;
+    const skip = s.val-s.nest;
+    const skipLine = i>0 && skip>0
+      ? `<span class="fpct">${skip.toLocaleString()} of these skipped an earlier step</span>`
+      : (i>0 ? `<span class="fpct">all on the full path</span>` : "");
     html+=`<div class="fstep">
-      <div class="flabel">${label}<span class="fdesc">${desc}</span></div>
-      <div class="ftrack"><span class="bar" style="width:${pct.toFixed(1)}%;height:22px;border-radius:5px"></span></div>
-      <div class="fval"><b>${val.toLocaleString()}</b><span class="fpct">${pct.toFixed(1)}% of created</span>${badge}</div>
+      <div class="flabel">${s.label}<span class="fdesc">${s.desc}</span></div>
+      <div class="ftrack">
+        <span class="bar" style="width:${solid.toFixed(1)}%;height:22px;border-radius:${rSolid}"></span>
+        <span style="display:block;height:22px;border-radius:${rExtra};width:${extra.toFixed(1)}%;background:color-mix(in srgb, var(--accent) 26%, transparent)"></span>
+      </div>
+      <div class="fval"><b>${s.val.toLocaleString()}</b><span class="fpct">${pct.toFixed(1)}% of leads</span>${badges}<br>${skipLine}</div>
     </div>`;
   });
   document.getElementById("funnel").innerHTML=html;
+}
+
+// ---- B · path integrity ------------------------------------------------------
+function renderLeak(f,n,miss){
+  const rows=[
+    {name:"Attempted",   field:"mx_Attempts &gt; 0",      val:f.attempted,  nest:n.attempted,  ref:false},
+    {name:"Contacted",   field:"mx_First_Call present",   val:f.contacted,  nest:n.contacted,  ref:true},
+    {name:"Connected*",  field:"mx_Interacted_Count &gt; 0", val:f.connected, nest:n.connected, ref:false},
+    {name:"Counselled",  field:"counselling-done flag",   val:f.counselled, nest:n.counselled, ref:false},
+    {name:"Enrolled / paid",field:"ProspectStage class “won”", val:f.enrolled, nest:n.enrolled, ref:false}
+  ];
+  let body="";
+  rows.forEach(r=>{
+    const skip=Math.max(0,r.val-r.nest), sp=pctNum(skip,r.val);
+    const nm = r.ref ? `${r.name} <span class="fpct">(reference, not a spec step)</span>` : r.name;
+    body+=`<tr><td class="dim">${nm}</td><td class="fpct">${r.field}</td><td>${r.val.toLocaleString()}</td><td>${r.nest.toLocaleString()}</td><td>${skip.toLocaleString()}</td><td><span class="cov ${ccLeak(sp)}">${r.val?sp.toFixed(1):"0.0"}%</span></td></tr>`;
+  });
+  document.getElementById("leakhead").innerHTML=`<tr><th>Step</th><th>LSQ field behind it</th><th>As reported</th><th class="grp">On the full path</th><th>Skipped an earlier step</th><th>% off-path</th></tr>`;
+  document.getElementById("leakrows").innerHTML=body;
+  const e=f.enrolled||1;
+  document.getElementById("leaknote").innerHTML =
+    `Of the <b>${f.enrolled.toLocaleString()}</b> enrolled leads in scope: `+
+    `<b>${miss.enrNoAttempt.toLocaleString()}</b> (${pctStr(miss.enrNoAttempt,e)}) have <b>no attempt logged</b>, `+
+    `<b>${miss.enrNoCall.toLocaleString()}</b> (${pctStr(miss.enrNoCall,e)}) have <b>no first call</b>, `+
+    `<b>${miss.enrNoConnect.toLocaleString()}</b> (${pctStr(miss.enrNoConnect,e)}) were <b>never connected</b>, and `+
+    `<b>${miss.enrNoCouns.toLocaleString()}</b> (${pctStr(miss.enrNoCouns,e)}) are <b>not flagged counselled</b>. `+
+    `<b>${miss.cnsNoConnect.toLocaleString()}</b> counselled leads have no connect logged. `+
+    `These are activity-logging gaps, not impossible journeys — which is exactly why the ratios above are quoted as-reported, not off the narrowed path.`;
+}
+
+// ---- C · funnel by source / owner / programme --------------------------------
+function renderDim(dimM,f){
+  const head=document.getElementById("dhead"), body=document.getElementById("drows");
+  const rf=document.getElementById("rowfilter2");
+  const q=rf.value.trim().toLowerCase();
+  let keys=Object.keys(dimM).map(Number);
+  if(q) keys=keys.filter(k=>dimLabel(k).toLowerCase().includes(q));
+  keys.sort((a,b)=>dimM[b].leads-dimM[a].leads);
+  const shown=keys.slice(0,60);
+  const avgL2C=pctNum(f.counselled,f.created), avgL2P=pctNum(f.enrolled,f.created), avgC2P=pctNum(f.enrolled,f.counselled);
+  document.getElementById("ctitle").textContent="C · Funnel by "+dimTitle()+" — L2C / C2P / L2P";
+  head.innerHTML=`<tr><th>${dimTitle().replace(/^./,c=>c.toUpperCase())}</th><th>Leads</th><th>Attempted</th><th>Connected</th><th>Counselled</th><th>Enrolled</th><th class="grp">L2C</th><th>C2P</th><th>L2P</th></tr>`;
+  body.innerHTML="";
+  shown.forEach(k=>{
+    const r=dimM[k];
+    const l2c=pctNum(r.cns,r.leads), c2p=pctNum(r.enr,r.cns), l2p=pctNum(r.enr,r.leads);
+    body.insertAdjacentHTML("beforeend",`<tr>
+      <td class="dim">${dimLabel(k)}</td>
+      <td>${r.leads.toLocaleString()}</td>
+      <td>${r.att.toLocaleString()} <span class="fpct">${pctStr(r.att,r.leads)}</span></td>
+      <td>${r.con.toLocaleString()} <span class="fpct">${pctStr(r.con,r.leads)}</span></td>
+      <td>${r.cns.toLocaleString()}</td>
+      <td>${r.enr.toLocaleString()}</td>
+      <td class="grp"><span class="cov ${relCls(l2c,avgL2C)}">${l2c.toFixed(1)}%</span></td>
+      <td>${r.cns?`<span class="cov ${relCls(c2p,avgC2P)}">${c2p.toFixed(1)}%</span>`:'<span class="fpct">—</span>'}</td>
+      <td><span class="cov ${relCls(l2p,avgL2P)}">${l2p.toFixed(1)}%</span></td>
+    </tr>`);
+  });
+  const t=keys.reduce((a,k)=>{ const r=dimM[k]; a.leads+=r.leads;a.att+=r.att;a.con+=r.con;a.cns+=r.cns;a.enr+=r.enr; return a; },{leads:0,att:0,con:0,cns:0,enr:0});
+  body.insertAdjacentHTML("beforeend",`<tr class="totrow"><td>Total (all ${keys.length})</td><td>${t.leads.toLocaleString()}</td><td>${t.att.toLocaleString()}</td><td>${t.con.toLocaleString()}</td><td>${t.cns.toLocaleString()}</td><td>${t.enr.toLocaleString()}</td><td class="grp">${pctStr(t.cns,t.leads)}</td><td>${pctStr(t.enr,t.cns)}</td><td>${pctStr(t.enr,t.leads)}</td></tr>`);
+  if(!shown.length) body.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No ${dimTitle()} matches.</td></tr>`;
+  document.getElementById("trunc2").innerHTML = `<b>L2C</b> = counselled ÷ leads · <b>C2P</b> = enrolled ÷ counselled · <b>L2P</b> = enrolled ÷ leads, all on <b>as-reported</b> counts. Badges are shaded <b>relative to the overall rate</b> in scope (green ≥ 1.2×, red ≤ 0.8×), not against an absolute bar. `
+    + (q ? `Showing ${shown.length} of ${keys.length} matching “${q}”; the total row reconciles all matches.`
+         : `${keys.length} ${dimTitle()}s in scope; top ${shown.length} shown by volume. The total row reconciles all of them.`);
 }
 
 function selectedSrcOrder(){
@@ -1822,9 +2140,15 @@ function selectedSrcOrder(){
   for(const L of DATA.leads) cnt[L[0]]++;
   return Object.keys(cnt).map(Number).filter(k=>SEL.has(k)).sort((a,b)=>cnt[b]-cnt[a]);
 }
+function progColsInScope(proM){
+  const tot={}; DATA.stages.forEach((s,i)=>{ const r=proM[i]; for(const k in r) tot[k]=(tot[k]||0)+r[k]; });
+  const cols=Object.keys(tot).map(Number).sort((a,b)=>tot[b]-tot[a]);
+  return {cols:cols.slice(0,PROGCAP), hidden:Math.max(0,cols.length-PROGCAP)};
+}
 
+// ---- D · ProspectStage distribution -----------------------------------------
 function renderStage(res){
-  const {stageCount,srcM,ownM}=res;
+  const {stageCount,srcM,ownM,proM}=res;
   const total=stageCount.reduce((a,b)=>a+b,0);
   const thead=document.getElementById("thead"), body=document.getElementById("rows");
   const rf=document.getElementById("rowfilter");
@@ -1832,7 +2156,7 @@ function renderStage(res){
   const q=rf.value.trim().toLowerCase();
 
   if(BREAK==="overall"){
-    document.getElementById("btitle").textContent="B · ProspectStage distribution — overall";
+    document.getElementById("btitle").textContent="D · ProspectStage distribution — overall";
     let idx=DATA.stages.map((s,i)=>i).filter(i=>stageCount[i]>0);
     const maxc=Math.max(1,...idx.map(i=>stageCount[i]));
     idx.sort((a,b)=> sortCol==="name" ? sortDir*DATA.stages[a].localeCompare(DATA.stages[b]) : sortDir*(stageCount[a]-stageCount[b]));
@@ -1852,7 +2176,7 @@ function renderStage(res){
   }
 
   if(BREAK==="source"){
-    document.getElementById("btitle").textContent="B · ProspectStage × Source — heat matrix";
+    document.getElementById("btitle").textContent="D · ProspectStage × Source — heat matrix";
     const cols=selectedSrcOrder();                                  // source columns
     let stIdx=DATA.stages.map((s,i)=>i).filter(i=>stageCount[i]>0);
     stIdx.sort((a,b)=>stageCount[b]-stageCount[a]);
@@ -1871,8 +2195,30 @@ function renderStage(res){
     return;
   }
 
+  if(BREAK==="program"){
+    document.getElementById("btitle").textContent="D · ProspectStage × Programme — heat matrix";
+    const {cols,hidden}=progColsInScope(proM);
+    let stIdx=DATA.stages.map((s,i)=>i).filter(i=>stageCount[i]>0);
+    stIdx.sort((a,b)=>stageCount[b]-stageCount[a]);
+    let cmax=0; stIdx.forEach(i=>cols.forEach(c=>{ const v=(proM[i][c]||0); if(v>cmax)cmax=v; }));
+    thead.innerHTML=`<tr><th>Stage</th>${cols.map(c=>`<th>${pname(c)}</th>`).join("")}<th class="grp">Total</th><th>% of total</th></tr>`;
+    body.innerHTML="";
+    stIdx.forEach(i=>{
+      const cells=cols.map(c=>{ const v=proM[i][c]||0; return `<td><span class="cell" style="${heat(v,cmax)}">${v||""}</span></td>`; }).join("");
+      const nm = EN.has(i)?`<span style="color:var(--good)">${DATA.stages[i]}</span>`:DATA.stages[i];
+      body.insertAdjacentHTML("beforeend",`<tr><td class="dim">${nm}</td>${cells}<td class="tot">${stageCount[i].toLocaleString()}</td><td>${pctStr(stageCount[i],total)}</td></tr>`);
+    });
+    const colTot=cols.map(c=>{ let s=0; stIdx.forEach(i=>s+=(proM[i][c]||0)); return s; });
+    body.insertAdjacentHTML("beforeend",`<tr class="totrow"><td>Total (all programmes)</td>${colTot.map(v=>`<td>${v.toLocaleString()}</td>`).join("")}<td>${total.toLocaleString()}</td><td>100%</td></tr>`);
+    if(!stIdx.length||!cols.length) body.innerHTML=`<tr><td colspan="${cols.length+3}" style="text-align:center;color:var(--muted);padding:16px">No leads in scope.</td></tr>`;
+    document.getElementById("trunc").textContent = hidden
+      ? `Top ${cols.length} programmes by volume shown; ${hidden} smaller programme${hidden===1?"":"s"} hidden (their leads are still in the Total column). Cells shaded by lead count.`
+      : "Cells shaded by lead count (deeper = more). Rows ranked by total volume; Enrolled stage(s) in green.";
+    return;
+  }
+
   // BREAK === "owner": owners (rows) × stages (columns)
-  document.getElementById("btitle").textContent="B · Lead owner × ProspectStage — heat matrix";
+  document.getElementById("btitle").textContent="D · Lead owner × ProspectStage — heat matrix";
   let stCols=DATA.stages.map((s,i)=>i).filter(i=>stageCount[i]>0);
   stCols.sort((a,b)=>stageCount[b]-stageCount[a]);
   let owners=Object.keys(ownM).map(Number);
@@ -1901,15 +2247,34 @@ function render(){
   END=dateToIdx(document.getElementById("dend").value);
   if(END<START){ const t=START; START=END; END=t; }
   document.getElementById("rangel").textContent = dmy(START)+" → "+dmy(END);
-  const res=compute(); const f=res.f;
+  const res=compute(); const f=res.f, n=res.n;
   document.getElementById("t-tot").textContent=f.created.toLocaleString();
+  document.getElementById("t-att").textContent=f.attempted.toLocaleString();
   document.getElementById("t-contacted").textContent=f.contacted.toLocaleString();
+  document.getElementById("t-con").textContent=f.connected.toLocaleString();
+  document.getElementById("t-cns").textContent=f.counselled.toLocaleString();
   document.getElementById("t-enr").textContent=f.enrolled.toLocaleString();
+  document.getElementById("t-l2c").textContent=pctStr(f.counselled,f.created);
+  document.getElementById("t-c2p").textContent=pctStr(f.enrolled,f.counselled);
   document.getElementById("t-rate").textContent=pctStr(f.enrolled,f.created);
-  renderFunnel(f);
+  renderFunnel(f,n);
+  renderLeak(f,n,res.miss);
+  renderDim(res.dimM,f);
   renderStage(res);
-  document.getElementById("xnote").innerHTML=`<b>Read this before quoting a conversion rate.</b> This pull has <b>no counselling or payment data</b>, so the xlsx's <b>L2C</b> (Counselled) and <b>C2P</b> (Paid) legs are <b>not measurable</b> — the funnel shows <b>Created &rarr; Contacted &rarr; Connected &rarr; Enrolled</b> only. Enrolled is very low in a fresh young cohort (many leads are still “New Lead”), so the Lead&rarr;Enrolled % is a <b>floor, not a mature rate</b>. Funnel steps are counted independently (each = leads meeting that condition), not as strict nested subsets, so “Connected” can exceed “Contacted” if interactions were logged without a first-call timestamp. <b>Connected</b> is a proxy (mx_Interacted_Count &gt; 0), not a verified conversation. <b>Cross-check in LSQ:</b> the stage counts here should match the LSQ <b>Lead-Stage distribution</b> report (Manage Leads → group by ProspectStage) filtered to the same created-date window and sources.`;
-  document.getElementById("foot").innerHTML=`Window ${dmy(START)} → ${dmy(END)} (IST). Cohort — leads created ${isoToDMY(DATA.base)} onwards, pulled complete (earlier creates excluded, d≥0). <b>ProspectStage</b> is the spine of this report; stage labels read live from DATA.stages. Counselled/Paid funnel legs are absent from this pull. Fields: created, first-call (Contacted), mx_Interacted_Count (Connected proxy), ProspectStage (Enrolled = label contains “enrol”).`;
+  const offPath = f.enrolled - n.enrolled;
+  const noCouns = !f.counselled;
+  document.getElementById("xnote").innerHTML=
+    `<b>Read this before quoting a conversion rate.</b> The spec funnel is <b>Lead created &rarr; Attempted &rarr; Connected &rarr; Counselled &rarr; Enrolled</b>, `+
+    `with <b>L2C</b> = counselled ÷ leads, <b>C2P</b> = enrolled ÷ counselled, <b>L2P</b> = enrolled ÷ leads. `+
+    `<b>These five steps are NOT a nested funnel.</b> Each one is a separate LSQ field — attempts, interacted count, the counselling flag, ProspectStage — and a lead can satisfy a later one without ever satisfying an earlier one, `+
+    `usually because the activity was never logged. In this window <b>${offPath.toLocaleString()}</b> of <b>${f.enrolled.toLocaleString()}</b> enrolled leads (${pctStr(offPath,f.enrolled||1)}) did not clear every step above them. `+
+    `So: the <b>solid</b> part of each bar is the strict subset that cleared every earlier step, the <b>faded</b> part is the leads that skipped one, and the headline number is the <b>as-reported</b> count — the figure the business quotes. Section B breaks the gap down step by step. `+
+    (noCouns ? `<b>No counselled leads are present in this scope</b>, so L2C reads 0% and C2P is undefined — check the pull before reporting that as a real collapse. ` : ``)+
+    `<b>Counselled being larger than Enrolled is expected</b> (counselling precedes payment); the thing to watch is the off-path share, not that ordering. `+
+    `<b>Attempted</b> replaces the old “Contacted” step to match the spec; Contacted (first-call timestamp) is kept as a reference row in section B because the two disagree materially. `+
+    `<b>Connected</b> is a proxy (mx_Interacted_Count &gt; 0), not a verified conversation. Enrolled is low in a young cohort — many leads are still “New Lead” — so L2P is a <b>floor, not a mature rate</b>. `+
+    `<b>Cross-check in LSQ:</b> stage counts here should match the LSQ <b>Lead-Stage distribution</b> report (Manage Leads → group by ProspectStage) on the same created-date window and sources.`;
+  document.getElementById("foot").innerHTML=`Window ${dmy(START)} → ${dmy(END)} (IST). Cohort — leads created ${isoToDMY(DATA.base)} onwards, pulled complete (earlier creates excluded, d≥0). Unworked bulk/bot pool excluded from every denominator when the pool toggle is on. Stage labels and the enrolled/“won” class read live from the data — never hardcoded. Fields: created, mx_Attempts (Attempted), mx_First_Call (Contacted, reference), mx_Interacted_Count (Connected proxy), counselling flag (Counselled), ProspectStage (Enrolled), programme (breakdown).`;
 }
 
 // ---- controls wiring ----
@@ -1917,8 +2282,11 @@ function sync(){ document.querySelectorAll("#srcs .chk").forEach(c=>c.classList.
 function srcOrder(){ const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++; return Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]); }
 function chips(){ const box=document.getElementById("srcs"); box.innerHTML=""; srcOrder().forEach(k=>{ const c=document.createElement("span"); c.className="chk on"; c.dataset.k=k; c.innerHTML=`<span class="dot"></span>${DATA.sources[k]}`; c.onclick=()=>{ SEL.has(k)?SEL.delete(k):SEL.add(k); sync(); render(); }; box.appendChild(c); }); }
 function resetSel(){ SEL.clear(); DATA.sources.forEach((s,i)=>SEL.add(i)); }
+if(!HASPROG){ document.querySelectorAll('#segbreak button[data-b="program"], #segdim button[data-d="program"]').forEach(b=>b.style.display="none"); }
 document.querySelectorAll("#segbreak button").forEach(b=>b.onclick=()=>{ BREAK=b.dataset.b; document.querySelectorAll("#segbreak button").forEach(x=>x.classList.toggle("on",x===b)); render(); });
+document.querySelectorAll("#segdim button").forEach(b=>b.onclick=()=>{ DIM=b.dataset.d; document.querySelectorAll("#segdim button").forEach(x=>x.classList.toggle("on",x===b)); render(); });
 document.getElementById("rowfilter").oninput=render;
+document.getElementById("rowfilter2").oninput=render;
 document.getElementById("s-all").onclick=()=>{ resetSel(); sync(); render(); };
 document.getElementById("s-exint").onclick=()=>{ SEL.clear(); DATA.sources.forEach((s,i)=>{ if(s!=="Internshala") SEL.add(i); }); sync(); render(); };
 const DS=document.getElementById("dstart"), DE=document.getElementById("dend");
@@ -1930,40 +2298,107 @@ resetSel(); chips(); render();
 // ---- theme toggle (keep; default light) ----
 
 }
-// ---- home KPIs ----
 function init_home(){
   const DATA=window.__DATA;
   const di=m=>m==null?null:Math.floor(m/1440);
-  const sep=DATA.leads.filter(r=>!poolSkip(r)&&di(r[1])!=null&&di(r[1])>=0);
-  const n=sep.length;
-  const contacted=sep.filter(r=>r[2]!=null).length;
-  const attempted=sep.filter(r=>r[7]>0).length;
-  const connected=sep.filter(r=>r[8]>0).length;
-  const totatt=sep.reduce((s,r)=>s+(r[7]||0),0);
-  const enrolIdx=DATA.stages.map((s,i)=>/enrol/i.test(s)?i:-1).filter(i=>i>=0);
-  const enrolled=sep.filter(r=>enrolIdx.includes(r[9])).length;
+  const S=DATA.leads.filter(r=>!poolSkip(r)&&di(r[1])!=null&&di(r[1])>=0);
+  const n=S.length||1;
+  const inr=v=>"\u20B9"+Math.round(v).toLocaleString('en-IN');
+  const cr=v=> v>=1e7 ? "\u20B9"+(v/1e7).toFixed(2)+" Cr" : v>=1e5 ? "\u20B9"+(v/1e5).toFixed(1)+" L" : inr(v);
+  const num=v=>v.toLocaleString('en-IN');
+  const pct=(a,b)=>b?(100*a/b).toFixed(1)+"%":"\u2014";
+  const dur=m=>m==null?"\u2014":m>=1440?(m/1440).toFixed(1)+"d":m>=60?(m/60).toFixed(1)+"h":Math.round(m)+"m";
+  const med=a=>{ if(!a.length) return null; const x=a.slice().sort((p,q)=>p-q); return x[Math.floor(x.length/2)]; };
+
+  // ---- single pass ----
+  const SLA=120;
+  let att=0,con=0,coun=0,enr=0,attSum=0,rev=0,revN=0,slaHit=0,slaBase=0,unmeas=0,overdue=0;
+  const b=[0,0,0,0];                       // attempt buckets 0 / 1-2 / 3-5 / 6+
+  const spd=[];                            // speed from assignment (same clock as the scorecard)
+  const ASOF=(()=>{ let m=0; for(const r of S){ const d=di(r[1]); if(d>m)m=d; } return lastFullDay(m); })();
+  const bySrc=new Map(), byOwn=new Map();
+  for(const r of S){
+    const a=r[7]||0, isAtt=a>0, isCon=(r[8]||0)>0;
+    if(isAtt) att++; if(isCon) con++;
+    if(r[16]===1) coun++;
+    if(stageCls(r[9])==="won") enr++;
+    attSum+=a; b[a<=0?0:a<=2?1:a<=5?2:3]++;
+    if(r[17]>0){ rev+=r[17]; revN++; }
+    if(r[6]!=null && di(r[6])<ASOF) overdue++;
+    // speed: first call minus original assignment; unmeasurable rows leave the denominator
+    if(r[2]!=null){
+      const st=r[3], d=st==null?null:r[2]-st;
+      if(d!=null&&d>=0){ spd.push(d); slaBase++; if(d<=SLA) slaHit++; }
+      else unmeas++;
+    } else { slaBase++; }                  // never called = an SLA miss, not an exclusion
+    const sk=r[0], S1=bySrc.get(sk)||{n:0,att:0,con:0,a:0,rev:0}; S1.n++; S1.att+=isAtt?1:0; S1.con+=isCon?1:0; S1.a+=a; S1.rev+=r[17]||0; bySrc.set(sk,S1);
+    const ok=r[4], O1=byOwn.get(ok)||{n:0,a:0,sp:[]}; O1.n++; O1.a+=a;
+    if(r[2]!=null&&r[3]!=null&&r[2]-r[3]>=0) O1.sp.push(r[2]-r[3]);
+    byOwn.set(ok,O1);
+  }
   const pool=DATA.leads.filter(r=>r[11]===1&&di(r[1])!=null&&di(r[1])>=0).length;
   const scope=window.__EXPOOL?"worked leads":"all leads incl. unworked pool";
-  const kpi=[["Leads created ("+scope+")",n.toLocaleString('en-IN')],
-    ["Contacted",Math.round(100*contacted/n)+"%"],
-    ["Connect rate*",Math.round(100*connected/Math.max(1,attempted))+"%"],
-    ["Avg attempts",(totatt/n).toFixed(2)],
-    ["Enrolled",enrolled.toLocaleString('en-IN')],
-    [(window.__EXPOOL?"Unworked pool (excluded)":"Unworked pool (included)"),pool.toLocaleString('en-IN')]];
+
+  // ---- KPI row (spec: Master_Dashboard r5) ----
+  const kpi=[["Total leads ("+scope+")",num(S.length)],["Leads attempted",num(att)],["Connected",num(con)],
+    ["Connect %",pct(con,att)],["Avg attempts / lead",(attSum/n).toFixed(2)],
+    ["Avg speed to lead",dur(med(spd))],["SLA compliance %",pct(slaHit,slaBase)],
+    ["Revenue collected",cr(rev)],
+    [(window.__EXPOOL?"Unworked pool (excluded)":"Unworked pool (included)"),num(pool)]];
   document.getElementById("kpis").innerHTML=kpi.map(k=>`<div class="kpi"><div class="n">${k[1]}</div><div class="l">${k[0]}</div></div>`).join("");
+
+  // ---- quick health check (spec: r9) ----
+  const hc=[["0 attempts",b[0],b[0]/n>0.25?"bad":""],["1\u20132 attempts",b[1],""],["3\u20135 attempts",b[2],""],
+    ["6+ attempts",b[3],""],["SLA breaches",slaBase-slaHit,"warn"],["Overdue follow-ups",overdue,overdue/n>0.3?"bad":"warn"]];
+  document.getElementById("health").innerHTML=hc.map(h=>`<div class="hc ${h[2]}"><div class="n">${num(h[1])}</div><div class="l">${h[0]}</div></div>`).join("");
+  document.getElementById("hcnote").textContent=`attempt buckets use the spec threshold of 5 \u00b7 overdue measured as of ${dmyHome(ASOF)}`;
+
+  // ---- funnel snapshot with the business's own ratio names ----
+  const steps=[["Lead created",S.length],["Attempted",att],["Connected",con],["Counselled",coun],["Enrolled",enr]];
+  document.getElementById("mfunnel").innerHTML=steps.map((st,i)=>{
+    const p=100*st[1]/S.length;
+    const badge=i>0?` <span class="cov ${(()=>{const c=Math.round(100*st[1]/(steps[i-1][1]||1));return c>=50?"g":c>=25?"a":"r";})()}">\u2192 ${Math.round(100*st[1]/(steps[i-1][1]||1))}% step</span>`:"";
+    return `<div class="fstep"><div class="flabel">${st[0]}</div><div class="ftrack"><span class="bar" style="width:${p.toFixed(1)}%;height:20px;border-radius:5px"></span></div><div class="fval"><b>${num(st[1])}</b><span class="fpct">${p.toFixed(1)}% of created</span>${badge}</div></div>`;
+  }).join("")
+   +`<div class="fstep" style="margin-top:8px"><div class="flabel">L2C / C2P / L2P</div><div class="ftrack"></div><div class="fval"><b>${pct(coun,S.length)} / ${pct(enr,coun)} / ${pct(enr,S.length)}</b></div></div>`;
+  document.getElementById("mfnote").innerHTML="<b>These five steps come from independent LeadSquared fields, so they do not strictly nest</b> \u2014 a lead can be Enrolled without a logged first call. Read each step as its own measure, not as a subset of the one above. Attempts and connects are under-logged, so effort figures are floors.";
+
+  // ---- source table (spec: r9 right-hand block) ----
+  document.getElementById("msrc").innerHTML=[...bySrc.entries()].sort((a,c)=>c[1].n-a[1].n).map(([k,v])=>
+    `<tr><td class="dim">${DATA.sources[k]}</td><td>${num(v.n)}</td><td><span class="cov ${v.att&&100*v.con/v.att>=50?"g":v.att&&100*v.con/v.att>=25?"a":"r"}">${pct(v.con,v.att)}</span></td><td>${(v.a/(v.n||1)).toFixed(2)}</td><td>${v.rev?cr(v.rev):"\u2014"}</td></tr>`).join("");
+
+  // ---- team view (spec: r19) ----
+  const team=[...byOwn.entries()].sort((a,c)=>c[1].n-a[1].n).slice(0,12);
+  document.getElementById("mteam").innerHTML=team.map(([k,v])=>
+    `<tr><td class="dim">${DATA.owners[k]}</td><td>${num(v.n)}</td><td>${num(v.a)}</td><td>${dur(med(v.sp))}</td><td>${(v.a/(v.n||1)).toFixed(2)}</td></tr>`).join("");
+  document.getElementById("teamnote").textContent=`top ${team.length} of ${byOwn.size} \u00b7 speed clocked from assignment`;
+
+  // ---- what to look at: derived, not hardcoded ----
+  const w=[];
+  if(b[0]/n>0.15) w.push(["bad",`<b>${num(b[0])} leads (${(100*b[0]/n).toFixed(0)}%) have zero logged attempts.</b> Either they are genuinely untouched, or calling is not being logged \u2014 both are worth knowing before you read any effort metric below.`]);
+  if(slaBase&&100*slaHit/slaBase<25) w.push(["bad",`<b>SLA compliance is ${pct(slaHit,slaBase)}</b> against a ${SLA}-minute target. Uncalled leads count as misses; ${num(unmeas)} leads were unmeasurable and excluded.`]);
+  if(overdue/n>0.2) w.push(["warn",`<b>${num(overdue)} follow-ups are past their due date</b> as of ${dmyHome(ASOF)}.`]);
+  if(coun&&enr/coun>0.4) w.push(["ok",`<b>Counselling converts well \u2014 ${pct(enr,coun)} of counselled leads enrol.</b> The constraint is getting leads INTO counselling (${pct(coun,S.length)} of created), not closing them.`]);
+  if(revN) w.push(["ok",`<b>${cr(rev)} collected from ${num(revN)} paying leads</b> (${pct(revN,S.length)} of the cohort). This is cash received, not contract value \u2014 part-payments are included.`]);
+  if(window.__EXPOOL&&pool) w.push(["warn",`<b>${num(pool)} leads sit in an unworked pool account and are excluded</b> from every rate above. Toggle in the top bar to include them.`]);
+  document.getElementById("watch").innerHTML=w.map(x=>`<div class="wi ${x[0]}">${x[1]}</div>`).join("")||'<div class="wi ok">Nothing anomalous in this window.</div>';
+
+  // ---- footer ----
   const gen=DATA.generated_at?new Date(DATA.generated_at):null;
-  const istNow=gen?new Date(gen.getTime()+330*60000):null;   // render in IST regardless of viewer TZ
+  const istNow=gen?new Date(gen.getTime()+330*60000):null;
   const pad=v=>String(v).padStart(2,"0");
-  const stamp=istNow?`${pad(istNow.getUTCDate())}-${pad(istNow.getUTCMonth()+1)}-${istNow.getUTCFullYear()} `
-    +`${pad(istNow.getUTCHours())}:${pad(istNow.getUTCMinutes())} IST`:"unknown";
+  const stamp=istNow?`${pad(istNow.getUTCDate())}-${pad(istNow.getUTCMonth()+1)}-${istNow.getUTCFullYear()} ${pad(istNow.getUTCHours())}:${pad(istNow.getUTCMinutes())} IST`:"unknown";
   document.getElementById("homefoot").innerHTML=
-    `<b>Data as of ${stamp}.</b> `
-    +`Pulled live from the LeadSquared API (read-only); every date and time on this dashboard is IST. Cohort = leads created ${isoToDMY(DATA.base)} onwards. `
-    +(window.__EXPOOL
-      ? `Rates exclude leads held by unworked pool accounts (${(DATA.pools||[]).join(", ")||"none"}) \u2014 toggle in the top bar. `
-      : `Rates <b>include</b> unworked pool leads, which dilute every rate below. `)
-    +"*Connect rate uses mx_Interacted_Count&gt;0 as a proxy; attempts are under-logged (a floor). "
-    +"Revenue & full conversion funnel require a separate converted-lead pull.";
+    `<b>Data as of ${stamp}.</b> Pulled live from the LeadSquared API (read-only); every date and time on this dashboard is IST. `
+    +`Cohort = leads created ${isoToDMY(DATA.base)} onwards. `
+    +(window.__EXPOOL?`Rates exclude leads held by unworked pool accounts (${(DATA.pools||[]).join(", ")||"none"}) \u2014 toggle in the top bar. `:`Rates <b>include</b> unworked pool leads, which dilute every rate. `)
+    +"Connect uses mx_Interacted_Count&gt;0 as a proxy; attempts and connects are under-logged, so effort metrics are floors. "
+    +"Revenue is amount collected (mx_Total_Amount_Paid), including part-payments.";
+}
+// home needs a DD-MM-YYYY day formatter in its own scope
+function dmyHome(i){
+  const D=window.__DATA, base=new Date(D.base+"T00:00:00Z");
+  return isoToDMY(new Date(base.getTime()+i*86400000).toISOString().slice(0,10));
 }
 const VIEWS={
   speed:{title:"Speed to Lead",init:init_speed},
