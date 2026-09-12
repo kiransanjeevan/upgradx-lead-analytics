@@ -149,6 +149,17 @@ td.owncol{white-space:nowrap;}
 .hero-eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);}
 .hero-h1{font-size:clamp(26px,4vw,38px);margin:10px 0 0;letter-spacing:-.025em;font-weight:800;text-wrap:balance;}
 .hero-sub{color:var(--ink-2);font-size:15.5px;max-width:70ch;margin:12px 0 0;line-height:1.55;}
+.modeseg{display:inline-flex;border:1px solid var(--accent);border-radius:9px;overflow:hidden;}
+.modeseg button{border:none;background:var(--surface);color:var(--muted);font-family:var(--sans);font-size:13px;font-weight:700;padding:8px 16px;cursor:pointer;}
+.modeseg button+button{border-left:1px solid var(--accent);}
+.modeseg button.on{background:var(--accent);color:#fff;}
+.modehint{margin:9px 2px 0;font-size:12.5px;color:var(--muted);}
+.modehint b{color:var(--ink-2);}
+.acts{display:grid;gap:8px;}
+.actrow{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 15px;}
+.actrow .t{font-size:13.5px;font-weight:650;color:var(--ink);}
+.actrow .d{font-size:11.5px;color:var(--muted);margin-top:2px;}
+.actrow .v{font-size:21px;font-weight:750;font-variant-numeric:tabular-nums;color:var(--accent-2);}
 .dmyecho{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px;letter-spacing:.02em;}
 .kpinote{margin:10px 2px 0;font-size:12.5px;color:var(--muted);}
 .kpinote b{color:var(--ink-2);}
@@ -200,6 +211,13 @@ td.owncol{white-space:nowrap;}
   <div class="hero-eyebrow">Learning Centre · Performance Analytics</div>
   <h1 class="hero-h1">Lead Analytics</h1>
   <p class="hero-sub">A single place to analyse lead performance across the upGradX offline vertical — response speed, ageing, counsellor effort, source quality and pipeline stage. All reports run live off LeadSquared (read-only, IST). Pick a report below.</p>
+  <div class="mdsect" style="margin-top:26px">
+    <div class="modeseg" id="h-mode">
+      <button data-m="cohort" class="on">Cohort performance</button>
+      <button data-m="ops">Operational performance</button>
+    </div>
+  </div>
+  <p class="modehint" id="h-modehint"></p>
   <div class="mdbar">
     <div class="fld"><div class="fl">From</div><input type="date" id="h-d0"></div>
     <div class="fld"><div class="fl">To</div><input type="date" id="h-d1"></div>
@@ -222,8 +240,9 @@ td.owncol{white-space:nowrap;}
 
   <div class="mdgrid">
     <div>
-      <div class="mdsect"><span class="sh">Funnel snapshot</span></div>
+      <div class="mdsect"><span class="sh" id="mftitle">Funnel snapshot</span></div>
       <div class="funnel" id="mfunnel"></div>
+      <div class="acts" id="macts"></div>
       <p class="xnote" id="mfnote"></p>
     </div>
     <div>
@@ -231,9 +250,6 @@ td.owncol{white-space:nowrap;}
       <div class="tblwrap"><table><thead><tr><th>Source</th><th>Lead base</th><th>Connect %</th><th>Avg att.</th><th>Revenue</th></tr></thead><tbody id="msrc"></tbody></table></div>
     </div>
   </div>
-
-  <div class="mdsect"><span class="sh">Team view — top counsellors by lead base</span><span class="note" id="teamnote"></span></div>
-  <div class="tblwrap"><table><thead><tr><th>RM / Counsellor</th><th>Lead base</th><th>Attempts</th><th>Avg speed</th><th>Avg att. / lead</th></tr></thead><tbody id="mteam"></tbody></table></div>
 
   <div class="mdsect"><span class="sh">What to look at</span></div>
   <div class="watch" id="watch"></div>
@@ -2342,16 +2358,38 @@ function init_home(){
   let hi=Math.min(LAST,Math.max(toIdx(d0El.value),toIdx(d1El.value)));
   if(!isFinite(lo)||!isFinite(hi)){ lo=Math.max(0,LAST-29); hi=LAST; }
 
+  // ---- mode ----------------------------------------------------------------
+  // COHORT     : population = leads CREATED in the window. A real funnel — each step
+  //              nests, so conversion % and L2C/C2P/L2P are meaningful.
+  // OPERATIONAL: population = leads TOUCHED in the window, including backlog created
+  //              earlier. Each row is a DIFFERENT population keyed on its own event
+  //              date, so these are counts only — a step-% between them is not a real
+  //              number and is deliberately not shown.
+  const MODE=window.__HMODE||"cohort";
+  const inWin=v=>{ const d=di(v); return d!=null && d>=lo && d<=hi; };
   const S=DATA.leads.filter(r=>{ if(poolSkip(r)) return false;
     const d=di(r[1]); return d!=null && d>=lo && d<=hi; });
   const n=S.length||1;
+  // operational population: any tracked activity whose timestamp lands in the window
+  const W=DATA.leads.filter(r=>!poolSkip(r) && (
+      inWin(r[5]) || inWin(r[2]) || inWin(r[15]) || inWin(r[19]) || inWin(r[20]) || inWin(r[1])));
+  const ops={
+    worked   : W.length,
+    created  : S.length,
+    attempted: DATA.leads.filter(r=>!poolSkip(r)&&inWin(r[2])).length,
+    connected: DATA.leads.filter(r=>!poolSkip(r)&&inWin(r[15])).length,
+    counselled:DATA.leads.filter(r=>!poolSkip(r)&&inWin(r[19])).length,
+    enrolled : DATA.leads.filter(r=>!poolSkip(r)&&inWin(r[20])).length,
+  };
+  ops.revenue=DATA.leads.filter(r=>!poolSkip(r)&&inWin(r[20])).reduce((t,r)=>t+(r[17]||0),0);
+  ops.backlog=W.filter(r=>{ const d=di(r[1]); return d==null||d<lo; }).length;
 
   document.getElementById("h-win").innerHTML=
     `<b>${dmyHome(lo)} \u2192 ${dmyHome(hi)}</b><br>${hi-lo+1} days \u00b7 ${S.length.toLocaleString('en-IN')} leads created`;
   // maturity warning: does the window reach into the not-yet-converted zone?
   const mEl=document.getElementById("h-mature");
   const freshDays=Math.max(0, hi-(LAST-MATURITY));
-  if(hi>LAST-MATURITY && lo<=LAST){
+  if(MODE==="cohort" && hi>LAST-MATURITY && lo<=LAST){
     mEl.hidden=false;
     mEl.innerHTML=`<b>Immature cohort.</b> This window runs to ${dmyHome(hi)}, and leads created in the last ~${MATURITY} days have not had time to counsel or enrol. `
       +`Counselled, Enrolled, L2C, C2P, L2P and Revenue are therefore <b>understated</b> \u2014 use <b>Mature cohort</b> for a conversion rate you can quote.`;
@@ -2369,7 +2407,7 @@ function init_home(){
   const b=[0,0,0,0];                       // attempt buckets 0 / 1-2 / 3-5 / 6+
   const spd=[];                            // speed from assignment (same clock as the scorecard)
   const ASOF=(()=>{ let m=0; for(const r of S){ const d=di(r[1]); if(d>m)m=d; } return lastFullDay(m); })();
-  const bySrc=new Map(), byOwn=new Map();
+  const bySrc=new Map();
   for(const r of S){
     const a=r[7]||0, isAtt=a>0, isCon=(r[8]||0)>0;
     if(isAtt) att++; if(isCon) con++;
@@ -2385,26 +2423,43 @@ function init_home(){
       else unmeas++;
     } else { slaBase++; }                  // never called = an SLA miss, not an exclusion
     const sk=r[0], S1=bySrc.get(sk)||{n:0,att:0,con:0,a:0,rev:0}; S1.n++; S1.att+=isAtt?1:0; S1.con+=isCon?1:0; S1.a+=a; S1.rev+=r[17]||0; bySrc.set(sk,S1);
-    const ok=r[4], O1=byOwn.get(ok)||{n:0,a:0,sp:[]}; O1.n++; O1.a+=a;
-    if(r[2]!=null&&r[3]!=null&&r[2]-r[3]>=0) O1.sp.push(r[2]-r[3]);
-    byOwn.set(ok,O1);
   }
   const pool=DATA.leads.filter(r=>{ if(r[11]!==1) return false;
     const d=di(r[1]); return d!=null && d>=lo && d<=hi; }).length;   // window-scoped, like every other tile
 
   // ---- KPI row (spec: Master_Dashboard r5) ----
-  const kpi=[["Leads created",num(S.length)],["Leads attempted",num(att)],["Connected",num(con)],
-    ["Connect %",pct(con,att)],["Avg attempts / lead",(attSum/n).toFixed(2)],
-    ["Avg speed to lead",dur(med(spd))],["SLA compliance %",pct(slaHit,slaBase)],
-    ["Revenue collected",cr(rev)],
-    [(window.__EXPOOL?"Unworked pool (excluded)":"Unworked pool (included)"),num(pool)]];
+  const kpi = MODE==="cohort"
+    ? [["Leads created",num(S.length)],["Leads attempted",num(att)],["Connected",num(con)],
+       ["Connect %",pct(con,att)],["Avg attempts / lead",(attSum/n).toFixed(2)],
+       ["Avg speed to lead",dur(med(spd))],["SLA compliance %",pct(slaHit,slaBase)],
+       ["Revenue collected",cr(rev)],
+       [(window.__EXPOOL?"Unworked pool (excluded)":"Unworked pool (included)"),num(pool)]]
+    : [["Leads worked",num(ops.worked)],["of which backlog",num(ops.backlog)],
+       ["New leads created",num(ops.created)],["First attempts made",num(ops.attempted)],
+       ["First connects made",num(ops.connected)],["Counselling sessions",num(ops.counselled)],
+       ["Enrolments",num(ops.enrolled)],["Revenue collected",cr(ops.revenue)]];
   document.getElementById("kpis").innerHTML=kpi.map(k=>`<div class="kpi"><div class="n">${k[1]}</div><div class="l">${k[0]}</div></div>`).join("");
   // Basis + nesting. Every tile counts leads CREATED in the window — not leads worked
   // in it. Attempted/Connected are genuine subsets; Counselled/Enrolled are not.
   const enrNoCoun=S.filter(r=>stageCls(r[9])==="won"&&r[16]!==1).length;
   const counNoCon=S.filter(r=>r[16]===1&&(r[8]||0)<=0).length;
+  document.getElementById("h-modehint").innerHTML = MODE==="cohort"
+    ? `<b>Cohort performance.</b> Everything below describes the leads <b>created</b> in this window and how they converted, whenever that conversion happened. Answers \u201cwere these leads any good?\u201d`
+    : `<b>Operational performance.</b> Everything below describes what actually <b>happened</b> in this window, including work on leads created earlier. Answers \u201cwhat did the team do?\u201d Counts only \u2014 no conversion rates, because each row is a different population.`;
+  document.querySelectorAll("#h-mode button").forEach(b=>b.classList.toggle("on",b.dataset.m===MODE));
+  // the health check and maturity warning are cohort concepts; hide them in ops mode
+  document.querySelectorAll(".hcrow, #hcnote").forEach(e=>{ e.style.display = MODE==="cohort"?"":"none"; });
+  document.querySelectorAll(".mdsect").forEach(e=>{
+    const sh=e.querySelector(".sh");
+    if(sh && sh.textContent.trim().startsWith("Quick health check")) e.style.display = MODE==="cohort"?"":"none";
+  });
   document.getElementById("kpinote").innerHTML=
-    `<b>Basis.</b> Every tile counts leads <b>created</b> between ${dmyHome(lo)} and ${dmyHome(hi)} — `
+    MODE==="ops"
+    ? `<b>Basis.</b> Every tile counts an <b>event that occurred</b> between ${dmyHome(lo)} and ${dmyHome(hi)}, `
+      +`regardless of when the lead was created — ${num(ops.backlog)} of the ${num(ops.worked)} leads worked were created before this window. `
+      +`<b>No row is a subset of another</b>, so ratios between them are not conversion rates. `
+      +`Switch to <b>Cohort performance</b> for a funnel that nests.`
+    : `<b>Basis.</b> Every tile counts leads <b>created</b> between ${dmyHome(lo)} and ${dmyHome(hi)} — `
     +`not leads worked on during it. A lead created in June and called yesterday is not here. `
     +`All five funnel tiles are subsets of Leads created. `
     +`<b>Chain.</b> Created \u2283 Attempted \u2283 Connected holds exactly. Below that it breaks — `
@@ -2425,25 +2480,61 @@ function init_home(){
   document.getElementById("health").innerHTML=hc.map(h=>`<div class="hc ${h[2]}"><div class="n">${num(h[1])}</div><div class="l">${h[0]}</div></div>`).join("");
   document.getElementById("hcnote").textContent=`attempt buckets use the spec threshold of 5 \u00b7 overdue measured as of ${dmyHome(ASOF)}`;
 
-  // ---- funnel snapshot with the business's own ratio names ----
-  const steps=[["Lead created",S.length],["Attempted",att],["Connected",con],["Counselled",coun],["Enrolled",enr]];
-  document.getElementById("mfunnel").innerHTML=steps.map((st,i)=>{
-    const p=100*st[1]/S.length;
-    const badge=i>0?` <span class="cov ${(()=>{const c=Math.round(100*st[1]/(steps[i-1][1]||1));return c>=50?"g":c>=25?"a":"r";})()}">\u2192 ${Math.round(100*st[1]/(steps[i-1][1]||1))}% step</span>`:"";
-    return `<div class="fstep"><div class="flabel">${st[0]}</div><div class="ftrack"><span class="bar" style="width:${p.toFixed(1)}%;height:20px;border-radius:5px"></span></div><div class="fval"><b>${num(st[1])}</b><span class="fpct">${p.toFixed(1)}% of created</span>${badge}</div></div>`;
-  }).join("")
-   +`<div class="fstep" style="margin-top:8px"><div class="flabel">L2C / C2P / L2P</div><div class="ftrack"></div><div class="fval"><b>${pct(coun,S.length)} / ${pct(enr,coun)} / ${pct(enr,S.length)}</b></div></div>`;
-  document.getElementById("mfnote").innerHTML="<b>These five steps come from independent LeadSquared fields, so they do not strictly nest</b> \u2014 a lead can be Enrolled without a logged first call. Read each step as its own measure, not as a subset of the one above. Attempts and connects are under-logged, so effort figures are floors.";
+  // ---- funnel (cohort) OR activity scorecard (operational) ----
+  const fEl=document.getElementById("mfunnel"), aEl=document.getElementById("macts");
+  if(MODE==="cohort"){
+    aEl.innerHTML=""; aEl.hidden=true; fEl.hidden=false;
+    document.getElementById("mftitle").textContent="Funnel snapshot \u00b7 cohort created in window";
+    const steps=[["Lead created",S.length],["Attempted",att],["Connected",con],["Counselled",coun],["Enrolled",enr]];
+    fEl.innerHTML=steps.map((st,i)=>{
+      const p=100*st[1]/S.length;
+      const c=Math.round(100*st[1]/(steps[i-1]?steps[i-1][1]||1:1));
+      const badge=i>0?` <span class="cov ${c>=50?"g":c>=25?"a":"r"}">\u2192 ${c}% step</span>`:"";
+      return `<div class="fstep"><div class="flabel">${st[0]}</div><div class="ftrack"><span class="bar" style="width:${p.toFixed(1)}%;height:20px;border-radius:5px"></span></div><div class="fval"><b>${num(st[1])}</b><span class="fpct">${p.toFixed(1)}% of created</span>${badge}</div></div>`;
+    }).join("")
+     +`<div class="fstep" style="margin-top:8px"><div class="flabel">L2C / C2P / L2P</div><div class="ftrack"></div><div class="fval"><b>${pct(coun,S.length)} / ${pct(enr,coun)} / ${pct(enr,S.length)}</b></div></div>`;
+    document.getElementById("mfnote").innerHTML="<b>These five steps come from independent LeadSquared fields, so they do not strictly nest</b> \u2014 a lead can be Enrolled without a logged first call. Attempts and connects are under-logged, so effort figures are floors.";
+  } else {
+    fEl.innerHTML=""; fEl.hidden=true; aEl.hidden=false;
+    document.getElementById("mftitle").textContent="Activity in window \u00b7 counts, not a funnel";
+    const rows=[
+      ["Leads worked",ops.worked,"any tracked activity in the window \u2014 including backlog created earlier"],
+      ["\u2514 of which backlog",ops.backlog,"created before this window, worked during it"],
+      ["New leads created",ops.created,"created in the window"],
+      ["First attempts made",ops.attempted,"first call logged in the window"],
+      ["First connects made",ops.connected,"first interaction in the window"],
+      ["Counselling sessions",ops.counselled,"first counselling dated in the window"],
+      ["Enrolments",ops.enrolled,"first payment dated in the window"],
+      ["Revenue collected",null,"payments first dated in the window"],
+    ];
+    aEl.innerHTML=rows.map(r=>
+      `<div class="actrow"><div><div class="t">${r[0]}</div><div class="d">${r[2]}</div></div>`
+      +`<div class="v">${r[1]==null?cr(ops.revenue):num(r[1])}</div></div>`).join("");
+    document.getElementById("mfnote").innerHTML=
+      "<b>Deliberately no conversion percentages here.</b> Each row is a different population keyed on its own event date \u2014 "
+      +"a lead can be worked this month but created last month, and counselled this month having connected last month. "
+      +"A ratio between two of these rows is not a conversion rate. Switch to <b>Cohort performance</b> for rates you can quote. "
+      +"<b>One limitation:</b> LeadSquared exposes only the <i>latest</i> activity date, so \u201cLeads worked\u201d is exact for a "
+      +"window ending on the most recent day and under-counts older windows.";
+  }
 
   // ---- source table (spec: r9 right-hand block) ----
+  if(MODE==="ops"){
+    const oSrc=new Map();
+    for(const r of W){ const k=r[0], o=oSrc.get(k)||{n:0,att:0,con:0,rev:0};
+      o.n++; if(inWin(r[2])) o.att++; if(inWin(r[15])) o.con++; if(inWin(r[20])) o.rev+=r[17]||0; oSrc.set(k,o); }
+    document.querySelector("#msrc").closest(".tblwrap").previousElementSibling.querySelector(".sh").textContent="Source \u00b7 activity in window";
+    const head=document.querySelector("#msrc").closest("table").querySelector("thead tr");
+    head.innerHTML="<th>Source</th><th>Leads worked</th><th>First attempts</th><th>First connects</th><th>Revenue</th>";
+    document.getElementById("msrc").innerHTML=[...oSrc.entries()].sort((a,c)=>c[1].n-a[1].n).map(([k,v])=>
+      `<tr><td class="dim">${DATA.sources[k]}</td><td>${num(v.n)}</td><td>${num(v.att)}</td><td>${num(v.con)}</td><td>${v.rev?cr(v.rev):"\u2014"}</td></tr>`).join("");
+  } else {
+  document.querySelector("#msrc").closest(".tblwrap").previousElementSibling.querySelector(".sh").textContent="Source performance";
+  document.querySelector("#msrc").closest("table").querySelector("thead tr").innerHTML=
+    "<th>Source</th><th>Lead base</th><th>Connect %</th><th>Avg att.</th><th>Revenue</th>";
   document.getElementById("msrc").innerHTML=[...bySrc.entries()].sort((a,c)=>c[1].n-a[1].n).map(([k,v])=>
     `<tr><td class="dim">${DATA.sources[k]}</td><td>${num(v.n)}</td><td><span class="cov ${v.att&&100*v.con/v.att>=50?"g":v.att&&100*v.con/v.att>=25?"a":"r"}">${pct(v.con,v.att)}</span></td><td>${(v.a/(v.n||1)).toFixed(2)}</td><td>${v.rev?cr(v.rev):"\u2014"}</td></tr>`).join("");
-
-  // ---- team view (spec: r19) ----
-  const team=[...byOwn.entries()].sort((a,c)=>c[1].n-a[1].n).slice(0,12);
-  document.getElementById("mteam").innerHTML=team.map(([k,v])=>
-    `<tr><td class="dim">${DATA.owners[k]}</td><td>${num(v.n)}</td><td>${num(v.a)}</td><td>${dur(med(v.sp))}</td><td>${(v.a/(v.n||1)).toFixed(2)}</td></tr>`).join("");
-  document.getElementById("teamnote").textContent=`top ${team.length} of ${byOwn.size} \u00b7 speed clocked from assignment`;
+  }
 
   // ---- what to look at: derived, not hardcoded ----
   const w=[];
@@ -2461,6 +2552,9 @@ function init_home(){
   const pad=v=>String(v).padStart(2,"0");
   const stamp=istNow?`${pad(istNow.getUTCDate())}-${pad(istNow.getUTCMonth()+1)}-${istNow.getUTCFullYear()} ${pad(istNow.getUTCHours())}:${pad(istNow.getUTCMinutes())} IST`:"unknown";
   // ---- controls ----
+  document.querySelectorAll("#h-mode button").forEach(b=>b.onclick=()=>{
+    window.__HMODE=b.dataset.m; init_home();
+  });
   d0El.onchange=d1El.onchange=()=>{ markCustom(); init_home(); };
   function markCustom(){ document.querySelectorAll("#h-preset button").forEach(b=>b.classList.remove("on")); }
   document.querySelectorAll("#h-preset button").forEach(b=>b.onclick=()=>{

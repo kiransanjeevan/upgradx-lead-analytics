@@ -57,7 +57,10 @@ COLS = ("ProspectID,CreatedOn,mx_First_Call_Date_and_Time,mx_Date_of_Lead_Assign
         "mx_Interacted_Count,ProspectStage,mx_Highest_Qualification,Source,"
         # report-architecture fields required by LSQ_Sales_Report_Master_Dashboard.xlsx
         "mx_Program,mx_SA_Allocation_City,mx_Offline_Centre_Name,mx_First_Interaction_Date,"
-        "mx_Is_Counselled_Lead,mx_Total_Amount_Paid,mx_Assignment_Date_Current_Owner")
+        "mx_Is_Counselled_Lead,mx_Total_Amount_Paid,mx_Assignment_Date_Current_Owner,"
+        # event dates — needed for the Operational view (what happened IN a window,
+        # as opposed to how a created cohort eventually converted)
+        "mx_First_Counselling_Date,mx_First_Transaction_Date")
 
 
 def pull(lookup):
@@ -218,6 +221,8 @@ def main():
             1 if str(L.get("mx_Is_Counselled_Lead") or "").strip().lower() in ("yes", "true", "1") else 0,
             money(L.get("mx_Total_Amount_Paid")),                         # 17 revenue
             mins(L.get("mx_Assignment_Date_Current_Owner")),              # 18 current-owner assign
+            mins(L.get("mx_First_Counselling_Date")),                     # 19 counselled ON
+            mins(L.get("mx_First_Transaction_Date")),                     # 20 first payment ON
         ])
 
     # Any raw Source landing in "Other" with real volume or real money should get its
@@ -259,7 +264,7 @@ def main():
            "cols": ["src", "created", "firstcall", "assign", "owner", "lastactivity",
                     "followup", "attempts", "interacted", "stage", "qual", "pool",
                     "program", "city", "centre", "firstconnect", "counselled", "revenue",
-                    "assign_cur"],
+                    "assign_cur", "counselled_on", "paid_on"],
            "leads": leads}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
@@ -268,6 +273,8 @@ def main():
     nconn = sum(1 for x in leads if x[15] is not None)
     ncoun = sum(x[16] for x in leads)
     nrev  = sum(1 for x in leads if x[17] > 0)
+    print(f"  event dates: counselled-on {sum(1 for x in leads if x[19] is not None)} "
+          f"| paid-on {sum(1 for x in leads if x[20] is not None)}")
     print(f"  new fields: first-connect {nconn} | counselled {ncoun} | with revenue {nrev} "
           f"| programs {len(progs)} | cities {len(citys)} | centres {len(ctrs)}")
     print(f"wrote {OUT}: {len(leads)} leads | {len(srcs)} src | {len(owns)} owners "
