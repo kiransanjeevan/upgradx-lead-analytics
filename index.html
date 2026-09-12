@@ -2643,6 +2643,7 @@ function upgradeDates(){
     txt.type='text'; txt.className='dtext'; txt.placeholder='DD-MM-YYYY';
     txt.setAttribute('inputmode','numeric');
     txt.setAttribute('aria-label',(nat.getAttribute('aria-label')||'date')+' (DD-MM-YYYY)');
+    nat.tabIndex=-1;                    // invisible: keyboard users tab to the text field
     const cal=document.createElement('span'); cal.className='dcal'; cal.innerHTML=CAL_SVG;
     cal.title='Pick from a calendar';
     nat.parentNode.insertBefore(wrap, nat);
@@ -2662,10 +2663,25 @@ function upgradeDates(){
     txt.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); txt.blur(); } });
     txt.addEventListener('input', ()=>txt.classList.remove('bad'));
     // Safari only opens the popover from its own glyph, which is invisible here, so
-    // always drive it explicitly. showPicker needs user activation — a click is one.
+    // drive it explicitly. Two dismissal problems come with that:
+    //   1. clicking the button to CLOSE also re-fires this handler, reopening it;
+    //   2. the native input never had focus, so Escape had nothing to close.
+    // Hence the open flag, and focusing the input before showing the picker.
+    let open=false;
+    const close=()=>{ open=false; try{ nat.blur(); }catch(_){} };
+    cal.addEventListener('mousedown', e=>e.preventDefault());   // don't steal focus mid-click
     cal.addEventListener('click', ()=>{
-      try{ nat.showPicker(); }
-      catch(_){ nat.style.pointerEvents='auto'; nat.focus(); nat.click(); nat.style.pointerEvents=''; }
+      if(open){ close(); return; }                              // second click = dismiss
+      nat.focus();                                              // so Escape + blur work natively
+      try{ nat.showPicker(); open=true; }
+      catch(_){ nat.style.pointerEvents='auto'; nat.click(); nat.style.pointerEvents=''; open=true; }
+    });
+    nat.addEventListener('change', close);
+    nat.addEventListener('blur',   close);
+    nat.addEventListener('keydown', e=>{ if(e.key==='Escape'){ close(); txt.focus(); } });
+    // Escape anywhere in the control returns you to the text field with the value intact
+    txt.addEventListener('keydown', e=>{
+      if(e.key==='Escape'){ e.preventDefault(); txt.value=isoToDMY(nat.value); txt.classList.remove('bad'); txt.blur(); }
     });
   });
   syncDateText();
