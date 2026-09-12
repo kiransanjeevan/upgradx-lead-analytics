@@ -171,8 +171,13 @@ td.owncol{white-space:nowrap;}
 .dcal input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;padding:0;border:0;pointer-events:none;}
 .kpinote{margin:10px 2px 0;font-size:12.5px;color:var(--muted);}
 .kpinote b{color:var(--ink-2);}
-.mdbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin:22px 0 4px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);}
+.mdbar{display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px;margin:22px 0 4px;padding:16px 18px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);}
 .mdbar .fld{display:flex;flex-direction:column;gap:5px;}
+.mdctl{flex:1 1 420px;display:flex;flex-direction:column;gap:12px;}
+.mdrow{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;}
+.ordiv{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:10px;font-weight:700;
+letter-spacing:.14em;color:var(--muted);}
+.ordiv::before,.ordiv::after{content:"";height:1px;background:var(--line);flex:1;}
 .mdbar .fl{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
 .mdwin{margin-left:auto;font-size:12px;color:var(--muted);text-align:right;}
 .mdwin b{color:var(--ink-2);}
@@ -227,13 +232,20 @@ td.owncol{white-space:nowrap;}
   </div>
   <p class="modehint" id="h-modehint"></p>
   <div class="mdbar">
-    <div class="fld"><div class="fl">From</div><input type="date" id="h-d0"></div>
-    <div class="fld"><div class="fl">To</div><input type="date" id="h-d1"></div>
-    <div class="fld"><div class="fl">Quick ranges</div>
+    <div class="mdctl">
+      <div class="mdrow">
+        <div class="fld"><div class="fl">From</div><input type="date" id="h-d0"></div>
+        <div class="fld"><div class="fl">To</div><input type="date" id="h-d1"></div>
+      </div>
+      <div class="ordiv">OR</div>
+      <div class="mdrow">
+      <div class="fld"><div class="fl">Quick ranges</div>
       <div class="seg" id="h-preset">
         <button data-p="7">7d</button><button data-p="30" class="on">30d</button>
         <button data-p="90">90d</button><button data-p="mtd">This month</button>
         <button data-p="mature">Mature cohort</button><button data-p="all">All time</button>
+      </div>
+      </div>
       </div>
     </div>
     <div class="mdwin" id="h-win"></div>
@@ -2576,6 +2588,7 @@ function init_home(){
     document.querySelectorAll("#h-preset button").forEach(x=>x.classList.toggle("on",x===b));
   });
 
+  syncDateText();
   document.getElementById("homefoot").innerHTML=
     `<b>Data as of ${stamp}.</b> Window <b>${dmyHome(lo)} \u2192 ${dmyHome(hi)}</b> (IST). Pulled live from the LeadSquared API (read-only); every date and time on this dashboard is IST. `
     +`Data available from ${isoToDMY(DATA.base)}. `
@@ -2696,6 +2709,11 @@ function syncDateText(){
 document.addEventListener('change', ev=>{
   if(ev.target && ev.target.matches && ev.target.matches('input[type=date]')) setTimeout(syncDateText,0);
 });
+// Presets and mode buttons set input.value directly, which fires no event — so the
+// visible DD-MM-YYYY text went stale behind them. Re-sync after any segmented click.
+document.addEventListener('click', ev=>{
+  if(ev.target && ev.target.closest && ev.target.closest('.seg,.modeseg')) setTimeout(syncDateText,0);
+}, true);
 // ---- refresh status: last run, next run, and whether one was missed ----
 // All arithmetic is on absolute instants; IST wall-clock is derived by shifting +5:30
 // and reading UTC fields, so the result is identical in any viewer timezone.
