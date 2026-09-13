@@ -206,7 +206,11 @@ def main():
         leads.append([
             idxof(bucket, srcs, sidx),
             mins(L.get("CreatedOn")), mins(L.get("mx_First_Call_Date_and_Time")),
-            mins(L.get("mx_Assignment_Date_Current_Owner")),
+            # slot 3 = the ORIGINAL assignment. This read mx_Assignment_Date_Current_Owner
+            # by mistake, which reassignment overwrites — so the Owner Scorecard clock and
+            # the Speed "assign" anchor were both measuring the wrong field, and slots 3
+            # and 18 were byte-identical for all 131,030 leads.
+            mins(L.get("mx_Date_of_Lead_Assignment")),
             idxof(owner, owns, oidx),
             mins(L.get("ProspectActivityDate_Max")), mins(L.get("mx_Follow_Up_Date")),
             num(L.get("mx_Reached_Out_Attempts")), num(L.get("mx_Interacted_Count")),

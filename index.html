@@ -1032,7 +1032,8 @@ function compute(){
     const age=asOf-d, bi=bkt(age);
     const pend=L[2]==null?1:0;
     const la=dayIdx(L[5]); const noact=(la!=null && (asOf-la)>10)?1:0;
-    const fu=dayIdx(L[6]); const over=(fu!=null && fu<asOf)?1:0;
+    // same rule as the dashboard: due date passed AND no activity since it passed
+    const fu=dayIdx(L[6]); const over=(fu!=null && fu<asOf && (la==null || la<fu))?1:0;
     const c=r.b[bi]; c.all++; c.pend+=pend; c.noact+=noact; c.over+=over;
     r.tAll++; r.tPend+=pend; r.tNoact+=noact; r.tOver+=over; r.tAtt+=(L[7]||0);
   }
@@ -1246,7 +1247,8 @@ function compute(){
       else r.unmeasurable++;   // call predates this assignment, or no assignment date
     }
     else r.uncalled++;
-    if(L[6]!=null && dayIdx(L[6])<ASOF) r.overdue++;
+    if(L[6]!=null && dayIdx(L[6])<ASOF && (L[5]==null || dayIdx(L[5])<dayIdx(L[6]))
+       && stageCls(L[9])==="open") r.overdue++;   // open leads only — a closed lead owes no callback
     if(ENROLLED_IDX.has(L[9])) r.enrolled++;
   }
 
@@ -2089,7 +2091,7 @@ function compute(){
   // f = AS-REPORTED counts: each condition evaluated independently on its own LSQ field.
   // n = STRICT-PATH counts: cumulative AND down the spec order, so each step really is
   //     a subset of the one above it. f - n = leads that skipped an earlier step.
-  const f={created:0,attempted:0,contacted:0,connected:0,counselled:0,enrolled:0};
+  const f={created:0,attempted:0,contacted:0,connected:0,counselled:0,enrolled:0,enrCns:0};
   const n={attempted:0,contacted:0,connected:0,counselled:0,enrolled:0};
   const miss={enrNoAttempt:0,enrNoCall:0,enrNoConnect:0,enrNoCouns:0,cnsNoConnect:0,anyRev:0,rev:0};
   const stageCount=DATA.stages.map(()=>0);
@@ -2113,6 +2115,10 @@ function compute(){
     if(cn) f.connected++;
     if(cs) f.counselled++;
     if(en) f.enrolled++;
+    // C2P must divide a SUBSET of the counselled base or it is not a conversion rate:
+    // 60% of enrolments are never flagged counselled, which pushed C2P over 100% —
+    // one owner rendered 6,700% in a green badge.
+    if(en && cs) f.enrCns++;
     // strict nesting: created -> attempted -> connected -> counselled -> enrolled
     if(at){ n.attempted++;
       if(ct) n.contacted++;
@@ -2133,8 +2139,8 @@ function compute(){
     if(ownM){ const o=L[4]; (ownM[o]||(ownM[o]={}))[st]=(ownM[o][st]||0)+1; }
     if(proM){ const r=proM[st]; r[pk]=(r[pk]||0)+1; }
     const dk = DIM==="owner" ? L[4] : (DIM==="program" ? pk : L[0]);
-    const row = dimM[dk] || (dimM[dk]={leads:0,att:0,ct:0,con:0,cns:0,enr:0});
-    row.leads++; if(at)row.att++; if(ct)row.ct++; if(cn)row.con++; if(cs)row.cns++; if(en)row.enr++;
+    const row = dimM[dk] || (dimM[dk]={leads:0,att:0,ct:0,con:0,cns:0,enr:0,enrCns:0});
+    row.leads++; if(at)row.att++; if(ct)row.ct++; if(cn)row.con++; if(cs)row.cns++; if(en)row.enr++; if(en&&cs)row.enrCns++;
   }
   return {f,n,miss,stageCount,srcM,ownM,proM,dimM};
 }
@@ -2164,7 +2170,7 @@ function renderFunnel(f,n){
       badges+=` <span class="cov ${cc(conv)}">&rarr; ${conv}% step</span>`;
     }
     if(s.label==="Counselled") badges+=` <span class="cov" ${neutral}>L2C ${pctStr(f.counselled,f.created)}</span>`;
-    if(s.label==="Enrolled / paid") badges+=` <span class="cov" ${neutral}>C2P ${pctStr(f.enrolled,f.counselled)}</span> <span class="cov" ${neutral}>L2P ${pctStr(f.enrolled,f.created)}</span>`;
+    if(s.label==="Enrolled / paid") badges+=` <span class="cov" ${neutral}>C2P ${pctStr(f.enrCns,f.counselled)}</span> <span class="cov" ${neutral}>L2P ${pctStr(f.enrolled,f.created)}</span>`;
     const skip = s.val-s.nest;
     const skipLine = i>0 && skip>0
       ? `<span class="fpct">${skip.toLocaleString()} of these skipped an earlier step</span>`
@@ -2218,13 +2224,13 @@ function renderDim(dimM,f){
   if(q) keys=keys.filter(k=>dimLabel(k).toLowerCase().includes(q));
   keys.sort((a,b)=>dimM[b].leads-dimM[a].leads);
   const shown=keys.slice(0,60);
-  const avgL2C=pctNum(f.counselled,f.created), avgL2P=pctNum(f.enrolled,f.created), avgC2P=pctNum(f.enrolled,f.counselled);
+  const avgL2C=pctNum(f.counselled,f.created), avgL2P=pctNum(f.enrolled,f.created), avgC2P=pctNum(f.enrCns,f.counselled);
   document.getElementById("ctitle").textContent="C · Funnel by "+dimTitle()+" — L2C / C2P / L2P";
   head.innerHTML=`<tr><th>${dimTitle().replace(/^./,c=>c.toUpperCase())}</th><th>Leads</th><th>Attempted</th><th>Connected</th><th>Counselled</th><th>Enrolled</th><th class="grp">L2C</th><th>C2P</th><th>L2P</th></tr>`;
   body.innerHTML="";
   shown.forEach(k=>{
     const r=dimM[k];
-    const l2c=pctNum(r.cns,r.leads), c2p=pctNum(r.enr,r.cns), l2p=pctNum(r.enr,r.leads);
+    const l2c=pctNum(r.cns,r.leads), c2p=pctNum(r.enrCns,r.cns), l2p=pctNum(r.enr,r.leads);
     body.insertAdjacentHTML("beforeend",`<tr>
       <td class="dim">${dimLabel(k)}</td>
       <td>${r.leads.toLocaleString()}</td>
@@ -2237,10 +2243,10 @@ function renderDim(dimM,f){
       <td><span class="cov ${relCls(l2p,avgL2P)}">${l2p.toFixed(1)}%</span></td>
     </tr>`);
   });
-  const t=keys.reduce((a,k)=>{ const r=dimM[k]; a.leads+=r.leads;a.att+=r.att;a.con+=r.con;a.cns+=r.cns;a.enr+=r.enr; return a; },{leads:0,att:0,con:0,cns:0,enr:0});
+  const t=keys.reduce((a,k)=>{ const r=dimM[k]; a.leads+=r.leads;a.att+=r.att;a.con+=r.con;a.cns+=r.cns;a.enr+=r.enr;a.enrCns+=r.enrCns||0; return a; },{leads:0,att:0,con:0,cns:0,enr:0,enrCns:0});
   body.insertAdjacentHTML("beforeend",`<tr class="totrow"><td>Total (all ${keys.length})</td><td>${t.leads.toLocaleString()}</td><td>${t.att.toLocaleString()}</td><td>${t.con.toLocaleString()}</td><td>${t.cns.toLocaleString()}</td><td>${t.enr.toLocaleString()}</td><td class="grp">${pctStr(t.cns,t.leads)}</td><td>${pctStr(t.enr,t.cns)}</td><td>${pctStr(t.enr,t.leads)}</td></tr>`);
   if(!shown.length) body.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No ${dimTitle()} matches.</td></tr>`;
-  document.getElementById("trunc2").innerHTML = `<b>L2C</b> = counselled ÷ leads · <b>C2P</b> = enrolled ÷ counselled · <b>L2P</b> = enrolled ÷ leads, all on <b>as-reported</b> counts. Badges are shaded <b>relative to the overall rate</b> in scope (green ≥ 1.2×, red ≤ 0.8×), not against an absolute bar. `
+  document.getElementById("trunc2").innerHTML = `<b>L2C</b> = counselled ÷ leads · <b>C2P</b> = enrolled <i>that were also flagged counselled</i> ÷ counselled · <b>L2P</b> = enrolled ÷ leads, all on <b>as-reported</b> counts. Badges are shaded <b>relative to the overall rate</b> in scope (green ≥ 1.2×, red ≤ 0.8×), not against an absolute bar. `
     + (q ? `Showing ${shown.length} of ${keys.length} matching “${q}”; the total row reconciles all matches.`
          : `${keys.length} ${dimTitle()}s in scope; top ${shown.length} shown by volume. The total row reconciles all of them.`);
 }
@@ -2365,7 +2371,7 @@ function render(){
   document.getElementById("t-cns").textContent=f.counselled.toLocaleString();
   document.getElementById("t-enr").textContent=f.enrolled.toLocaleString();
   document.getElementById("t-l2c").textContent=pctStr(f.counselled,f.created);
-  document.getElementById("t-c2p").textContent=pctStr(f.enrolled,f.counselled);
+  document.getElementById("t-c2p").textContent=pctStr(f.enrCns,f.counselled);
   document.getElementById("t-rate").textContent=pctStr(f.enrolled,f.created);
   renderFunnel(f,n);
   renderLeak(f,n,res.miss);
@@ -2375,7 +2381,7 @@ function render(){
   const noCouns = !f.counselled;
   document.getElementById("xnote").innerHTML=
     `<b>Read this before quoting a conversion rate.</b> The spec funnel is <b>Lead created &rarr; Attempted &rarr; Connected &rarr; Counselled &rarr; Enrolled</b>, `+
-    `with <b>L2C</b> = counselled ÷ leads, <b>C2P</b> = enrolled ÷ counselled, <b>L2P</b> = enrolled ÷ leads. `+
+    `with <b>L2C</b> = counselled ÷ leads, <b>C2P</b> = enrolled <i>that were also flagged counselled</i> ÷ counselled, <b>L2P</b> = enrolled ÷ leads. `+
     `<b>These five steps are NOT a nested funnel.</b> Each one is a separate LSQ field — attempts, interacted count, the counselling flag, ProspectStage — and a lead can satisfy a later one without ever satisfying an earlier one, `+
     `usually because the activity was never logged. In this window <b>${offPath.toLocaleString()}</b> of <b>${f.enrolled.toLocaleString()}</b> enrolled leads (${pctStr(offPath,f.enrolled||1)}) did not clear every step above them. `+
     `So: the <b>solid</b> part of each bar is the strict subset that cleared every earlier step, the <b>faded</b> part is the leads that skipped one, and the headline number is the <b>as-reported</b> count — the figure the business quotes. Section B breaks the gap down step by step. `+
@@ -2481,14 +2487,16 @@ function init_home(){
     if(stageCls(r[9])==="won") enr++;
     attSum+=a; b[a<=0?0:a<=2?1:a<=5?2:3]++;
     if(r[17]>0) revN++;
-    if(r[6]!=null && di(r[6])<ASOF) overdue++;
+    // "Overdue" has to mean a callback nobody made. Date-passed alone flagged 86% of
+    // the book, 90% of which had activity after the due date — a stale field, not neglect.
+    if(r[6]!=null && di(r[6])<ASOF && (r[5]==null || di(r[5])<di(r[6]))) overdue++;
     // speed: first call minus original assignment; unmeasurable rows leave the denominator
     if(r[2]!=null){
       const st=r[3], d=st==null?null:r[2]-st;
       if(d!=null&&d>=0){ spd.push(d); slaBase++; if(d<=SLA) slaHit++; }
       else unmeas++;
     } else { slaBase++; }                  // never called = an SLA miss, not an exclusion
-    const sk=r[0], S1=bySrc.get(sk)||{n:0,att:0,con:0,a:0,rev:0}; S1.n++; S1.att+=isAtt?1:0; S1.con+=isCon?1:0; S1.a+=a; S1.rev+=r[17]||0; bySrc.set(sk,S1);
+    const sk=r[0], S1=bySrc.get(sk)||{n:0,att:0,con:0,a:0,paid:0}; S1.n++; S1.att+=isAtt?1:0; S1.con+=isCon?1:0; S1.a+=a; if((r[17]||0)>0) S1.paid++; bySrc.set(sk,S1);
   }
   // window-scoped pool count, and the same split per source — a source can look like a
   // strong performer purely because most of it is parked and only the worked sliver shows
@@ -2503,7 +2511,7 @@ function init_home(){
   const kpi = MODE==="cohort"
     ? [["Leads created",num(S.length)],["Leads attempted",num(att)],["Connected",num(con)],
        ["Connect %",pct(con,att)],["Avg attempts / lead",(attSum/n).toFixed(2)],
-       ["Avg speed to lead",dur(med(spd))],["SLA compliance %",pct(slaHit,slaBase)],
+       ["Median speed to lead",dur(med(spd))],["SLA compliance %",pct(slaHit,slaBase)],
        [(window.__EXPOOL?"Unworked pool (excluded)":"Unworked pool (included)"),num(pool)]]
     : [["Leads worked",num(ops.worked)],["of which backlog",num(ops.backlog)],
        ["New leads created",num(ops.created)],["First attempts made",num(ops.attempted)],
@@ -2597,7 +2605,7 @@ function init_home(){
   // ---- source table (spec: r9 right-hand block) ----
   if(MODE==="ops"){
     const oSrc=new Map();
-    for(const r of W){ const k=r[0], o=oSrc.get(k)||{n:0,att:0,con:0,rev:0};
+    for(const r of W){ const k=r[0], o=oSrc.get(k)||{n:0,att:0,con:0,enr:0};
       o.n++; if(inWin(r[2])) o.att++; if(inWin(r[15])) o.con++; if(inWin(r[20])) o.enr++; oSrc.set(k,o); }
     document.querySelector("#msrc").closest(".tblwrap").previousElementSibling.querySelector(".sh").textContent="Source \u00b7 activity in window";
     const head=document.querySelector("#msrc").closest("table").querySelector("thead tr");
