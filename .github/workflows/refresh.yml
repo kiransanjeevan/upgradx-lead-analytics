@@ -4,17 +4,21 @@ name: Daily LSQ refresh
 # Vercel is git-connected, so the commit triggers a redeploy automatically.
 on:
   schedule:
-    # 01:30 UTC = 07:00 IST — after the ~6 PM IST Internshala batch + overnight automations settle.
-    # NOTE: GitHub runs scheduled workflows on a best-effort basis; the first scheduled
-    # run here started 4h31m late. On-the-hour/half-hour crons are the most contended,
-    # so an odd minute (e.g. "17 2 * * *") tends to start closer to on time.
-    - cron: "30 1 * * *"
+    # 01:37 UTC = 07:07 IST — after the ~6 PM IST Internshala batch + overnight
+    # automations settle. The odd minute is deliberate: GitHub queues scheduled jobs
+    # from a shared pool and :00/:30 are the most contended slots, so runs there are
+    # the most likely to be delayed or dropped (see TROUBLESHOOTING in README.md).
+    - cron: "37 1 * * *"
+    # Backup, 04:43 UTC = 10:13 IST. GitHub does not guarantee scheduled runs and has
+    # already skipped one here entirely. This second attempt no-ops when the morning
+    # run already landed, so it costs nothing on a normal day and rescues a dropped one.
+    - cron: "43 4 * * *"
   workflow_dispatch: {}   # lets you trigger a refresh manually from the Actions tab
 
 # The dashboard reads this to show "next refresh in ..." and to flag a missed run.
 # It is NOT what schedules the job — keep it equal to the cron above.
 env:
-  LSQ_REFRESH_IST: "07:00"   # = cron 30 1 * * * UTC
+  LSQ_REFRESH_IST: "07:07"   # = the primary cron, 37 1 * * * UTC
 
 permissions:
   contents: write
@@ -33,7 +37,23 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The backup run must not duplicate the morning one. A manual dispatch always
+      # proceeds; a scheduled run stops here if today's IST data is already committed.
+      - name: Skip if today's data already landed
+        id: freshness
+        run: |
+          gen=$(python3 -c "import json;print(json.load(open('data/universe.json'))['generated_at'][:10])")
+          today=$(TZ=Asia/Kolkata date +%F)
+          echo "committed data is from $gen; today in IST is $today"
+          if [ "$gen" = "$today" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Today's refresh already landed — skipping the backup run."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Pull LeadSquared data
+        if: steps.freshness.outputs.skip != 'true'
         env:
           LSQ_HOST: ${{ secrets.LSQ_HOST }}
           LSQ_ACCESS: ${{ secrets.LSQ_ACCESS }}
@@ -42,6 +62,7 @@ jobs:
         run: python scripts/pull.py
 
       - name: Commit refreshed data
+        if: steps.freshness.outputs.skip != 'true'
         run: |
           git config user.name  "lsq-refresh-bot"
           git config user.email "actions@github.com"
