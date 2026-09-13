@@ -197,6 +197,11 @@ letter-spacing:.14em;color:var(--muted);}
 .kpi .l{font-size:12px;color:var(--muted);margin-top:7px;}
 .sectlabel{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:34px 2px 14px;}
 .cardgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+.navgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:9px;margin:20px 0 4px;}
+.ncard{display:flex;align-items:center;gap:9px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:11px 12px;box-shadow:var(--shadow);cursor:pointer;font-family:var(--sans);transition:border-color .14s,transform .14s;}
+.ncard:hover{border-color:var(--accent);transform:translateY(-1px);}
+.ncard .ic{width:28px;height:28px;flex:0 0 28px;border-radius:8px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:15px;}
+.ncard .t{font-size:13px;font-weight:650;color:var(--ink);line-height:1.25;letter-spacing:-.01em;}
 .rcard{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 18px 20px;box-shadow:var(--shadow);cursor:pointer;transition:border-color .14s,transform .14s,box-shadow .14s;font-family:var(--sans);display:flex;flex-direction:column;gap:9px;}
 .rcard:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 16px rgb(20 30 45/.10);}
 .rcard .ic{width:40px;height:40px;border-radius:10px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:20px;}
@@ -220,6 +225,7 @@ letter-spacing:.14em;color:var(--muted);}
   <div class="hero-eyebrow">Learning Centre · Performance Analytics</div>
   <h1 class="hero-h1">Lead Analytics</h1>
   <p class="hero-sub">A single place to analyse lead performance across the upGradX offline vertical — response speed, ageing, counsellor effort, source quality and pipeline stage. All reports run live off LeadSquared (read-only, IST). Pick a report below.</p>
+  <div class="navgrid"><button class="ncard" onclick="show('speed')" title="Time from creation / first-call / assignment to first contact — by source and owner, with SLA compliance."><span class="ic">⏱️</span><span class="t">Speed to Lead</span></button><button class="ncard" onclick="show('ageing')" title="How long a chosen creation cohort has sat since creation — pending-first-attempt, no-activity and overdue-follow-up across age buckets, filtered by stage."><span class="ic">📅</span><span class="t">Lead Ageing</span></button><button class="ncard" onclick="show('owner')" title="Per-counsellor accountability — leads, coverage, attempts, speed, SLA and overdue follow-ups."><span class="ic">🧑‍💼</span><span class="t">Owner Scorecard</span></button><button class="ncard" onclick="show('source')" title="Per-source volume, attempted, connected, connect %, avg attempts and speed to lead."><span class="ic">📊</span><span class="t">Source Performance</span></button><button class="ncard" onclick="show('attempts')" title="Dialling effort by owner / source — total & average attempts, connected leads, attempt-distribution buckets."><span class="ic">📞</span><span class="t">Average Attempts</span></button><button class="ncard" onclick="show('connect')" title="Attempted vs connected (proxy), connect % and average attempts to connect, by source / owner."><span class="ic">🔌</span><span class="t">Connectability</span></button><button class="ncard" onclick="show('funnel')" title="Created → Attempted → Connected → Counselled → Enrolled, with L2C/C2P/L2P, path integrity and the full ProspectStage distribution."><span class="ic">🪜</span><span class="t">Funnel / Stage</span></button></div>
   <div class="mdsect" style="margin-top:26px">
     <div class="modeseg" id="h-mode">
       <button data-m="cohort" class="on">Cohort performance</button>
@@ -267,14 +273,6 @@ letter-spacing:.14em;color:var(--muted);}
     </div>
   </div>
 
-  <div class="sectlabel">Reports</div>
-  <div class="cardgrid"><button class="rcard" onclick="show('speed')"><div class="ic">⏱️</div><div class="t">Speed to Lead</div><div class="d">Time from creation / first-call / assignment to first contact — by source and owner, with SLA compliance.</div><div class="go">Open report →</div></button>
-<button class="rcard" onclick="show('ageing')"><div class="ic">📅</div><div class="t">Lead Ageing</div><div class="d">How long leads sit unworked, with pending-first-attempt, no-activity and overdue-follow-up flags across age buckets.</div><div class="go">Open report →</div></button>
-<button class="rcard" onclick="show('owner')"><div class="ic">🧑‍💼</div><div class="t">Owner Scorecard</div><div class="d">Per-counsellor accountability — leads, coverage, attempts, speed, SLA and overdue follow-ups.</div><div class="go">Open report →</div></button>
-<button class="rcard" onclick="show('source')"><div class="ic">📊</div><div class="t">Source Performance</div><div class="d">Per-source volume, attempted, connected, connect %, avg attempts and speed to lead.</div><div class="go">Open report →</div></button>
-<button class="rcard" onclick="show('attempts')"><div class="ic">📞</div><div class="t">Average Attempts</div><div class="d">Dialling effort by owner / source — total & average attempts, connected leads, attempt-distribution buckets.</div><div class="go">Open report →</div></button>
-<button class="rcard" onclick="show('connect')"><div class="ic">🔌</div><div class="t">Connectability</div><div class="d">Attempted vs connected (proxy), connect % and average attempts to connect, by source / owner.</div><div class="go">Open report →</div></button>
-<button class="rcard" onclick="show('funnel')"><div class="ic">🪜</div><div class="t">Funnel / Stage</div><div class="d">Created → Contacted → Connected → Enrolled funnel plus the full ProspectStage distribution.</div><div class="go">Open report →</div></button></div>
   <div class="homefoot" id="homefoot"></div>
 </div></template>
 <template id="tpl-speed">  <div class="eyebrow">LSQ · Speed to Lead</div>
