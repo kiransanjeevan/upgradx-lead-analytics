@@ -357,8 +357,15 @@ letter-spacing:.14em;color:var(--muted);}
     <div class="lvl">
       <div class="num">1</div>
       <div>
-        <div class="lname">As-of date <span class="side" id="asofl"></span></div>
+        <div class="lname">Created between <span class="side" id="cohortl"></span></div>
+        <div class="dates">
+          <div class="fld"><div class="fl">From</div><input type="date" id="a-c0"></div>
+          <div class="fld"><div class="fl">To</div><input type="date" id="a-c1"></div>
+        </div>
+        <div class="datehint">Which <b>creation cohort</b> to age. Defaults to everything pulled, so you can narrow to e.g. August leads and watch that cohort alone.</div>
+        <div class="lname" style="margin-top:16px">As-of date <span class="side" id="asofl"></span></div>
         <div><input type="date" id="asof"></div>
+        <div class="mature" id="asofwarn" hidden></div>
         <div class="datehint">Age = <b>as-of − creation date</b> (whole days, IST). Covers the <b>pulled cohort</b> — leads created from the window start onwards, pulled complete. Earlier dates are disabled; the exact range is in the footer.</div>
       </div>
     </div>
@@ -376,14 +383,18 @@ letter-spacing:.14em;color:var(--muted);}
         <div class="segwrap">
           <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Break down by</div><div class="seg" id="segdim"><button data-dim="source" class="on">Source</button><button data-dim="owner">Lead owner</button></div></div>
           <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Age-bucket cells show</div><div class="seg" id="segmetric"><button data-m="all" class="on">All leads</button><button data-m="pend">Pending 1st</button><button data-m="noact">No activity &gt;10d</button><button data-m="over">Overdue follow-up</button></div></div>
-          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Lifecycle</div><div class="seg" id="seglife"><button data-l="open" class="on">Open only</button><button data-l="openwon">Open + Enrolled</button><button data-l="all">All stages</button></div></div>
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Lifecycle</div><div class="seg" id="seglife"><button data-l="open" class="on">Open only</button><button data-l="all">All stages</button></div></div>
+        </div>
+        <div class="lname" style="margin-top:16px">Stages <span class="side"><a id="st-all">All</a> · <a id="st-none">None</a></span></div>
+        <div class="srcs" id="stgchips"></div>
+        <div class="datehint">Narrow to specific ProspectStage values — e.g. <b>New Lead</b> alone shows leads never worked, <b>Follow Up</b> shows those in progress. Overrides Lifecycle when anything is deselected.
         </div>
       </div>
     </div>
   </div>
 
   <div class="tiles">
-    <div class="tile hi"><div class="n" id="t-tot">—</div><div class="l">Leads (Sep cohort, selected)</div></div>
+    <div class="tile hi"><div class="n" id="t-tot">—</div><div class="l">Leads in cohort (selected)</div></div>
     <div class="tile unc"><div class="n" id="t-pend">—</div><div class="l">Pending first attempt</div></div>
     <div class="tile warn"><div class="n" id="t-noact">—</div><div class="l">No activity &gt;10 days</div></div>
     <div class="tile warn"><div class="n" id="t-over">—</div><div class="l">Overdue follow-up</div></div>
@@ -993,7 +1004,7 @@ function init_ageing(){
 const DATA = window.__DATA;
 // leads: [src, created, firstcall, assign, owner, lastactivity, followup] — minutes since base (IST); null=missing
 const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
-let DIM="source", METRIC="all", LIFE="open"; const SEL=new Set();
+let DIM="source", METRIC="all", LIFE="open"; const SEL=new Set(); const STG=new Set();
 const BUCKETS=[["0 days",0,0],["1 day",1,1],["2 days",2,2],["3–7 days",3,7],["8+ days",8,9999]];
 const METLABEL={all:"all leads",pend:"pending first attempt",noact:"no activity >10 days",over:"overdue follow-up"};
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
@@ -1005,18 +1016,19 @@ const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); i
 function mk(){ return {b:BUCKETS.map(()=>({all:0,pend:0,noact:0,over:0})), tAll:0,tPend:0,tNoact:0,tOver:0,tAtt:0}; }
 function compute(){
   const asOf=dateToIdx(document.getElementById("asof").value);
+  const c0=Math.max(0,dateToIdx(document.getElementById("a-c0").value));
+  const c1=Math.min(asOf,dateToIdx(document.getElementById("a-c1").value));
   const rows={};
-  let excl=0;
+  let excl=0, cohort=0;
   for(const L of DATA.leads){
     if(poolSkip(L)) continue;
     const d=dayIdx(L[1]); if(d==null||d<0||d>asOf) continue;
+    if(d<c0||d>c1) continue;                       // creation-cohort window
     if(!SEL.has(L[0])) continue;
+    cohort++;
+    if(!STG.has(L[9])){ excl++; continue; }        // explicit stage selection
     // Ageing measures the OPEN pipeline. A lead already Not Interested / DNP / Junk /
     // Cold / Disqualified is not ageing — it is finished. Test rows never count.
-    const cls=stageCls(L[9]);
-    if(cls==="test"){ excl++; continue; }
-    if(LIFE==="open"    && cls!=="open"){ excl++; continue; }
-    if(LIFE==="openwon" && cls==="lost"){ excl++; continue; }
     const key=DIM==="source"?L[0]:L[4];
     const r=rows[key]||(rows[key]=mk());
     const age=asOf-d, bi=bkt(age);
@@ -1026,15 +1038,34 @@ function compute(){
     const c=r.b[bi]; c.all++; c.pend+=pend; c.noact+=noact; c.over+=over;
     r.tAll++; r.tPend+=pend; r.tNoact+=noact; r.tOver+=over; r.tAtt+=(L[7]||0);
   }
-  return {rows, asOf, excl};
+  return {rows, asOf, excl, c0, c1, cohort};
 }
 function heat(v,max){ if(!v||!max) return ""; const pct=Math.min(52,Math.round(52*v/max)); return `background:color-mix(in srgb, var(--accent) ${pct}%, transparent)`; }
 function render(){
-  const {rows,asOf,excl}=compute();
+  const {rows,asOf,excl,c0,c1,cohort}=compute();
   document.getElementById("asofl").textContent="as of "+dmy(asOf);
+  document.getElementById("cohortl").textContent=`${dmy(c0)} \u2192 ${dmy(c1)} \u00b7 ${cohort.toLocaleString('en-IN')} leads`;
   const nameOf = DIM==="source"?(k=>DATA.sources[k]):(k=>DATA.owners[k]);
-  const LIFELABEL={open:"open stages only",openwon:"open + Enrolled",all:"all stages incl. closed"};
-  document.getElementById("mtitle").textContent = `Ageing matrix — cells: ${METLABEL[METRIC]} · by ${DIM==="source"?"source":"lead owner"} · ${LIFELABEL[LIFE]}`;
+  const nStg=STG.size, allStg=(DATA.stages||[]).filter((x,i)=>stageCls(i)!=="test").length;
+  const LIFELABEL={open:"open stages only",all:"all stages incl. closed"};
+  const stgLabel = nStg===allStg ? "all stages incl. closed"
+                 : nStg===0 ? "no stages selected"
+                 : LIFE==="open" && document.querySelector('#seglife button.on') ? "open stages only"
+                 : `${nStg} of ${allStg} stages selected`;
+  // Age is recomputed from the creation date, which is immutable. Everything else —
+  // stage, last activity, follow-up date — exists only as its CURRENT value, so an
+  // as-of in the past mixes historical ages with today's flags. Say so rather than
+  // let someone read it as a snapshot of how things looked that day.
+  const backdated = asOf < LASTFULL;
+  const warnEl=document.getElementById("asofwarn");
+  if(warnEl){
+    warnEl.hidden=!backdated;
+    if(backdated) warnEl.innerHTML=`<b>Back-dated as-of.</b> Ages are recomputed to ${dmy(asOf)}, but stage, `
+      +`last activity and follow-up dates are only stored as their <b>current</b> values \u2014 so Pending, `
+      +`No-activity, Overdue and the stage filter still reflect today, not ${dmy(asOf)}. `
+      +`This is not a historical snapshot; use it to re-age a cohort, not to reconstruct a past view.`;
+  }
+  document.getElementById("mtitle").textContent = `Ageing matrix — cells: ${METLABEL[METRIC]} · by ${DIM==="source"?"source":"lead owner"} · ${stgLabel}`;
   document.getElementById("ownfilter").style.display = DIM==="owner"?"":"none";
   const thead=document.getElementById("thead");
   thead.innerHTML="<tr><th>"+(DIM==="source"?"Source":"Lead owner")+"</th>"+BUCKETS.map(b=>`<th>${b[0]}</th>`).join("")
@@ -1063,7 +1094,7 @@ function render(){
   document.getElementById("t-avgatt").textContent=T.tAll?(T.tAtt/T.tAll).toFixed(1):"0";
   document.getElementById("trunc").textContent = DIM==="owner" ? (q?`Owners matching “${q}”.`:`All ${keys.length} owners with leads in scope, ranked by volume.`) : "";
   document.getElementById("xnote").innerHTML=`<b>Cross-check in LSQ:</b> a bucket cell = Source (row) × Created On in the bucket's date range. <b>Pending</b> = First Call empty, within the selected lifecycle · <b>No act &gt;10d</b> = last activity &gt;10 days before as-of · <b>Overdue FU</b> = follow-up date already past. Every count reduces to a created-date range, so it reconciles with the LSQ dashboard (IST). <b>Avg att</b> = mean of logged reach-out attempts (mx_Reached_Out_Attempts; empty = 0 attempts) — a floor, since attempts are under-logged.`;
-  document.getElementById("foot").innerHTML=`As of ${dmy(asOf)} (IST). Cohort: leads created ${isoToDMY(DATA.base)} onwards, pulled complete; leads created before ${isoToDMY(DATA.base)} are excluded (their older buckets would be incomplete). <b>Lifecycle: ${LIFELABEL[LIFE]}</b>${excl?` — ${excl.toLocaleString("en-IN")} lead(s) in the window excluded as closed or test data`:""}. Closed = ProspectStage is Not Interested / Did Not Pick / Junk / Cold / Disqualified; a closed lead is finished, not ageing. Fields: created, first-call, last-activity (ProspectActivityDate_Max), follow-up (mx_Follow_Up_Date), attempts (mx_Reached_Out_Attempts).`;
+  document.getElementById("foot").innerHTML=`As of ${dmy(asOf)} (IST). Ageing the cohort <b>created ${dmy(c0)} \u2192 ${dmy(c1)}</b> (${cohort.toLocaleString("en-IN")} leads); the pull itself starts ${isoToDMY(DATA.base)}, and anything created earlier is excluded because its older buckets would be incomplete. <b>Stages: ${stgLabel}</b>${excl?` — ${excl.toLocaleString("en-IN")} lead(s) in the cohort excluded by the stage filter`:""}. Closed = ProspectStage is Not Interested / Did Not Pick / Junk / Cold / Disqualified; a closed lead is finished, not ageing. Fields: created, first-call, last-activity (ProspectActivityDate_Max), follow-up (mx_Follow_Up_Date), attempts (mx_Reached_Out_Attempts).`;
 }
 function sync(){document.querySelectorAll("#srcs .chk").forEach(c=>c.classList.toggle("on",SEL.has(+c.dataset.k)));}
 function srcOrder(){ const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++; return Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]); }
@@ -1071,12 +1102,49 @@ function chips(){ const box=document.getElementById("srcs"); box.innerHTML=""; s
 function resetSel(){ SEL.clear(); DATA.sources.forEach((s,i)=>SEL.add(i)); }
 document.querySelectorAll("#segdim button").forEach(b=>b.onclick=()=>{ DIM=b.dataset.dim; document.querySelectorAll("#segdim button").forEach(x=>x.classList.toggle("on",x===b)); render(); });
 document.querySelectorAll("#segmetric button").forEach(b=>b.onclick=()=>{ METRIC=b.dataset.m; document.querySelectorAll("#segmetric button").forEach(x=>x.classList.toggle("on",x===b)); render(); });
-document.querySelectorAll("#seglife button").forEach(b=>b.onclick=()=>{ LIFE=b.dataset.l; document.querySelectorAll("#seglife button").forEach(x=>x.classList.toggle("on",x===b)); render(); });
+// Lifecycle is now a PRESET over the stage chips rather than a separate filter, so
+// there is one place that decides which stages count and it is always visible.
+function applyLife(){
+  STG.clear();
+  (DATA.stages||[]).forEach((lbl,i)=>{
+    const c=stageCls(i);
+    if(c==="test") return;                       // test rows never count
+    if(LIFE==="open" && c!=="open") return;
+    STG.add(i);
+  });
+  drawStages();
+}
+function drawStages(){
+  const box=document.getElementById("stgchips"); if(!box) return;
+  box.innerHTML="";
+  const cnt=new Array((DATA.stages||[]).length).fill(0);
+  for(const L of DATA.leads){ if(!poolSkip(L) && dayIdx(L[1])>=0) cnt[L[9]]++; }
+  (DATA.stages||[]).map((s,i)=>i).filter(i=>stageCls(i)!=="test")
+    .sort((a,b)=>cnt[b]-cnt[a]).forEach(i=>{
+      const c=document.createElement("span");
+      c.className="chk"+(STG.has(i)?" on":""); c.dataset.i=i;
+      const cls=stageCls(i);
+      c.title=`${DATA.stages[i]} — ${cls} · ${cnt[i].toLocaleString('en-IN')} leads in the pulled cohort`;
+      c.innerHTML=`<span class="dot"></span>${DATA.stages[i]}`;
+      c.onclick=()=>{ STG.has(i)?STG.delete(i):STG.add(i);
+        document.querySelectorAll("#seglife button").forEach(x=>x.classList.remove("on"));
+        drawStages(); render(); };
+      box.appendChild(c);
+    });
+}
+document.querySelectorAll("#seglife button").forEach(b=>b.onclick=()=>{ LIFE=b.dataset.l; document.querySelectorAll("#seglife button").forEach(x=>x.classList.toggle("on",x===b)); applyLife(); render(); });
+document.getElementById("st-all").onclick=()=>{ STG.clear(); (DATA.stages||[]).forEach((s,i)=>{ if(stageCls(i)!=="test") STG.add(i); }); document.querySelectorAll("#seglife button").forEach(x=>x.classList.toggle("on",x.dataset.l==="all")); LIFE="all"; drawStages(); render(); };
+document.getElementById("st-none").onclick=()=>{ STG.clear(); document.querySelectorAll("#seglife button").forEach(x=>x.classList.remove("on")); drawStages(); render(); };
 document.getElementById("ownfilter").oninput=render;
 document.getElementById("s-all").onclick=()=>{ resetSel(); sync(); render(); };
 document.getElementById("s-exint").onclick=()=>{ SEL.clear(); DATA.sources.forEach((s,i)=>{ if(s!=="Internshala") SEL.add(i); }); sync(); render(); };
-const AS=document.getElementById("asof"); AS.min=DATA.base; AS.max=idxToStr(maxDay); AS.value=idxToStr(maxDay); AS.onchange=render;
-resetSel(); chips(); render();
+const LASTFULL=lastFullDay(maxDay);
+const AS=document.getElementById("asof"); AS.min=DATA.base; AS.max=idxToStr(maxDay);
+AS.value=idxToStr(LASTFULL); AS.onchange=render;
+const C0=document.getElementById("a-c0"), C1=document.getElementById("a-c1");
+[C0,C1].forEach(e=>{ e.min=DATA.base; e.max=idxToStr(maxDay); e.onchange=render; });
+C0.value=DATA.base; C1.value=idxToStr(LASTFULL);
+resetSel(); applyLife(); chips(); render();
 
 }
 function init_owner(){
@@ -1440,7 +1508,6 @@ function render(){
     return sortDir*(av-bv);
   });
 
-  const maxCreated=Math.max(1,...rows.map(r=>r.created));
   document.getElementById("tbody").innerHTML=rows.map(r=>{
     const cls=r.connpct==null?"a":cc(r.connpct);
     const connpct=r.connpct==null?'<span class="cov a">—</span>':`<span class="cov ${cls}">${r.connpct.toFixed(1)}%</span>`;
@@ -1451,10 +1518,9 @@ function render(){
     const poolCell=x=> x.poolpct>0.05
       ? `<span class="cov ${x.poolpct>=50?"r":x.poolpct>=20?"a":"g"}" title="${x.pooled.toLocaleString("en-IN")} leads from this source sit in the unworked pool and are not in Lead Created — the rates to the right describe only the worked remainder">${x.poolpct.toFixed(0)}%</span>`
       : '<span style="color:var(--muted)">\u2014</span>';
-    const barW=Math.round(56*r.created/maxCreated);
     return `<tr>
       <td class="dim">${r.name}</td>
-      <td><span class="bar" style="width:${barW}px"></span>&nbsp;${r.created.toLocaleString("en-IN")}</td>
+      <td>${r.created.toLocaleString("en-IN")}</td>
       <td>${poolCell(r)}</td>
       <td>${r.attempted.toLocaleString("en-IN")}</td>
       <td>${r.connected.toLocaleString("en-IN")}</td>
