@@ -160,6 +160,8 @@ td.owncol{white-space:nowrap;}
 .actrow .t{font-size:13.5px;font-weight:650;color:var(--ink);}
 .actrow .d{font-size:11.5px;color:var(--muted);margin-top:2px;}
 .actrow .v{font-size:21px;font-weight:750;font-variant-numeric:tabular-nums;color:var(--accent-2);}
+.lown{color:var(--muted)!important;background:none!important;border-color:transparent!important;}
+.lown .nsm{font-family:var(--mono);font-size:9.5px;margin-left:4px;opacity:.9;}
 .dwrap{display:inline-flex;align-items:stretch;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);overflow:hidden;}
 .dwrap:focus-within{border-color:var(--accent);}
 .dwrap .dtext{border:none;border-radius:0;background:transparent;width:104px;padding:8px 0 8px 11px;font-variant-numeric:tabular-nums;}
@@ -801,6 +803,16 @@ function lastFullDay(maxDay){
   const genIdx=Math.round((Date.UTC(ist.getUTCFullYear(),ist.getUTCMonth(),ist.getUTCDate())-base.getTime())/DAY);
   return Math.max(0, Math.min(maxDay, genIdx-1));
 }
+// A rate or median built on a handful of leads is noise wearing the costume of a
+// measurement — one owner showed 194 leads with a median computed from ONE. Below the
+// threshold the value is de-emphasised and its sample size shown, rather than hidden:
+// the reader still sees it, but can no longer mistake it for a reliable figure.
+const LOW_N = 10;
+function smallN(html, n){
+  if(n==null || n>=LOW_N) return html;
+  const t = n===0 ? "no measurable leads" : `computed from only ${n} measurable lead${n===1?"":"s"} — too few to read as a rate`;
+  return `<span class="lown" title="${t}">${html}<span class="nsm">n=${n}</span></span>`;
+}
 function isoToDMY(v){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v||"")); return m? m[3]+"-"+m[2]+"-"+m[1] : String(v||""); }
 // stage lifecycle class from the data file ("open" | "won" | "lost" | "test")
 function stageCls(i){ const a=window.__DATA.stage_class; return (a && a[i]) || "open"; }
@@ -823,8 +835,8 @@ const EXPLAIN={
 };
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
-function idxToStr(i){ return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isoToDMY(idxToStr(i)); }   // display only; inputs stay ISO
+function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
 function fm(m){ if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
 function cc(c){return c>=50?"g":(c>=25?"a":"r");}
 function nf(n){ return n.toLocaleString("en-IN"); }
@@ -945,11 +957,11 @@ function render(){
       +`<td>${nf(d.total)}</td>`
       +`<td class="unc">${nf(u)}${mu((100*u/(d.total||1)).toFixed(0))}</td>`
       +`<td>${d.total?'<span class="cov '+cc(c)+'">'+c.toFixed(0)+'%</span>':'—'}</td>`
-      +`<td>${s.n?fm(s.med):"—"}</td>`
+      +`<td>${s.n?smallN(fm(s.med),s.n):"—"}</td>`
       +`<td>${s.n?fm(s.p90):"—"}</td>`
       +`<td class="grp">${nf(d.connected)}${mu(cp.toFixed(0))}</td>`
       +`<td>${cm!=null?fm(cm):"—"}</td>`
-      +`<td>${s.n?s.slaAll.toFixed(0)+"%":"—"}</td></tr>`;
+      +`<td>${s.n?smallN(s.slaAll.toFixed(0)+"%",s.n):"—"}</td></tr>`;
   };
   if(DIM==="source"){
     Object.keys(srcB).map(Number).sort((x,y)=>srcB[y].total-srcB[x].total).forEach(k=>{
@@ -1007,8 +1019,8 @@ const BUCKETS=[["0 days",0,0],["1 day",1,1],["2 days",2,2],["3–7 days",3,7],["
 const METLABEL={all:"all leads",pend:"pending first attempt",noact:"no activity >10 days",over:"overdue follow-up"};
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
-function idxToStr(i){ return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isoToDMY(idxToStr(i)); }   // display only; inputs stay ISO
+function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
 function bkt(age){ for(let i=0;i<BUCKETS.length;i++){ if(age>=BUCKETS[i][1]&&age<=BUCKETS[i][2]) return i; } return BUCKETS.length-1; }
 const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>m)m=d; } return m; })();
 function mk(){ return {b:BUCKETS.map(()=>({all:0,pend:0,noact:0,over:0})), tAll:0,tPend:0,tNoact:0,tOver:0,tAtt:0}; }
@@ -1153,8 +1165,8 @@ const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
 // ---- shared helpers (keep) ----
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
-function idxToStr(i){ return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isoToDMY(idxToStr(i)); }   // display only; inputs stay ISO
+function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
 function fm(m){ if(m==null)return "—"; if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
 function cc(c){return c>=50?"g":(c>=25?"a":"r");}
 function med(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
@@ -1341,8 +1353,8 @@ function render(){
         <td class="${uncCls}">${r.uncalled.toLocaleString()}<span class="muted-pct">${r.uncalledPct.toFixed(0)}%</span></td>
         <td class="grp"><span class="cov ${covCls}">${r.cov.toFixed(0)}%</span></td>
         <td>${r.avgatt.toFixed(1)}</td>
-        <td>${fm(r.medspeed)}</td>
-        <td>${r.sla.toFixed(0)}%</td>
+        <td>${smallN(fm(r.medspeed), r.speeds.length)}</td>
+        <td>${smallN(r.sla.toFixed(0)+"%", r.slaBase)}</td>
         <td class="grp ${r.overdue>0?'warncol':''}">${r.overdue.toLocaleString()}</td>
         <td>${r.enrolled.toLocaleString()}</td>
       </tr>`;
@@ -1410,8 +1422,8 @@ const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
 // ---- shared helpers (keep) ----
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
-function idxToStr(i){ return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isoToDMY(idxToStr(i)); }   // display only; inputs stay ISO
+function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
 function fm(m){ if(m==null)return "—"; if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
 function cc(c){return c>=50?"g":(c>=25?"a":"r");}
 function med(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
@@ -1633,8 +1645,8 @@ const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
 // ---- shared helpers (keep) ----
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
-function idxToStr(i){ return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isoToDMY(idxToStr(i)); }   // display only; inputs stay ISO
+function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
 function fm(m){ if(m==null)return "—"; if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
 function cc(c){return c>=50?"g":(c>=25?"a":"r");}
 function med(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
@@ -1852,8 +1864,8 @@ const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
 // ---- shared helpers (keep) ----
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
-function idxToStr(i){ return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isoToDMY(idxToStr(i)); }   // display only; inputs stay ISO
+function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
 function fm(m){ if(m==null)return "—"; if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
 function cc(c){return c>=50?"g":(c>=25?"a":"r");}
 function med(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
@@ -1915,11 +1927,13 @@ function compute(){
 }
 
 function fmtPct(r){
+  if(r.att>0 && r.att<LOW_N) return smallN(`<span class="cov">${r.pct.toFixed(1)}%</span>`, r.att);
   if(!r.att) return '<span class="cov r">—</span>';
   const c = cc(r.pct);
   return `<span class="cov ${c}">${r.pct.toFixed(1)}%</span>`;
 }
-function fmtAC(r){ return r.ac==null ? '<span style="color:var(--muted)">—</span>' : r.ac.toFixed(2); }
+function fmtAC(r){ if(r.ac==null) return '<span style="color:var(--muted)">\u2014</span>';
+  return smallN(r.ac.toFixed(2), r.con); }
 
 function render(){
   const {rows,tot} = compute();
@@ -2056,8 +2070,8 @@ const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
 // ---- shared helpers (keep) ----
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
-function idxToStr(i){ return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isoToDMY(idxToStr(i)); }   // display only; inputs stay ISO
+function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
 function fm(m){ if(m==null)return "—"; if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
 function cc(c){return c>=50?"g":(c>=25?"a":"r");}
 function ccLeak(c){return c<=2?"g":(c<=10?"a":"r");}          // leakage: small = good
@@ -2719,6 +2733,15 @@ function upgradeDates(){
     nat.parentNode.insertBefore(wrap, nat);
     wrap.appendChild(txt); wrap.appendChild(cal); cal.appendChild(nat);
 
+    // An empty date field produced NaN day-indexes and every formatter downstream threw
+    // RangeError, freezing the report on stale numbers. The control simply refuses to
+    // hold an empty value: clearing it restores the last good one.
+    let lastGood=nat.value;
+    nat.addEventListener('change',()=>{
+      if(nat.value) { lastGood=nat.value; return; }
+      nat.value=lastGood;
+      txt.value=isoToDMY(lastGood);
+    }, true);                                    // capture: runs before the report's own handler
     const commit=()=>{
       const iso=parseDMY(txt.value);
       if(!iso){ txt.classList.add('bad'); return; }
