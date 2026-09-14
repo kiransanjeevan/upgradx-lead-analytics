@@ -63,9 +63,15 @@ COLS = ("ProspectID,CreatedOn,mx_First_Call_Date_and_Time,mx_Date_of_Lead_Assign
         "mx_First_Counselling_Date,mx_First_Transaction_Date")
 
 
+MAX_PAGES = 200          # 200k rows per anchor; the assignment anchor is already ~125
+
+
 def pull(lookup):
+    """Paginate one anchor. Raises rather than returning a short list: a truncated
+    pull that reports success is worse than a failed run, because the dashboard
+    deploys wrong numbers with no way to tell them from right ones."""
     out, page = [], 1
-    while page <= 200:
+    while page <= MAX_PAGES:
         body = {"Parameter": {"LookupName": lookup, "LookupValue": START, "SqlOperator": ">="},
                 "Columns": {"Include_CSV": COLS},
                 "Sorting": {"ColumnName": lookup, "Direction": "0"},
@@ -73,12 +79,21 @@ def pull(lookup):
         req = urllib.request.Request(URL, data=json.dumps(body).encode(),
                                      headers={"Content-Type": "application/json"})
         d = json.loads(urllib.request.urlopen(req, timeout=90).read().decode())
-        if not isinstance(d, list) or not d:
-            break
+        # A non-list is LeadSquared reporting a fault (rate limit, transient error).
+        # The old code treated that the same as "no more data" and exited quietly.
+        if not isinstance(d, list):
+            msg = d.get("ExceptionMessage") or d.get("Message") or str(d)[:200] if isinstance(d, dict) else str(d)[:200]
+            raise RuntimeError(f"{lookup}: page {page} returned {type(d).__name__}, not leads — {msg}")
+        if not d:
+            break                       # genuine end of data
         out += d
         if len(d) < 1000:
-            break
+            break                       # short page = last page
         page += 1
+    else:
+        raise RuntimeError(
+            f"{lookup}: hit the {MAX_PAGES}-page cap with a full final page — "
+            f"{len(out):,} rows pulled and more remain. Raise MAX_PAGES; data is being dropped.")
     return out
 
 
@@ -254,6 +269,28 @@ def main():
 
     # stamp in IST explicitly — CI runners are UTC, and a raw +00:00 timestamp in a
     # file labelled tz:"IST" is exactly the kind of thing that gets misread later.
+    # Compare against the snapshot we are replacing. A large swing is usually a real
+    # CRM event (a bulk reassignment moved 6,236 leads on 14-09-2026), so this warns
+    # and never fails — structural truncation is what raises, above.
+    try:
+        with open(OUT) as f:
+            prev = len(json.load(f).get("leads", []))
+        if prev:
+            delta = (len(leads) - prev) / prev * 100
+            if abs(delta) >= 3:
+                # Truncation would have raised above, so this is a real CRM change —
+                # but a 5% shift and a 70% shift deserve very different volume.
+                loud = "!! LARGE CHANGE !!" if abs(delta) >= 25 else "WARNING:"
+                print(f"  {loud} universe {prev:,} -> {len(leads):,} ({delta:+.1f}%). "
+                      f"Every anchor paginated to completion, so this is a real change in "
+                      f"LeadSquared, not a short pull.")
+                if abs(delta) >= 25:
+                    print(f"  {loud} A swing this size is unusual — verify in LSQ before "
+                          f"anyone reads the dashboard. Likely causes: a bulk reassignment, "
+                          f"an owner deactivation, or a changed lead-status filter.")
+    except (OSError, ValueError):
+        pass                            # first run, or unreadable previous file
+
     stamp = datetime.now(timezone.utc).astimezone(ISTTZ).isoformat()
     out = {"base": BASE_DATE, "tz": "IST", "generated_at": stamp,
            "sources": srcs, "owners": owns, "stages": stgs, "quals": quals,

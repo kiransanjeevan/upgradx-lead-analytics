@@ -4,21 +4,23 @@ name: Daily LSQ refresh
 # Vercel is git-connected, so the commit triggers a redeploy automatically.
 on:
   schedule:
-    # 01:37 UTC = 07:07 IST — after the ~6 PM IST Internshala batch + overnight
-    # automations settle. The odd minute is deliberate: GitHub queues scheduled jobs
-    # from a shared pool and :00/:30 are the most contended slots, so runs there are
-    # the most likely to be delayed or dropped (see TROUBLESHOOTING in README.md).
-    - cron: "37 1 * * *"
-    # Backup, 04:43 UTC = 10:13 IST. GitHub does not guarantee scheduled runs and has
-    # already skipped one here entirely. This second attempt no-ops when the morning
-    # run already landed, so it costs nothing on a normal day and rescues a dropped one.
-    - cron: "43 4 * * *"
+    # 19:41 UTC = 01:11 IST next day. Deliberately early: GitHub creates scheduled runs
+    # 4.5-5.5h after the cron time on this repo (queue delay is zero — it is the
+    # scheduler, not runner availability), so a 01:11 target lands by ~06:30 IST.
+    # Safe to run overnight: only ~1% of assignments and activity, and 5% of lead
+    # creation, happen between 01:00 and 07:00 IST. The evening peak (62% of
+    # assignments, 20:00 IST) is long finished.
+    - cron: "41 19 * * *"
+    # Backup, 02:23 UTC = 07:53 IST. No-ops when the primary already landed, so a
+    # normal day is still one pull and one commit. Whichever lands first wins; the
+    # other stands down, so the order does not matter if both are delayed.
+    - cron: "23 2 * * *"
   workflow_dispatch: {}   # lets you trigger a refresh manually from the Actions tab
 
 # The dashboard reads this to show "next refresh in ..." and to flag a missed run.
 # It is NOT what schedules the job — keep it equal to the cron above.
 env:
-  LSQ_REFRESH_IST: "07:07"   # = the primary cron, 37 1 * * * UTC
+  LSQ_REFRESH_IST: "01:11"   # = the primary cron, 41 19 * * * UTC
 
 permissions:
   contents: write

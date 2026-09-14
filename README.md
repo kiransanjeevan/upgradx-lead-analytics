@@ -89,12 +89,22 @@ late** and one never ran. Nothing in this repo was wrong either time.
 
 Two mitigations are in `refresh.yml`:
 
-1. **An odd-minute cron** (`37 1 * * *` rather than `30 1`). GitHub queues scheduled
-   jobs from a shared pool and `:00`/`:30` are the most contended minutes, so runs
-   there are the likeliest to be delayed or dropped.
-2. **A backup run** at `43 4 * * *` (10:13 IST). It checks whether today's IST data is
-   already committed and no-ops if so, so a normal day still produces exactly one pull
-   and one commit. It only does real work when the morning run was dropped.
+1. **The schedule absorbs the delay.** Primary is `41 19 * * *` (19:41 UTC = **01:11
+   IST**), chosen so that even a 5-hour slip lands by ~06:30 IST. Measured delays on
+   this repo: 4h32m, 5h21m, 5h24m — and the queue delay is *zero* every time, meaning
+   GitHub creates the run late rather than waiting on a runner. Moving to an odd
+   minute alone did not help.
+2. **Running overnight is safe.** Only ~1% of assignments and last-activity events,
+   and ~5% of lead creation, fall between 01:00 and 07:00 IST; the evening peak (62%
+   of assignments, 20:00 IST) is long finished.
+3. **A backup run** at `23 2 * * *` (07:53 IST) no-ops when the primary already
+   landed, so a normal day is still one pull and one commit. Whichever lands first
+   wins and the other stands down, so order does not matter if both slip.
+4. **The pull fails loudly rather than short.** A page returning an error object, or
+   the page cap being hit with a full final page, raises instead of silently writing
+   a truncated file — a stale dashboard is safer than a quietly wrong one. Volume
+   swings only *warn* (louder past 25%), because a real bulk reassignment moved 6,236
+   leads on 14-09-2026 and must not break the pipeline.
 
 ### What to do when it is stale
 
