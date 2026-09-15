@@ -170,7 +170,11 @@ td.owncol{white-space:nowrap;}
 .dcal{position:relative;display:grid;place-items:center;width:32px;cursor:pointer;color:var(--muted);border-left:1px solid var(--line);}
 .dcal:hover{color:var(--accent);background:var(--surface-2);}
 .dcal svg{width:15px;height:15px;pointer-events:none;}
-.dcal input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;padding:0;border:0;pointer-events:none;}
+.dcal input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;padding:0;border:0;margin:0;cursor:pointer;}
+/* Stretch the browser's native calendar indicator over the whole button. Clicking
+   anywhere in .dcal then hits the real control, so the browser opens AND closes its
+   own picker. No showPicker(), no open/close flag to get stuck. */
+.dcal input[type=date]::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;opacity:0;cursor:pointer;}
 .kpinote{margin:10px 2px 0;font-size:12.5px;color:var(--muted);}
 .kpinote b{color:var(--ink-2);}
 .mdbar{display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px;margin:22px 0 4px;padding:16px 18px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);}
@@ -2755,23 +2759,18 @@ function upgradeDates(){
     txt.addEventListener('blur', ()=>{ if(!parseDMY(txt.value)){ txt.classList.remove('bad'); txt.value=isoToDMY(nat.value); } else commit(); });
     txt.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); txt.blur(); } });
     txt.addEventListener('input', ()=>txt.classList.remove('bad'));
-    // Safari only opens the popover from its own glyph, which is invisible here, so
-    // drive it explicitly. Two dismissal problems come with that:
-    //   1. clicking the button to CLOSE also re-fires this handler, reopening it;
-    //   2. the native input never had focus, so Escape had nothing to close.
-    // Hence the open flag, and focusing the input before showing the picker.
-    let open=false;
-    const close=()=>{ open=false; try{ nat.blur(); }catch(_){} };
-    cal.addEventListener('mousedown', e=>e.preventDefault());   // don't steal focus mid-click
-    cal.addEventListener('click', ()=>{
-      if(open){ close(); return; }                              // second click = dismiss
-      nat.focus();                                              // so Escape + blur work natively
-      try{ nat.showPicker(); open=true; }
-      catch(_){ nat.style.pointerEvents='auto'; nat.click(); nat.style.pointerEvents=''; open=true; }
+    // The native input now sits invisibly over the whole button with its picker
+    // indicator stretched to fill it, so a click reaches the real control and the
+    // browser opens and closes its own picker. The previous version drove
+    // showPicker() from JS with an open/close flag; when showPicker() failed in
+    // Safari the flag still flipped, so every second click was swallowed as a
+    // "dismiss" and the picker never appeared at all.
+    // Firefox has no ::-webkit- indicator, so fall back to showPicker() only when
+    // the click did not land on the input itself.
+    cal.addEventListener('click', e=>{
+      if(e.target===nat) return;                 // the real control got it
+      try{ nat.showPicker(); }catch(_){ nat.focus(); }
     });
-    nat.addEventListener('change', close);
-    nat.addEventListener('blur',   close);
-    nat.addEventListener('keydown', e=>{ if(e.key==='Escape'){ close(); txt.focus(); } });
     // Escape anywhere in the control returns you to the text field with the value intact
     txt.addEventListener('keydown', e=>{
       if(e.key==='Escape'){ e.preventDefault(); txt.value=isoToDMY(nat.value); txt.classList.remove('bad'); txt.blur(); }
