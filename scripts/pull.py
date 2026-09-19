@@ -8,6 +8,7 @@ Reads credentials from environment variables (set as GitHub Secrets in CI):
 Optional:
   LSQ_START   window start, an IST calendar date (default 2026-09-01); widen for more history.
   LSQ_POOLS   comma-separated owner names that are unworked holding/bot pools
+              (default: Avtar LCoffline,Futworks Lc)
               (default "Avtar LCoffline"). Their leads are flagged pool=1 so the
               dashboard can keep them out of rate denominators.
   LSQ_REFRESH_IST  the daily schedule as HH:MM IST (default 07:00), written into the
@@ -38,8 +39,11 @@ START  = (BASE - timedelta(minutes=IST)).strftime("%Y-%m-%d %H:%M:%S")
 # Bulk/bot accounts that hold leads without working them. Their leads are real and
 # still counted as Created, but including them in rate denominators (coverage, avg
 # attempts, connect %, enrolment %) understates what counsellors actually do.
+# `Avtar LCoffline` is the Aavataar AI voice-bot queue; `Futworks Lc` is the Futwork
+# tele-qualification vendor. NEITHER writes the lead call fields — their work lives in
+# activities (event 328 and 330) — so leads sitting there look untouched by design.
 POOL_OWNERS = {o.strip().lower() for o in
-               (os.environ.get("LSQ_POOLS") or "Avtar LCoffline").split(",") if o.strip()}
+               (os.environ.get("LSQ_POOLS") or "Avtar LCoffline,Futworks Lc").split(",") if o.strip()}
 
 # Daily refresh time (IST), surfaced to the dashboard so it can show the next run and
 # flag a missed one. The workflow passes this from the same place the cron is defined.

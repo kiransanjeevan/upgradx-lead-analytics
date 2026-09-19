@@ -61,6 +61,7 @@ jobs:
           LSQ_ACCESS: ${{ secrets.LSQ_ACCESS }}
           LSQ_SECRET: ${{ secrets.LSQ_SECRET }}
           LSQ_START: ${{ vars.LSQ_START }}   # optional; defaults to 2026-09-01 in the script
+          LSQ_POOLS: ${{ vars.LSQ_POOLS }}   # optional; defaults to "Avtar LCoffline,Futworks Lc" in the script
         run: python scripts/pull.py
 
       - name: Commit refreshed data
