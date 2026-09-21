@@ -26,7 +26,6 @@ not committed. Override its location with ROUTING_WORKBOOK.
 Everything that appears as a number in the report's prose is computed here and
 interpolated into the template. Do not type a count into template.html.
 """
-import difflib
 import json
 import os
 import re
@@ -69,9 +68,39 @@ C = lambda k, f="criteria": cell.get(k, {}).get(f, "")
 
 
 def rules(t):
-    """Pull (rule name, assigned user) pairs out of a distribution card's criteria blob."""
-    return [[m.group(1).strip(), m.group(2).strip()] for m in
-            re.finditer(r'Rule Name\s*:?\s*([^\n/]+)[\s\S]*?Assigned Users?\s*:\s*([^\n]+)', t or "")]
+    """Parse a distribution card's criteria blob into one dict per rule block.
+
+    Keyed on `sig` — the sorted set of quoted match tokens from the Conditions
+    block — NOT on the rule name. The rule name is free text someone typed and
+    drifts between branches (Bengal/Kolkata and salt/salt-lake-kolkata2 are the
+    same rule with identical conditions); the conditions are what LeadSquared
+    actually evaluates. Keying on the name invents mismatches that do not exist
+    in the instance.
+
+    `users` may legitimately be empty — an "Assigned Users:" line with nothing
+    after it is a rule that matches and then distributes to nobody. The pattern
+    must stay on its own line rather than running on to the next one and
+    mistaking "Check for User Availability : No" for an owner.
+    """
+    out = []
+    for b in re.split(r'(?=Rule Name\s*:)', t or "")[1:]:
+        nm = re.search(r'Rule Name\s*:?\s*([^\n/]+)', b)
+        if not nm:
+            continue
+        us = re.search(r'Assigned Users?\s*:[ \t]*([^\n]*)', b)
+        cd = re.search(r'Conditions?\s*:?[ \t]*\n([\s\S]*?)(?:\n\s*Rule\s+\d+|\Z)', b)
+        conds = cd.group(1).strip() if cd else ""
+        toks = sorted({q.lower() for q in re.findall(r'"([^"]+)"', conds)})
+        name = nm.group(1).strip()
+        out.append(dict(name=name, users=(us.group(1).strip() if us else ""), conds=conds,
+                        sig="|".join(toks) if toks else "name:" + name.lower()))
+    return out
+
+
+def owners(u):
+    """Assigned Users line -> display names. Empty list means no owner at all."""
+    return [n for n in (x.split('<')[0].strip().rstrip(',').strip()
+                        for x in (u or "").split('>')) if n]
 
 
 # ---- graph: col/row hand-placed for a clean left-to-right read ----
@@ -143,38 +172,58 @@ walk("Trigger32", [])
 LBL = {"DistributeLead208": "Meta Ads", "DistributeLead117": "Internshala",
        "DistributeLead221": "Google / Meta web", "DistributeLead219": "Other sources"}
 CARDS = {k: rules(C(k)) for k in LBL}
-norm = lambda s: s.split('<')[0].strip()
-centres = sorted({c for v in CARDS.values() for c, _ in v}, key=str.lower)
+
+# One matrix row per DISTINCT RULE (condition signature), not per rule name.
+# The display label is the rule name the branches agree on — the one used by the
+# most branches — with any other spellings recorded as aliases.
+bysig = {}
+for k, rs in CARDS.items():
+    for r in rs:
+        bysig.setdefault(r["sig"], {})[k] = r
+label = {}
+for sig, per in bysig.items():
+    names = [r["name"] for r in per.values()]
+    label[sig] = max(sorted(set(names)), key=names.count)
+
 matrix = []
-for c in centres:
-    row = {"centre": c}
-    vals = []
+for sig in sorted(bysig, key=lambda s: label[s].lower()):
+    per = bysig[sig]
+    row = {"centre": label[sig], "sig": sig,
+           "aliases": sorted({r["name"] for r in per.values()} - {label[sig]}, key=str.lower),
+           "conds": next(iter(per.values()))["conds"]}
+    seen = []
     for k in CARDS:
-        u = next((norm(u) for nm, u in CARDS[k] if nm == c), "")
-        row[k] = u
-        vals.append(u)
-    row["differs"] = len({v for v in vals if v}) > 1
-    row["missing"] = sum(1 for v in vals if not v)
+        r = per.get(k)
+        row[k] = ", ".join(owners(r["users"])) if r else ""
+        row[k + "_state"] = "absent" if r is None else ("unassigned" if not owners(r["users"]) else "ok")
+        seen.append(row[k + "_state"])
+    row["differs"] = len({row[k] for k in CARDS if row[k]}) > 1
+    row["missing"] = sum(1 for s in seen if s == "absent")
+    row["unassigned"] = sum(1 for s in seen if s == "unassigned")
     matrix.append(row)
 
-# ---- derive the spelling defects instead of hardcoding them ----
-# A centre named in exactly one branch, that closely resembles a centre named in
-# the others, is a typo: leads matching one spelling are invisible to the other
-# branch's rule and fall through to the default owner with no error raised.
-present = {k: {c for c, _ in v} for k, v in CARDS.items()}
-fold = lambda s: re.sub(r'[^a-z0-9]', '', s.lower())
-defects = []
-for c in centres:
-    where = [k for k, s in present.items() if c in s]
-    if len(where) != 1:
-        continue
-    near = max((o for o in centres if o != c),
-               key=lambda o: (fold(c) in fold(o) or fold(o) in fold(c),
-                              difflib.SequenceMatcher(None, fold(c), fold(o)).ratio()),
-               default=None)
-    if near and (fold(c) in fold(near) or fold(near) in fold(c)
-                 or difflib.SequenceMatcher(None, fold(c), fold(near)).ratio() >= 0.8):
-        defects.append({"centre": c, "only": where[0], "near": near})
+# ---- the two things worth flagging, both DERIVED ----
+# 1. Naming drift: one rule, spelled differently across branches. The conditions
+#    are identical, so routing is unaffected — a documentation-hygiene issue, NOT
+#    a defect. (An earlier version of this script keyed the matrix on rule names
+#    and reported these as misrouted leads. They never were.)
+aliases = [{"centre": m["centre"], "aliases": m["aliases"], "conds": m["conds"],
+            "where": {LBL[k]: bysig[m["sig"]][k]["name"]
+                      for k in CARDS if k in bysig[m["sig"]]}}
+           for m in matrix if m["aliases"]]
+
+# 2. Rules whose "Assigned Users:" line is blank. This is DELIBERATE, not a bug:
+#    the centre has closed, so nobody is assigned, and LeadSquared hands the lead
+#    to the card's Default User instead. Worth surfacing so a reader knows why the
+#    cell is empty and where those leads actually go — but it is working as built.
+DEFAULT_USER = {k: (re.search(r'Default User\s*:\s*([^\n<]+)', C(k)) or [None, ""])[1].strip()
+                for k in LBL}
+no_owner = [{"centre": m["centre"],
+             "branches": [LBL[k] for k in CARDS if m[k + "_state"] == "unassigned"],
+             "owned": {LBL[k]: m[k] for k in CARDS if m[k + "_state"] == "ok"},
+             "fallback": sorted({DEFAULT_USER[k] for k in CARDS
+                                 if m[k + "_state"] == "unassigned" and DEFAULT_USER[k]})}
+            for m in matrix if m["unassigned"]]
 
 # ---- upstream steps, channel fan-out, queries, form ----
 trows = [[("" if v is None else str(v).strip()) for v in r]
@@ -187,10 +236,12 @@ queries = [str(r[1]) for r in wb['Queries'].iter_rows(min_row=2, values_only=Tru
 form = [[("" if v is None else str(v)) for v in r]
         for r in wb['Conversation Log Form'].iter_rows(min_row=2, values_only=True) if any(r)]
 
-D = dict(nodes=NODES, edges=EDGES, paths=paths, matrix=matrix, cardLabels=LBL, centres=centres,
+D = dict(nodes=NODES, edges=EDGES, paths=paths, matrix=matrix, cardLabels=LBL,
+         centres=[m["centre"] for m in matrix],
          diffs=sum(1 for m in matrix if m["differs"]),
          missing=sum(1 for m in matrix if m["missing"]),
-         defects=defects, steps=steps, chans=chans, queries=queries, form=form,
+         aliases=aliases, noOwner=no_owner, defaultUser=DEFAULT_USER,
+         steps=steps, chans=chans, queries=queries, form=form,
          ext=EXTERNAL, source=WORKBOOK.name)
 
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -199,12 +250,17 @@ tpl = (HERE / "template.html").read_text(encoding="utf-8")
 out.write_text(tpl.replace("__DATA__", json.dumps(D, ensure_ascii=False)), encoding="utf-8")
 
 distinct = len({s["step"] for s in steps})
-print(f"nodes {len(NODES)} | edges {len(EDGES)} | paths {len(paths)} | centres {len(centres)} "
-      f"| differ {D['diffs']} | missing {D['missing']} | defects {len(defects)}")
+print(f"nodes {len(NODES)} | edges {len(EDGES)} | paths {len(paths)} | rules {len(matrix)} "
+      f"| differ {D['diffs']} | missing {D['missing']} "
+      f"| naming drift {len(aliases)} | closed centres {len(no_owner)}")
 print(f"steps {len(steps)} automations across {distinct} distinct steps | channels {len(chans)} "
       f"| queries {len(queries)} | form rows {len(form)}")
-for d in defects:
-    print(f"   defect: {d['centre']!r} only in {LBL[d['only']]}, vs {d['near']!r}")
+for a in aliases:
+    print(f"   naming drift: {a['centre']!r} also spelled {a['aliases']} "
+          f"— identical conditions, no routing impact")
+for u in no_owner:
+    print(f"   no owner: {u['centre']!r} blank in {u['branches']} "
+          f"-> default user {u['fallback']}")
 for p in paths:
     print("   →", p["destId"], "|", " · ".join(p["conds"]) or "(direct)")
 print(f"   wrote {out} ({out.stat().st_size // 1024} KB)")

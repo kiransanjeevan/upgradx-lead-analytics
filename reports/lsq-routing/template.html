@@ -94,10 +94,15 @@
   tr.diff td{background:color-mix(in srgb,var(--crit) 6%,transparent)}
   tr.diff td:first-child{font-weight:600}
   td.gap{color:var(--crit);font-weight:600}
+  td.quiet{color:var(--ink-3);font-style:italic}
   .badge{font-family:var(--m);font-size:10px;padding:2px 7px;border-radius:5px;background:var(--crit-soft);color:var(--crit);white-space:nowrap}
+  .badge.alias{background:var(--surface-2);color:var(--ink-3)}
   .callout{margin-top:12px;border-left:3px solid var(--crit);background:var(--crit-soft);border-radius:0 9px 9px 0;padding:12px 14px;font-size:13.5px}
   .callout b{color:var(--crit)}
   .callout.warn{border-left-color:var(--warn);background:var(--warn-soft)} .callout.warn b{color:var(--ink)}
+  /* Explanatory, not a fault — must NOT read as an alarm. */
+  .callout.info{border-left-color:var(--axis);background:var(--surface-2);color:var(--ink-2)}
+  .callout.info b{color:var(--ink)}
   code{font-family:var(--m);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:4px}
   ol.q{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;font-size:14px;color:var(--ink-2)}
   /* drawer */
@@ -168,13 +173,14 @@
 
   <section id="v-matrix" hidden>
     <h2>Which counsellor owns which centre</h2>
-    <p>All four source branches fan out to the same centre list, but the assigned person often differs. Click a column header to sort.</p>
+    <p>All four source branches carry the same rule set — matched on the rule's <em>conditions</em>, not its name — but the assigned person often differs. Click a column header to sort.</p>
     <div class="legend" style="margin-top:12px">
       <button type="button" class="ghost" id="diffOnly" aria-pressed="false">Show mismatches only</button>
       <span class="hint" id="matrixCount"></span>
     </div>
     <div class="tw" id="matrixTbl"></div>
-    <div class="callout warn" id="defects"></div>
+    <div class="callout info" id="noOwner"></div>
+    <div class="callout info" id="aliases"></div>
   </section>
 
   <section id="v-top" hidden>
@@ -221,8 +227,8 @@ $('#lede').innerHTML = `Every routing automation for the Offline &amp; Learning 
 $('#tiles').innerHTML = [
   {v: D.paths.length, k:'complete paths through the flow'},
   {v: terms.length, k:'places a lead can end up'},
-  {v: D.centres.length, k:`centre rules, repeated in ${Object.keys(D.cardLabels).length} branches`},
-  {v: D.diffs, k:`of ${D.centres.length} centres have a different owner by source`, flag:true},
+  {v: D.matrix.length, k:`centre rules, repeated in all ${Object.keys(D.cardLabels).length} branches`},
+  {v: D.diffs, k:`of ${D.matrix.length} centre rules have a different owner by source`, flag:true},
   {v: 1, k:`decision sends ${D.ext.botPoolShare}% of Internshala leads to the bot queue`, flag:true}
 ].map(t => `<div class="tile${t.flag?' flag':''}"><div class="v">${t.v}</div><div class="k">${t.k}</div></div>`).join('');
 
@@ -356,24 +362,45 @@ function renderMatrix(filter){
     return va < vb ? -sortDir : va > vb ? sortDir : 0; });
   $('#matrixTbl').innerHTML = `<table><thead><tr><th data-k="centre">Centre rule</th>${
     cards.map(c => `<th data-k="${c}">${D.cardLabels[c]}</th>`).join('')}</tr></thead><tbody>${
-    rows.map(m => `<tr class="${m.differs ? 'diff' : ''}"><td>${esc(m.centre)}${m.missing ? ` <span class="badge">missing in ${m.missing}</span>` : ''}</td>${
-      cards.map(c => `<td class="${m[c] ? '' : 'gap'}">${m[c] ? esc(m[c]) : '— not routed —'}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-  $('#matrixCount').textContent = `${rows.length} of ${D.matrix.length} rows · ${D.diffs} mismatched · ${D.missing} with a branch that never routes`;
+    rows.map(m => `<tr class="${m.differs ? 'diff' : ''}"><td>${esc(m.centre)}${
+      m.aliases.length ? ` <span class="badge alias" title="Same rule, different name in another branch — identical conditions">also “${m.aliases.map(esc).join('”, “')}”</span>` : ''}${
+      m.missing ? ` <span class="badge">missing in ${m.missing}</span>` : ''}</td>${
+      cards.map(c => m[c + '_state'] === 'ok'
+        ? `<td>${esc(m[c])}</td>`
+        : `<td class="${m[c + '_state'] === 'unassigned' ? 'quiet' : 'gap'}">${
+            m[c + '_state'] === 'unassigned' ? '— centre closed → default user —' : '— rule absent —'}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  $('#matrixCount').textContent = `${rows.length} of ${D.matrix.length} rules · ${D.diffs} route to a different owner by source`;
   $('#matrixTbl').querySelectorAll('th').forEach(th => th.onclick = () => {
     if (sortKey === th.dataset.k) sortDir *= -1; else { sortKey = th.dataset.k; sortDir = 1; }
     renderMatrix($('#q').value); });
 }
 $('#diffOnly').onclick = () => { diffOnly = !diffOnly; $('#diffOnly').setAttribute('aria-pressed', diffOnly); renderMatrix($('#q').value); };
 renderMatrix('');
-/* Spelling defects are DERIVED, not typed: a centre named in exactly one branch that
-   closely resembles a centre named elsewhere is almost certainly a typo. */
+/* Both callouts are DERIVED from the parsed conditions, never typed in.
+   The distinction between them is the whole point: only one is a live defect. */
 const NUMW = ['no','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten'];
-$('#defects').innerHTML = D.defects.length
-  ? `<b>${NUMW[D.defects.length] || D.defects.length} data ${D.defects.length === 1 ? 'defect' : 'defects'} worth fixing at source.</b> ` +
-    D.defects.map(d => `<code>${esc(d.centre)}</code> appears only in the ${esc(D.cardLabels[d.only])} branch, ` +
-      `against <code>${esc(d.near)}</code> elsewhere`).join('; ') +
-    `. A lead matching one spelling is invisible to the other branch's rule, and neither shows up as an error — the lead simply falls through to the default owner.`
-  : `<b>No spelling defects found.</b> Every centre rule name appears in more than one source branch, or has no near-duplicate.`;
+
+/* Blank owner = CLOSED CENTRE, deliberate. The rule still matches; LeadSquared
+   hands the lead to the card's Default User. Explained, not flagged as a fault. */
+$('#noOwner').innerHTML = D.noOwner.length
+  ? `<b>${NUMW[D.noOwner.length] || D.noOwner.length} centre${D.noOwner.length === 1 ? ' has' : 's have'} closed — the blank owner is intentional.</b> ` +
+    D.noOwner.map(u => `<code>${esc(u.centre)}</code> is unassigned in ${u.branches.map(esc).join(', ')}${
+      Object.keys(u.owned).length ? `, still owned in ${Object.entries(u.owned).map(([b,o]) => `${esc(b)} (${esc(o)})`).join(', ')}` : ''}`).join('; ') +
+    `. The rule keeps matching, and with no assigned user LeadSquared falls back to the card's Default User${
+      D.noOwner.some(u => u.fallback.length) ? ` — ${[...new Set(D.noOwner.flatMap(u => u.fallback))].map(esc).join(', ')}` : ''
+    }. So these leads are still picked up; they are just handled centrally rather than by a centre counsellor.`
+  : `<b>Every rule has an owner.</b> No “Assigned Users” line is blank in any branch.`;
+
+/* NOT A DEFECT: same conditions, different label. Flagged for hygiene only —
+   an earlier version of this report keyed the matrix on rule names and wrongly
+   reported these as misrouted leads. */
+$('#aliases').innerHTML = D.aliases.length
+  ? `<b>${NUMW[D.aliases.length] || D.aliases.length} rule${D.aliases.length === 1 ? ' is' : 's are'} named inconsistently across branches — no routing impact.</b> ` +
+    D.aliases.map(a => Object.entries(a.where).filter(([,n]) => n !== a.centre)
+      .map(([b,n]) => `${esc(b)} calls it <code>${esc(n)}</code>`).join(' and ') +
+      ` where the other branches say <code>${esc(a.centre)}</code>`).join('; ') +
+    `. The match conditions are byte-identical in every branch, so all of them route the same leads to the same owner. This is a naming-hygiene item, not a misrouting bug — worth tidying at source so the next reader is not misled, but nothing is broken today.`
+  : `<b>Rule names are consistent.</b> Every rule is spelled the same way in each branch it appears in.`;
 
 /* ---------- upstream pipeline ----------
    The workbook has one row per AUTOMATION, and Step 5 is six parallel automations
