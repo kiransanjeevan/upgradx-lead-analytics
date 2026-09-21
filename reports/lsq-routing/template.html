@@ -1,0 +1,445 @@
+<title>LSQ Lead Routing Map</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --plane:#f6f6f4; --surface:#ffffff; --surface-2:#eeeeea; --ink:#12161a; --ink-2:#4b5358; --ink-3:#838b90;
+    --rule:#dedcd5; --axis:#b9bfbd;
+    --dec:#2a78d6; --bot:#eb6834; --term:#1baf7a; --trig:#4a3aa7; --act:#6b7378;
+    --crit:#c62f2f; --crit-soft:#fbe9e9; --warn:#8a6212; --warn-soft:#fdf3dd; --ok-soft:#e6f5ee;
+    --f:"Inter Tight",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --m:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --shadow:0 1px 2px rgba(15,20,25,.05),0 12px 32px -22px rgba(15,20,25,.45);
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --plane:#0d0f11; --surface:#181b1c; --surface-2:#212527; --ink:#f1f4f5; --ink-2:#b6bec1; --ink-3:#828a8e;
+    --rule:#2a2f31; --axis:#3b4245;
+    --dec:#3987e5; --bot:#d95926; --term:#199e70; --trig:#9085e9; --act:#8b9398;
+    --crit:#e66767; --crit-soft:#2b1a1a; --warn:#d2a64c; --warn-soft:#2a2418; --ok-soft:#142a22;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px -22px rgba(0,0,0,.9);
+  }}
+  :root[data-theme="dark"]{
+    --plane:#0d0f11; --surface:#181b1c; --surface-2:#212527; --ink:#f1f4f5; --ink-2:#b6bec1; --ink-3:#828a8e;
+    --rule:#2a2f31; --axis:#3b4245;
+    --dec:#3987e5; --bot:#d95926; --term:#199e70; --trig:#9085e9; --act:#8b9398;
+    --crit:#e66767; --crit-soft:#2b1a1a; --warn:#d2a64c; --warn-soft:#2a2418; --ok-soft:#142a22;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px -22px rgba(0,0,0,.9);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--plane);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:0 72px}
+  h1{font-size:clamp(24px,4vw,33px);line-height:1.12;letter-spacing:-.02em;margin:8px 0 0;text-wrap:balance}
+  h2{font-size:19px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+  h3{font-size:13px;font-weight:600;color:var(--ink-2);margin:0 0 8px;letter-spacing:.01em}
+  p{margin:9px 0 0;max-width:74ch;color:var(--ink-2)}
+  .eyebrow{font-family:var(--m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dec)}
+  /* top bar */
+  .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:color-mix(in srgb,var(--plane) 92%,transparent);
+       backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+  .bar-in{max-width:1240px;margin:0 auto;padding:9px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--rule);border-radius:8px;padding:2px;gap:2px;flex-wrap:wrap}
+  .seg button{font:inherit;font-size:12.5px;font-weight:500;border:0;background:transparent;color:var(--ink-2);padding:6px 12px;border-radius:6px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--dec);color:#fff}
+  .seg button:focus-visible,.ghost:focus-visible,input:focus-visible{outline:2px solid var(--dec);outline-offset:2px}
+  .ghost{font:inherit;font-size:12.5px;font-weight:500;padding:6px 12px;border-radius:7px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer}
+  .ghost[aria-pressed="true"]{background:var(--bot);border-color:var(--bot);color:#fff}
+  input[type=search]{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:7px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);min-width:170px}
+  .hint{font-family:var(--m);font-size:11px;color:var(--ink-3)}
+  /* hero + tiles */
+  header.hero{padding-block:26px 4px}
+  .tiles{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+  .tile{background:var(--surface);padding:13px 15px}
+  .tile .v{font-size:25px;font-weight:600;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+  .tile.flag .v{color:var(--crit)}
+  .tile .k{font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.35}
+  section{margin-top:30px;scroll-margin-top:66px}
+  .card{margin-top:12px;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+  .card.flat{box-shadow:none}
+  figcaption{margin-top:10px;font-size:12.5px;color:var(--ink-3);max-width:80ch}
+  /* diagram */
+  .scrollx{overflow-x:auto;overscroll-behavior-x:contain}
+  svg.flow{display:block;min-width:940px;width:100%;height:auto}
+  svg.flow text{font-family:var(--f)}
+  .nd{cursor:pointer}
+  .nd:focus{outline:none}
+  .nd:focus-visible rect,.nd:focus-visible polygon{stroke-width:3.4}
+  .dim{opacity:.16}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2);margin-bottom:12px;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .sw{width:22px;height:13px;border:1.6px solid var(--ink-2);display:inline-block}
+  .sw.dec{transform:rotate(45deg);width:13px;border-color:var(--dec)}
+  .sw.term{border-radius:7px;border-color:var(--term)}
+  .sw.bot{border-radius:7px;border-color:var(--bot);background:color-mix(in srgb,var(--bot) 16%,transparent)}
+  .sw.act{border-radius:3px;border-color:var(--act)}
+  .ln{width:26px;height:0;border-top:2px solid var(--ink-2)}
+  .ln.no{border-top-style:dashed}
+  /* path list */
+  .paths{display:grid;gap:8px;margin-top:4px}
+  .path{background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--term);border-radius:9px;padding:11px 13px;cursor:pointer}
+  .path.bot{border-left-color:var(--bot);background:color-mix(in srgb,var(--bot) 5%,var(--surface))}
+  .path:hover{border-color:var(--dec)}
+  .path .d{font-weight:600;font-size:14.5px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .path .o{font-family:var(--m);font-size:11px;color:var(--ink-3)}
+  .path .c{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+  .cond{font-size:12px;background:var(--surface-2);border-radius:20px;padding:3px 10px;color:var(--ink-2);white-space:nowrap}
+  .cond b{color:var(--dec)}
+  .cond.no b{color:var(--bot)}
+  /* tables */
+  .tw{margin-top:12px;overflow:auto;max-height:70vh;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+  table{border-collapse:separate;border-spacing:0;width:100%;font-size:13.5px}
+  th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
+  thead th{font-family:var(--m);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:500;
+           background:var(--surface-2);position:sticky;top:0;z-index:2;cursor:pointer;white-space:nowrap}
+  thead th::after{content:" ⇅";opacity:.35}
+  tbody tr:last-child td{border-bottom:0}
+  tr.diff td{background:color-mix(in srgb,var(--crit) 6%,transparent)}
+  tr.diff td:first-child{font-weight:600}
+  td.gap{color:var(--crit);font-weight:600}
+  .badge{font-family:var(--m);font-size:10px;padding:2px 7px;border-radius:5px;background:var(--crit-soft);color:var(--crit);white-space:nowrap}
+  .callout{margin-top:12px;border-left:3px solid var(--crit);background:var(--crit-soft);border-radius:0 9px 9px 0;padding:12px 14px;font-size:13.5px}
+  .callout b{color:var(--crit)}
+  .callout.warn{border-left-color:var(--warn);background:var(--warn-soft)} .callout.warn b{color:var(--ink)}
+  code{font-family:var(--m);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+  ol.q{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;font-size:14px;color:var(--ink-2)}
+  /* drawer */
+  .scrim{position:fixed;inset:0;background:rgba(10,12,14,.42);z-index:50;opacity:0;pointer-events:none;transition:opacity .16s}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;right:0;top:0;bottom:0;width:min(470px,94vw);background:var(--surface);border-left:1px solid var(--rule);
+          z-index:60;transform:translateX(100%);transition:transform .18s;display:flex;flex-direction:column}
+  .drawer.open{transform:none}
+  .dhead{padding:18px 20px 12px;border-bottom:1px solid var(--rule);display:flex;gap:12px;align-items:flex-start}
+  .dhead h3{margin:0;font-size:17px;color:var(--ink);flex:1}
+  .dbody{padding:16px 20px 28px;overflow:auto}
+  .dbody .k{font-family:var(--m);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-top:16px}
+  .dbody .k:first-child{margin-top:0}
+  .dbody pre{white-space:pre-wrap;font-family:var(--m);font-size:12px;line-height:1.55;color:var(--ink-2);background:var(--surface-2);
+             border-radius:8px;padding:11px 12px;margin:6px 0 0}
+  .dbody textarea{width:100%;margin-top:6px;font:inherit;font-size:13px;padding:9px 11px;border-radius:8px;border:1px solid var(--rule);
+                  background:var(--surface-2);color:var(--ink);min-height:84px;resize:vertical}
+  footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-family:var(--m);font-size:11px;color:var(--ink-3);line-height:1.9}
+  [hidden]{display:none!important}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="bar"><div class="bar-in">
+  <div class="seg" id="views">
+    <button type="button" data-v="map" aria-pressed="true">Routing map</button>
+    <button type="button" data-v="paths" aria-pressed="false">Every path</button>
+    <button type="button" data-v="matrix" aria-pressed="false">Centre owners</button>
+    <button type="button" data-v="top" aria-pressed="false">Upstream steps</button>
+    <button type="button" data-v="open" aria-pressed="false">Open questions</button>
+  </div>
+  <input type="search" id="q" placeholder="Search node, owner, criteria…" aria-label="Search">
+  <button type="button" class="ghost" id="clearTrace" hidden>Clear trace</button>
+  <button type="button" class="ghost" id="exportBtn">Export notes</button>
+  <span class="hint" id="hint"></span>
+</div></div>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">upGrad X · LeadSquared</div>
+    <h1>Lead routing map — Offline &amp; Learning Centre</h1>
+    <p id="lede"></p>
+    <div class="tiles" id="tiles"></div>
+  </header>
+
+  <section id="v-map">
+    <h2>Where a lead can end up</h2>
+    <p>Left to right: entry checks, then one branch per lead source, then the seven places a lead lands. <b>Click any box to trace its full path</b> and read the exact LeadSquared criteria.</p>
+    <div class="card">
+      <div class="legend">
+        <span><i class="sw dec"></i>Decision</span>
+        <span><i class="sw act"></i>Action</span>
+        <span><i class="sw term"></i>Destination</span>
+        <span><i class="sw bot"></i>Bot queue</span>
+        <span><i class="ln"></i>Yes</span>
+        <span><i class="ln no"></i>No</span>
+      </div>
+      <div class="scrollx"><svg class="flow" id="flow" role="img" aria-label="Lead routing flow: a lead entering the Offline and Learning Centre vertical passes an entry check and an assignability check, is routed to a point of contact, stamped and delayed, then split by lead source into Meta Ads, Internshala, Google or Meta web, any other source, and a safety-net branch. The Internshala branch adds two extra checks — page-view medium and whether the Aavataar bot called in the last two days — and its No branch parks the lead in the Avtar LCoffline bot queue."></svg></div>
+      <figcaption>Solid edges are the Yes path, dashed edges the No path. Every box carries its LeadSquared card id so it can be found in the automation builder. Diagram scrolls sideways on narrow screens.</figcaption>
+    </div>
+    <div class="callout" id="mapCallout"></div>
+  </section>
+
+  <section id="v-paths" hidden>
+    <h2>Every path a lead can take</h2>
+    <p>The same logic read as routes rather than a tree — each row is one complete set of conditions and where it lands.</p>
+    <div class="paths" id="pathList"></div>
+  </section>
+
+  <section id="v-matrix" hidden>
+    <h2>Which counsellor owns which centre</h2>
+    <p>All four source branches fan out to the same centre list, but the assigned person often differs. Click a column header to sort.</p>
+    <div class="legend" style="margin-top:12px">
+      <button type="button" class="ghost" id="diffOnly" aria-pressed="false">Show mismatches only</button>
+      <span class="hint" id="matrixCount"></span>
+    </div>
+    <div class="tw" id="matrixTbl"></div>
+    <div class="callout warn" id="defects"></div>
+  </section>
+
+  <section id="v-top" hidden>
+    <h2 id="topH2"></h2>
+    <p>Each step is triggered by a field the previous step wrote, so the chain is time-staggered rather than event-chained.</p>
+    <div class="card"><div class="scrollx"><svg id="pipe" role="img" style="display:block;min-width:820px;width:100%;height:auto"></svg></div>
+      <figcaption id="pipeCap">The label on each arrow is the field whose change fires the next automation.</figcaption></div>
+    <div class="tw" id="stepTbl"></div>
+    <h3 style="margin-top:22px" id="chanH3"></h3>
+    <div class="tw" id="chanTbl"></div>
+  </section>
+
+  <section id="v-open" hidden>
+    <h2>Open questions from the workbook</h2>
+    <ol class="q" id="queries"></ol>
+    <h3 style="margin-top:22px">Conversation Log form — the input that drives stage automations</h3>
+    <div class="tw" id="formTbl"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+  <div class="dhead"><h3 id="dTitle"></h3><button class="ghost" id="dClose" aria-label="Close">Close</button></div>
+  <div class="dbody" id="dBody"></div>
+</aside>
+
+<script>
+const D = __DATA__;
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const KEY = 'lsq-routing-notes-v2';
+let NOTES = {}; try { NOTES = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ NOTES = {}; }
+const saveNotes = () => { try { localStorage.setItem(KEY, JSON.stringify(NOTES)); $('#hint').textContent = 'notes saved'; setTimeout(()=>$('#hint').textContent='',2500); } catch(e){} };
+const byId = Object.fromEntries(D.nodes.map(n => [n.id, n]));
+const ROLE = {trigger:'var(--trig)', decision:'var(--dec)', action:'var(--act)', terminal:'var(--term)', 'terminal-bot':'var(--bot)', exit:'var(--ink-3)'};
+const RNAME = {trigger:'Trigger', decision:'Decision', action:'Action', terminal:'Destination', 'terminal-bot':'Bot queue', exit:'Exit'};
+
+/* ---------- hero ---------- */
+const terms = D.nodes.filter(n => n.role.startsWith('terminal'));
+$('#lede').innerHTML = `Every routing automation for the Offline &amp; Learning Centre vertical, generated from <b>LSQ Lead Routing Logic.xlsx</b>. ` +
+  `A lead passes ${D.nodes.filter(n=>n.role==='decision').length} decisions and can land in ${terms.length} places. Node ids match the LeadSquared card names.`;
+$('#tiles').innerHTML = [
+  {v: D.paths.length, k:'complete paths through the flow'},
+  {v: terms.length, k:'places a lead can end up'},
+  {v: D.centres.length, k:`centre rules, repeated in ${Object.keys(D.cardLabels).length} branches`},
+  {v: D.diffs, k:`of ${D.centres.length} centres have a different owner by source`, flag:true},
+  {v: 1, k:`decision sends ${D.ext.botPoolShare}% of Internshala leads to the bot queue`, flag:true}
+].map(t => `<div class="tile${t.flag?' flag':''}"><div class="v">${t.v}</div><div class="k">${t.k}</div></div>`).join('');
+
+/* ---------- flow diagram ---------- */
+const COLX = [30, 176, 322, 468, 614, 760, 906, 1052, 1236, 1420, 1604];
+const NW = 132, NH = 52, ROWH = 84, TOP = 26;
+const cx = n => COLX[n.col] + NW/2, cy = n => TOP + n.row*ROWH + NH/2;
+function nodeShape(n, traced){
+  const x = COLX[n.col], y = TOP + n.row*ROWH, c = ROLE[n.role];
+  const dim = traced && !traced.has(n.id) ? ' dim' : '';
+  const fill = n.role === 'terminal-bot' ? `fill="${c}" fill-opacity=".14"`
+             : n.role === 'terminal' ? `fill="${c}" fill-opacity=".10"` : `fill="var(--surface)"`;
+  const rx = n.role.startsWith('terminal') ? 24 : n.role === 'decision' ? 6 : 8;
+  const body = n.role === 'decision'
+    ? `<polygon points="${x+8},${y+NH/2} ${x+NW/2},${y+2} ${x+NW-8},${y+NH/2} ${x+NW/2},${y+NH-2}" fill="var(--surface)" stroke="${c}" stroke-width="1.8"/>`
+    : `<rect x="${x}" y="${y}" width="${NW}" height="${NH}" rx="${rx}" ${fill} stroke="${c}" stroke-width="1.8"/>`;
+  const label = wrap(n.label, n.role === 'decision' ? 15 : 17);
+  const ty = y + NH/2 - (label.length-1)*6 + 1;
+  return `<g class="nd${dim}" tabindex="0" role="button" data-id="${n.id}" aria-label="${esc(n.label)} — ${RNAME[n.role]}">
+    ${body}
+    <text x="${x+NW/2}" y="${ty}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">
+      ${label.map((l,i) => `<tspan x="${x+NW/2}" dy="${i?12:0}">${esc(l)}</tspan>`).join('')}</text>
+    <text x="${x+NW/2}" y="${y+NH+12}" text-anchor="middle" font-size="9" font-family="IBM Plex Mono,monospace" fill="var(--ink-3)">${n.id === 'UpdateCard' ? 'Update' : n.id}</text>
+  </g>`;
+}
+function wrap(s, per){
+  const w = s.split(' '), out = []; let cur = '';
+  w.forEach(x => { if ((cur + ' ' + x).trim().length > per){ out.push(cur.trim()); cur = x; } else cur += ' ' + x; });
+  if (cur.trim()) out.push(cur.trim());
+  return out.slice(0,3);
+}
+function edgePath(a, b){
+  const x1 = COLX[a.col] + NW, y1 = cy(a), x2 = COLX[b.col], y2 = cy(b);
+  if (a.row === b.row) return `M${x1} ${y1} H${x2}`;
+  const mid = x1 + (x2 - x1) * 0.45;
+  return `M${x1} ${y1} H${mid-10} Q${mid} ${y1} ${mid} ${y1 + (y2>y1?10:-10)} V${y2 + (y2>y1?-10:10)} Q${mid} ${y2} ${mid+10} ${y2} H${x2}`;
+}
+let TRACE = null;
+function drawFlow(){
+  const W = COLX[10] + NW + 30, H = TOP + 7*ROWH + 30;
+  const traced = TRACE;
+  const edges = D.edges.map(e => {
+    const a = byId[e.f], b = byId[e.t];
+    const on = traced && traced.has(a.id) && traced.has(b.id);
+    const dim = traced && !on ? ' class="dim"' : '';
+    const col = e.lab === 'No' ? 'var(--bot)' : (on ? 'var(--dec)' : 'var(--axis)');
+    const dash = e.lab === 'No' ? ' stroke-dasharray="5 4"' : '';
+    const mx = (COLX[a.col] + NW + COLX[b.col]) / 2, my = (cy(a) + cy(b)) / 2;
+    return `<path d="${edgePath(a,b)}" fill="none" stroke="${col}" stroke-width="${on?2.6:1.7}"${dash} marker-end="url(#ah)"${dim}/>` +
+      (e.lab ? `<text x="${mx}" y="${my-6}" text-anchor="middle" font-size="10" font-weight="600" font-family="IBM Plex Mono,monospace" fill="${col}"${dim}>${e.lab}</text>` : '');
+  }).join('');
+  $('#flow').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  $('#flow').innerHTML =
+    `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+     <g font-family="IBM Plex Mono,monospace" font-size="9.5" fill="var(--ink-3)">
+       <text x="${COLX[0]}" y="14">ENTRY</text><text x="${COLX[3]}" y="14">ROUTE + STAMP</text>
+       <text x="${COLX[7]}" y="14">SOURCE BRANCH</text><text x="${COLX[10]}" y="14">DESTINATION</text></g>
+     ${edges}${D.nodes.map(n => nodeShape(n, traced)).join('')}`;
+  $('#flow').querySelectorAll('.nd').forEach(g => {
+    g.onclick = () => selectNode(g.dataset.id);
+    g.onkeydown = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectNode(g.dataset.id); } };
+  });
+}
+function ancestors(id){
+  const set = new Set([id]); let added = true;
+  while (added){ added = false;
+    D.edges.forEach(e => { if (set.has(e.t) && !set.has(e.f)){ set.add(e.f); added = true; } }); }
+  return set;
+}
+function selectNode(id){ TRACE = ancestors(id); $('#clearTrace').hidden = false; drawFlow(); openDrawer(byId[id]); }
+$('#clearTrace').onclick = () => { TRACE = null; $('#clearTrace').hidden = true; drawFlow(); };
+drawFlow();
+$('#mapCallout').innerHTML = `<b>One decision creates the pool.</b> <code>IfElse237</code> asks whether the Aavataar bot called this lead in the last two days. ` +
+  `<b>Yes</b> → three named counsellors. <b>No</b> → <code>UpdateLead235</code> parks it in <b>Avtar LCoffline</b>, the bot queue. Click that box to trace the full path.`;
+
+/* ---------- drawer ---------- */
+const drawer = $('#drawer'), scrim = $('#scrim');
+let lastFocus = null;
+function openDrawer(n){
+  lastFocus = document.activeElement;
+  $('#dTitle').textContent = n.label;
+  const p = [`<div class="k">Card</div><pre>${n.id} · ${RNAME[n.role]}${n.sub ? ' · ' + esc(n.sub) : ''}</pre>`];
+  if (n.owner) p.push(`<div class="k">Lands with</div><pre>${esc(n.owner)}</pre>`);
+  if (n.crit) p.push(`<div class="k">Criteria in LeadSquared</div><pre>${esc(n.crit).slice(0,4000)}</pre>`);
+  if (n.exitc) p.push(`<div class="k">Exit criteria</div><pre>${esc(n.exitc)}</pre>`);
+  if (n.comment) p.push(`<div class="k">Comment from the sheet</div><pre>${esc(n.comment)}</pre>`);
+  p.push(`<div class="k">Your note</div><textarea id="noteBox" placeholder="Add a note for the team…">${esc(NOTES[n.id] || '')}</textarea>`);
+  $('#dBody').innerHTML = p.join('');
+  $('#noteBox').oninput = e => { NOTES[n.id] = e.target.value; saveNotes(); };
+  drawer.classList.add('open'); scrim.classList.add('on');
+  $('#dClose').focus();
+}
+function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('on'); if (lastFocus) lastFocus.focus(); }
+$('#dClose').onclick = closeDrawer; scrim.onclick = closeDrawer;
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+  if (e.key === 'Tab' && drawer.classList.contains('open')){
+    const f = drawer.querySelectorAll('button, textarea'); if (!f.length) return;
+    const first = f[0], last = f[f.length-1];
+    if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+});
+
+/* ---------- paths ---------- */
+function renderPaths(filter){
+  const f = (filter || '').toLowerCase();
+  const rows = D.paths.filter(p => !f || (p.dest + p.owner + p.conds.join(' ')).toLowerCase().includes(f));
+  $('#pathList').innerHTML = rows.map(p => `<div class="path${p.role === 'terminal-bot' ? ' bot' : ''}" data-id="${p.destId}" tabindex="0" role="button">
+    <div class="d">${esc(p.dest)} <span class="o">${p.destId}${p.owner ? ' · ' + esc(p.owner) : ''}</span></div>
+    <div class="c">${p.conds.map(c => { const no = / → No$/.test(c);
+      return `<span class="cond${no?' no':''}">${esc(c.replace(/ → (Yes|No)$/,''))} <b>${no?'No':'Yes'}</b></span>`; }).join('')}</div></div>`).join('')
+    || `<p>No paths match “${esc(filter)}”.</p>`;
+  $('#pathList').querySelectorAll('.path').forEach(el => {
+    el.onclick = () => selectNode(el.dataset.id);
+    el.onkeydown = e => { if (e.key === 'Enter'){ selectNode(el.dataset.id); } };
+  });
+}
+renderPaths('');
+
+/* ---------- matrix ---------- */
+const cards = Object.keys(D.cardLabels);
+let sortKey = 'centre', sortDir = 1, diffOnly = false;
+function renderMatrix(filter){
+  const f = (filter || '').toLowerCase();
+  let rows = D.matrix.filter(m => (!diffOnly || m.differs) &&
+    (!f || (m.centre + cards.map(c => m[c]).join(' ')).toLowerCase().includes(f)));
+  rows = rows.slice().sort((a,b) => {
+    const va = (a[sortKey] || '').toString().toLowerCase(), vb = (b[sortKey] || '').toString().toLowerCase();
+    return va < vb ? -sortDir : va > vb ? sortDir : 0; });
+  $('#matrixTbl').innerHTML = `<table><thead><tr><th data-k="centre">Centre rule</th>${
+    cards.map(c => `<th data-k="${c}">${D.cardLabels[c]}</th>`).join('')}</tr></thead><tbody>${
+    rows.map(m => `<tr class="${m.differs ? 'diff' : ''}"><td>${esc(m.centre)}${m.missing ? ` <span class="badge">missing in ${m.missing}</span>` : ''}</td>${
+      cards.map(c => `<td class="${m[c] ? '' : 'gap'}">${m[c] ? esc(m[c]) : '— not routed —'}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  $('#matrixCount').textContent = `${rows.length} of ${D.matrix.length} rows · ${D.diffs} mismatched · ${D.missing} with a branch that never routes`;
+  $('#matrixTbl').querySelectorAll('th').forEach(th => th.onclick = () => {
+    if (sortKey === th.dataset.k) sortDir *= -1; else { sortKey = th.dataset.k; sortDir = 1; }
+    renderMatrix($('#q').value); });
+}
+$('#diffOnly').onclick = () => { diffOnly = !diffOnly; $('#diffOnly').setAttribute('aria-pressed', diffOnly); renderMatrix($('#q').value); };
+renderMatrix('');
+/* Spelling defects are DERIVED, not typed: a centre named in exactly one branch that
+   closely resembles a centre named elsewhere is almost certainly a typo. */
+const NUMW = ['no','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten'];
+$('#defects').innerHTML = D.defects.length
+  ? `<b>${NUMW[D.defects.length] || D.defects.length} data ${D.defects.length === 1 ? 'defect' : 'defects'} worth fixing at source.</b> ` +
+    D.defects.map(d => `<code>${esc(d.centre)}</code> appears only in the ${esc(D.cardLabels[d.only])} branch, ` +
+      `against <code>${esc(d.near)}</code> elsewhere`).join('; ') +
+    `. A lead matching one spelling is invisible to the other branch's rule, and neither shows up as an error — the lead simply falls through to the default owner.`
+  : `<b>No spelling defects found.</b> Every centre rule name appears in more than one source branch, or has no near-duplicate.`;
+
+/* ---------- upstream pipeline ----------
+   The workbook has one row per AUTOMATION, and Step 5 is six parallel automations
+   (one per business unit). The pipeline draws one box per DISTINCT step, and the
+   trigger labels are parsed off the step's own Trigger column rather than typed,
+   so adding a step or a BU can't silently desync the diagram from the table. */
+const STEPN = [...new Set(D.steps.map(s => s.step))];
+const STEP1 = STEPN.map(n => D.steps.find(s => s.step === n));
+const trigOf = s => (s.trigger || '').split(':').pop().split(/\s+and\s+/)[0].trim();
+$('#topH2').textContent = `What runs before this — the ${NUMW[STEPN.length] ? NUMW[STEPN.length].toLowerCase() : STEPN.length} upstream steps`;
+$('#chanH3').textContent = `${STEP1[STEPN.length-2] ? STEP1[STEPN.length-2].step : 'The previous step'} fans out to ${D.chans.length} channels`;
+(function(){
+  const S = STEP1, x0 = 20, w = 150, gap = 40, y = 40, H = 132;
+  const W = x0 + S.length*(w+gap);
+  const trig = S.map(trigOf);
+  const fan = D.steps.filter(s => s.step === STEPN[STEPN.length-1]).length;
+  $('#pipeCap').textContent = `The label on each arrow is the field whose change fires the next automation. `
+    + `${S[0].time} → ${S[S.length-1].time} on the worked example in the workbook; `
+    + `${STEPN[STEPN.length-1]} is ${fan} parallel automations, one per business unit.`;
+  $('#pipe').setAttribute('aria-label',
+    `${S.length} sequential automations, ${trig.map((t,i)=>`${S[i].step} on ${t}`).join(', ')}.`);
+  $('#pipe').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  $('#pipe').innerHTML = `<defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="var(--axis)"/></marker></defs>` +
+    S.map((s,i) => { const x = x0 + i*(w+gap);
+      const arrow = i < S.length-1 ? `<path d="M${x+w} ${y+26} H${x+w+gap-6}" stroke="var(--axis)" stroke-width="1.6" fill="none" marker-end="url(#ah2)"/>
+        <text x="${x+w+gap/2}" y="${y+18}" text-anchor="middle" font-size="9" font-family="IBM Plex Mono,monospace" fill="var(--ink-3)">${esc(trig[i+1])}</text>` : '';
+      const last = i === S.length-1;
+      return `${arrow}<rect x="${x}" y="${y}" width="${w}" height="52" rx="9" fill="${last?'var(--term)':'var(--surface)'}" fill-opacity="${last?.12:1}" stroke="${last?'var(--term)':'var(--axis)'}" stroke-width="1.8"/>
+        <text x="${x+w/2}" y="${y+21}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)">${esc(s.step)}</text>
+        <text x="${x+w/2}" y="${y+37}" text-anchor="middle" font-size="10" fill="var(--ink-2)">${esc(wrap(s.summary.replace(/[()]/g,''), 24)[0] || '')}</text>
+        <text x="${x+w/2}" y="${y+68}" text-anchor="middle" font-size="9" font-family="IBM Plex Mono,monospace" fill="var(--ink-3)">${esc(s.time)} · ${esc(s.dur)}</text>`;
+    }).join('') +
+    `<text x="${x0}" y="22" font-size="9.5" font-family="IBM Plex Mono,monospace" fill="var(--ink-3)">TRIGGERED BY: ${esc(trig[0])}</text>`;
+})();
+$('#stepTbl').innerHTML = `<table><thead><tr><th>Step</th><th>Automation</th><th>Trigger</th><th>Runs</th><th>Waits</th><th>Duration</th><th>Writes</th></tr></thead><tbody>${
+  D.steps.map(s => `<tr><td><b>${esc(s.step)}</b><div style="font-family:var(--m);font-size:11px;color:var(--ink-3)">${esc(s.applies)}</div></td>
+    <td style="max-width:240px">${esc(s.name)}<div style="color:var(--ink-3);font-size:12px;margin-top:3px">${esc(s.summary)}</div></td>
+    <td style="font-size:12.5px">${esc(s.trigger)}</td><td style="font-family:var(--m);font-size:12px">${esc(s.time)}</td>
+    <td style="font-family:var(--m);font-size:12px">${esc(s.wait)}</td><td style="font-family:var(--m);font-size:12px">${esc(s.dur)}</td>
+    <td style="font-size:12.5px;color:var(--ink-2)">${esc(s.writes)}</td></tr>`).join('')}</tbody></table>`;
+$('#chanTbl').innerHTML = `<table><thead><tr><th>Channel</th><th>Owner it assigns</th></tr></thead><tbody>${
+  D.chans.map(c => `<tr><td>${esc(c[0])}</td><td style="color:var(--ink-2)">${esc(c[1])}</td></tr>`).join('')}</tbody></table>`;
+
+/* ---------- open questions ---------- */
+$('#queries').innerHTML = D.queries.map(q => `<li>${esc(q)}</li>`).join('');
+$('#formTbl').innerHTML = `<table><thead><tr><th>Page</th><th>Field</th><th>Type</th><th>Mandatory</th><th>Options</th></tr></thead><tbody>${
+  D.form.map(f => `<tr><td>${esc(String(f[0]).replace('.0',''))}</td><td>${esc(f[1])}</td><td>${esc(f[2])}</td><td>${esc(f[3])}</td>
+    <td style="color:var(--ink-2);font-size:12.5px">${esc(f[4])}</td></tr>`).join('')}</tbody></table>`;
+
+/* ---------- views, search, export ---------- */
+$('#views').onclick = e => { const b = e.target.closest('button'); if (!b) return;
+  $('#views').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  ['map','paths','matrix','top','open'].forEach(v => $('#v-' + v).hidden = (v !== b.dataset.v)); };
+$('#q').oninput = e => { renderPaths(e.target.value); renderMatrix(e.target.value);
+  const f = e.target.value.toLowerCase();
+  if (f){ const hit = D.nodes.filter(n => (n.id + n.label + n.crit + n.owner).toLowerCase().includes(f)).map(n => n.id);
+          TRACE = hit.length && hit.length < D.nodes.length ? new Set(hit) : null; }
+  else TRACE = null;
+  $('#clearTrace').hidden = !TRACE; drawFlow(); };
+$('#exportBtn').onclick = () => {
+  const txt = Object.entries(NOTES).filter(([,v]) => v && v.trim())
+    .map(([k,v]) => `${k} (${byId[k] ? byId[k].label : ''}):\n${v}`).join('\n\n') || '(no notes yet)';
+  navigator.clipboard?.writeText(txt).then(() => { $('#hint').textContent = 'notes copied'; setTimeout(()=>$('#hint').textContent='',2500); })
+    .catch(() => { $('#hint').textContent = 'copy failed'; });
+};
+$('#foot').innerHTML = `Generated from <b>LSQ Lead Routing Logic.xlsx</b> — Top Level Routing, Offline BU Level Routing, Queries and Conversation Log Form. ` +
+  `Node ids match the LeadSquared card names. Notes are stored in this browser only; use Export notes to share them.`;
+</script>
