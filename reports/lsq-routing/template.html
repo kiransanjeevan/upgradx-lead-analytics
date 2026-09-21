@@ -101,6 +101,33 @@
   .callout.info b{color:var(--ink)}
   code{font-family:var(--m);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:4px}
   ol.q{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;font-size:14px;color:var(--ink-2)}
+  /* ---- custom select: a real listbox, not the OS dropdown ---- */
+  .sel{position:relative}
+  .sel-btn{width:100%;font:inherit;font-size:15px;font-weight:600;text-align:left;cursor:pointer;
+           background:var(--surface);color:var(--ink);border:1.5px solid var(--rule);border-radius:10px;
+           padding:11px 38px 11px 13px;display:block;position:relative}
+  .sel-btn:hover{border-color:var(--dec)}
+  .sel-btn:focus-visible{outline:2px solid var(--dec);outline-offset:2px}
+  .sel[data-open="true"] .sel-btn{border-color:var(--dec);box-shadow:0 0 0 3px color-mix(in srgb,var(--dec) 14%,transparent)}
+  .sel-btn::after{content:"";position:absolute;right:14px;top:50%;width:8px;height:8px;
+                  border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);
+                  transform:translateY(-70%) rotate(45deg);transition:transform .15s}
+  .sel[data-open="true"] .sel-btn::after{transform:translateY(-20%) rotate(225deg)}
+  .sel-pop{position:absolute;z-index:30;top:calc(100% + 6px);left:0;right:0;background:var(--surface);
+           border:1px solid var(--rule);border-radius:12px;box-shadow:0 2px 6px rgba(15,23,32,.07),0 18px 44px -20px rgba(15,23,32,.5);
+           overflow:hidden;display:none}
+  .sel[data-open="true"] .sel-pop{display:block}
+  .sel-search{width:100%;font:inherit;font-size:14px;border:0;border-bottom:1px solid var(--rule);
+              padding:11px 13px;background:var(--surface-3);color:var(--ink)}
+  .sel-search:focus{outline:none;border-bottom-color:var(--dec)}
+  .sel-list{max-height:264px;overflow-y:auto;padding:5px;margin:0;list-style:none}
+  .sel-opt{padding:9px 11px;border-radius:8px;cursor:pointer;font-size:14.5px;color:var(--ink-2);
+           display:flex;gap:9px;align-items:baseline;line-height:1.35}
+  .sel-opt .sub{margin-left:auto;font-family:var(--m);font-size:10.5px;color:var(--ink-3);white-space:nowrap}
+  .sel-opt[aria-selected="true"]{color:var(--ink);font-weight:600}
+  .sel-opt.active{background:var(--surface-2);color:var(--ink)}
+  .sel-opt[aria-selected="true"]::before{content:"\2713";color:var(--dec);font-weight:700;font-size:12px}
+  .sel-empty{padding:14px;font-size:13.5px;color:var(--ink-3);text-align:center}
   /* ---- "Where leads land" board ---- */
   .tracer{margin-top:14px;background:var(--surface);border:1px solid var(--rule);border-radius:14px;
           padding:18px;box-shadow:var(--shadow)}
@@ -140,6 +167,136 @@
   .stn.end .pip{background:var(--line);border-color:var(--line);color:#fff}
   .stn.end .tx{color:var(--ink);font-weight:600;font-size:15.5px}
   .stn .sub{display:block;font-size:13px;font-weight:400;color:var(--ink-3);margin-top:2px}
+  /* ---- recommendations ---- */
+  .recs{margin-top:16px;display:grid;gap:12px}
+  .rec{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:16px 18px;
+       box-shadow:var(--shadow);display:grid;grid-template-columns:34px 1fr;gap:14px}
+  .rec .n{font-family:var(--d);font-weight:700;font-size:26px;line-height:1;color:var(--axis)}
+  .rec h4{margin:0;font-family:var(--d);font-weight:600;font-size:20px;text-transform:uppercase;
+          letter-spacing:.012em;color:var(--ink);text-wrap:balance}
+  .rec .ev{margin-top:7px;font-family:var(--m);font-size:11.5px;color:var(--ink-2);
+           background:var(--surface-3);border-left:2px solid var(--axis);padding:7px 10px;border-radius:0 7px 7px 0}
+  .rec .do{margin-top:9px;font-size:14.5px;color:var(--ink-2);max-width:70ch}
+  .rec .do b{color:var(--ink);font-weight:600}
+  .pills{margin-top:11px;display:flex;gap:7px;flex-wrap:wrap}
+  .pill{font-family:var(--m);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+        padding:3px 9px;border-radius:20px;border:1px solid var(--rule);color:var(--ink-2);background:var(--surface-3)}
+  .pill.hi{border-color:var(--term);color:var(--term)}
+  .pill.mid{border-color:var(--warn);color:var(--warn)}
+  .pill.lo{border-color:var(--axis);color:var(--ink-3)}
+  @media (max-width:520px){.rec{grid-template-columns:1fr}.rec .n{font-size:20px}}
+  /* ---- flow, laid out by CSS ----
+     The browser does the layout, so text cannot overflow its box and labels
+     cannot land on top of each other. Arrows are real elements with a line AND
+     a head; the previous SVG version drew a marker at the end of a 9px stub,
+     which rendered as a floating arrowhead with no arm. */
+  .stage{margin-top:18px}
+  .stage + .stage{margin-top:26px}
+  .stage-h{display:flex;gap:11px;align-items:baseline;margin-bottom:2px}
+  .stage-h .sn{font-family:var(--d);font-weight:700;font-size:15px;color:#fff;background:var(--ink);
+               width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;align-self:center}
+  .stage-h h3{font-family:var(--d);font-weight:600;font-size:20px;text-transform:uppercase;
+              letter-spacing:.012em;color:var(--ink);margin:0}
+  /* A vertical stepper, not a wrapping row. A flex row re-flows mid-sequence:
+     the last arrow on a line points into empty space and the next step restarts
+     at the far left, so the reading order breaks exactly where it matters. */
+  .chain{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:0}
+  .cstep{display:grid;grid-template-columns:32px minmax(0,1fr);gap:14px;padding-bottom:6px;position:relative}
+  .cstep::before{content:"";position:absolute;left:15px;top:34px;bottom:0;width:2px;background:var(--axis)}
+  .cstep:last-child::before{display:none}
+  .cnum{width:32px;height:32px;border-radius:50%;border:2px solid var(--axis);background:var(--surface);
+        display:grid;place-items:center;font-family:var(--d);font-weight:700;font-size:15px;
+        color:var(--ink-2);z-index:1}
+  .cstep.decision .cnum{border-color:var(--dec);color:var(--dec)}
+  .cstep.trigger .cnum{border-color:var(--trig);color:var(--trig)}
+  .cbody{min-width:0;padding-bottom:12px}
+  .step{display:block;width:100%;max-width:640px;text-align:left;font:inherit;color:inherit;cursor:pointer;
+        background:var(--surface);border:1.5px solid var(--axis);border-radius:11px;padding:12px 14px}
+  .step:hover{border-color:var(--dec);box-shadow:var(--shadow)}
+  .step:focus-visible{outline:2px solid var(--dec);outline-offset:2px}
+  .cstep.decision .step{border-color:var(--dec);border-width:2px}
+  .cstep.trigger .step{border-color:var(--trig)}
+  .step .t{display:block;font-weight:600;font-size:15px;line-height:1.3;color:var(--ink)}
+  .step .w{display:block;font-size:13px;line-height:1.45;color:var(--ink-2);margin-top:3px}
+  .step .id{display:block;font-family:var(--m);font-size:10px;color:var(--ink-3);margin-top:5px}
+  .step .more{float:right;font-family:var(--m);font-size:10px;color:var(--dec);margin-left:10px}
+  /* the answer that carries you to the next step, sitting on the connector */
+  .tgo{display:flex;gap:7px;align-items:center;margin-top:9px;font-family:var(--m);font-size:11px;
+       color:var(--ink-2);letter-spacing:.02em}
+  .tgo .ar{color:var(--axis);font-size:14px;line-height:1}
+  .branch{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap;margin-top:9px;
+          background:var(--crit-soft);border-radius:9px;padding:9px 12px;font-size:13.5px;color:var(--ink-2)}
+  .branch .no{font-family:var(--m);font-size:10px;padding:2px 9px;border-radius:20px;flex:none;
+              border:1px solid var(--bot);color:var(--bot);background:var(--surface)}
+  /* lanes */
+  .lanes{margin-top:12px;display:grid;gap:11px}
+  .lane{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--line);
+        border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .lane-h{display:flex;gap:10px;align-items:baseline;padding:12px 15px 10px;flex-wrap:wrap}
+  .lane-h .src{font-family:var(--d);font-weight:600;font-size:19px;text-transform:uppercase;
+               letter-spacing:.01em;color:var(--ink)}
+  .lane-h .n{margin-left:auto;font-family:var(--m);font-size:10.5px;color:var(--ink-3)}
+  .outs{display:grid;gap:0;border-top:1px solid var(--rule)}
+  .out{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:11px 15px}
+  .out + .out{border-top:1px dashed var(--rule)}
+  .out .conds{display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1 1 300px;min-width:0}
+  .out .cnd{font-size:12.5px;color:var(--ink-2);background:var(--surface-3);border-radius:7px;padding:4px 9px;line-height:1.35}
+  .out .cnd b{color:var(--ink);font-weight:600}
+  .out .sep{color:var(--ink-3);font-size:13px}
+  .out .to{font-weight:600;font-size:14px;color:var(--ink);display:flex;gap:7px;align-items:center;flex:0 1 auto}
+  .out .to .ar{color:var(--line);font-size:16px;line-height:1}
+  .out.bot .to{color:var(--bot)}
+  .out .always{font-size:12.5px;color:var(--ink-3);font-style:italic}
+  .ends{margin-top:13px;display:grid;gap:10px}
+  .end{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--term);
+       border-radius:12px;padding:13px 16px;box-shadow:var(--shadow)}
+  .end.bot{border-left-color:var(--bot)}
+  .end.out{border-left-color:var(--axis);background:var(--surface-3);box-shadow:none}
+  .eh{display:flex;gap:11px;align-items:baseline;flex-wrap:wrap}
+  .eh b{font-size:16px;color:var(--ink)}
+  .ec{margin-left:auto;font-family:var(--m);font-size:10.5px;color:var(--ink-3);white-space:nowrap}
+  .en{margin-top:5px;font-size:14px;color:var(--ink-2);max-width:74ch;line-height:1.5}
+  .eids{margin-top:8px;display:flex;gap:5px;flex-wrap:wrap}
+  .eids span{font-family:var(--m);font-size:10px;color:var(--ink-3);background:var(--surface-3);
+             border:1px solid var(--rule);border-radius:5px;padding:2px 7px}
+  .lane-f{border-top:1px solid var(--rule);padding:10px 15px 12px;background:var(--surface-3)}
+  .lane-f .lf{font-size:12.5px;color:var(--ink-2);line-height:1.5}
+  .lane-f .lf b{color:var(--ink)}
+  .egs{margin-top:7px;display:flex;gap:6px;flex-wrap:wrap}
+  .eg{font-family:var(--m);font-size:11px;color:var(--ink-2);background:var(--surface);
+      border:1px solid var(--rule);border-radius:7px;padding:3px 8px}
+  .eg.more{color:var(--ink-3);border-style:dashed}
+  .tile .s{font-size:11.5px;color:var(--ink-3);margin-top:5px;line-height:1.4}
+  /* upstream steps, as a vertical timeline */
+  .pipe{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:0}
+  .pstep{display:grid;grid-template-columns:34px 1fr;gap:14px;padding-bottom:16px;position:relative}
+  .pstep:last-child{padding-bottom:0}
+  .pstep::before{content:"";position:absolute;left:16px;top:34px;bottom:-2px;width:2px;background:var(--rule)}
+  .pstep:last-child::before{display:none}
+  .pnum{width:34px;height:34px;border-radius:50%;border:2px solid var(--axis);background:var(--surface);
+        display:grid;place-items:center;font-family:var(--d);font-weight:700;font-size:16px;color:var(--ink-2);z-index:1}
+  .pstep.last .pnum{border-color:var(--term);color:var(--term)}
+  .pbody{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow)}
+  .pstep.last .pbody{border-color:var(--term)}
+  .pbody h4{margin:0;font-family:var(--d);font-weight:600;font-size:19px;text-transform:uppercase;
+            letter-spacing:.012em;color:var(--ink)}
+  .ph{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+  .pbody .why{margin:6px 0 0;font-size:14px;color:var(--ink-2);max-width:72ch}
+  .pmeta{margin-top:9px;display:flex;gap:7px;flex-wrap:wrap}
+  .pmeta span{font-family:var(--m);font-size:10.5px;color:var(--ink-2);background:var(--surface-3);
+              border-radius:20px;padding:3px 9px;border:1px solid var(--rule)}
+  .pmeta span.fires{border-color:var(--dec);color:var(--dec)}
+  .bulist{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:5px}
+  .bulist li{font-size:12.5px;color:var(--ink-2);font-family:var(--m);background:var(--surface-3);
+             border-radius:7px;padding:5px 9px}
+  @media (max-width:560px){
+    .chain{flex-direction:column;align-items:stretch}
+    .step{max-width:none}
+    .arrow{width:100%;min-width:0;padding:7px 0}
+    .arrow .line{width:2px;height:22px;min-width:0}
+    .arrow .line::after{right:-4px;top:auto;bottom:-1px;border-left:5px solid transparent;
+      border-right:5px solid transparent;border-top:9px solid var(--axis);border-bottom:0}
+  }
   /* drawer */
   .scrim{position:fixed;inset:0;background:rgba(10,12,14,.42);z-index:50;opacity:0;pointer-events:none;transition:opacity .16s}
   .scrim.on{opacity:1;pointer-events:auto}
@@ -155,6 +312,15 @@
              border-radius:8px;padding:11px 12px;margin:6px 0 0}
   .dbody textarea{width:100%;margin-top:6px;font:inherit;font-size:13px;padding:9px 11px;border-radius:8px;border:1px solid var(--rule);
                   background:var(--surface-2);color:var(--ink);min-height:84px;resize:vertical}
+  .dflt{font-size:12.5px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-top:6px}
+  .rl{margin-top:8px;display:grid;gap:7px}
+  .rli{border:1px solid var(--rule);border-radius:9px;padding:9px 11px;background:var(--surface)}
+  .rlh{display:flex;gap:8px;align-items:baseline;font-size:13.5px;color:var(--ink)}
+  .rlh .rn{font-family:var(--m);font-size:10px;color:var(--ink-3);background:var(--surface-2);
+           border-radius:5px;padding:1px 6px;flex:none}
+  .rlo{font-size:12.5px;color:var(--ink-2);margin-top:3px}
+  .rlo i{color:var(--ink-3)}
+  .rlc{font-family:var(--m);font-size:11px;color:var(--ink-3);margin-top:5px;line-height:1.6}
   footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-family:var(--m);font-size:11px;color:var(--ink-3);line-height:1.9}
   [hidden]{display:none!important}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -167,10 +333,9 @@
     <button type="button" data-v="paths" aria-pressed="false">Every path</button>
     <button type="button" data-v="matrix" aria-pressed="false">Centre owners</button>
     <button type="button" data-v="top" aria-pressed="false">Upstream steps</button>
-    <button type="button" data-v="open" aria-pressed="false">Open questions</button>
+    <button type="button" data-v="recs" aria-pressed="false">Recommendations</button>
   </div>
-  <input type="search" id="q" placeholder="Search node, owner, criteria…" aria-label="Search">
-  <button type="button" class="ghost" id="clearTrace" hidden>Clear trace</button>
+  <input type="search" id="q" placeholder="Search paths and centre owners…" aria-label="Search">
   <button type="button" class="ghost" id="exportBtn">Export notes</button>
   <span class="hint" id="hint"></span>
 </div></div>
@@ -185,11 +350,11 @@
 
   <section id="v-land">
     <h2>Trace a lead</h2>
-    <p>Pick where a lead came from and which centre it names. No card ids, no rule names — just where it ends up and why.</p>
+    <p>Pick where a lead came from and which centre its <b>Source Campaign</b> names. No card ids, no rule names \u2014 just where it ends up and why.</p>
     <div class="tracer">
       <div class="row">
-        <div class="fld"><label for="tSource">Lead came from</label><select id="tSource"></select></div>
-        <div class="fld"><label for="tCentre">Centre it names</label><select id="tCentre"></select></div>
+        <div class="fld"><label id="lblSrc">Lead came from</label><div id="tSource" aria-labelledby="lblSrc"></div></div>
+        <div class="fld"><label id="lblCen">Centre named in the campaign</label><div id="tCentre" aria-labelledby="lblCen"></div></div>
       </div>
       <div class="answer">
         <div class="lands">Ends up with</div>
@@ -202,30 +367,36 @@
     <h2 style="margin-top:30px">The four routes</h2>
     <p>Every lead is tested against these in order. The first one that matches decides the route.</p>
     <div class="routes" id="routes"></div>
+    <h2 style="margin-top:30px">The four places a lead ends up</h2>
+    <p>Whichever route it takes, a lead finishes in one of these. The first one accounts for most
+       leads and is defined four times over — once in each source's rule card.</p>
+    <div class="ends" id="ends"></div>
     <div class="callout info" id="landNotes"></div>
   </section>
 
   <section id="v-map" hidden>
-    <h2>Where a lead can end up</h2>
-    <p>Left to right: entry checks, then one branch per lead source, then the seven places a lead lands. <b>Click any box to trace its full path</b> and read the exact LeadSquared criteria.</p>
-    <div class="card">
-      <div class="legend">
-        <span><i class="sw dec"></i>Decision</span>
-        <span><i class="sw act"></i>Action</span>
-        <span><i class="sw term"></i>Destination</span>
-        <span><i class="sw bot"></i>Bot queue</span>
-        <span><i class="ln"></i>Yes</span>
-        <span><i class="ln no"></i>No</span>
-      </div>
-      <div class="scrollx"><svg class="flow" id="flow" role="img" aria-label="Lead routing flow: a lead entering the Offline and Learning Centre vertical passes an entry check and an assignability check, is routed to a point of contact, stamped and delayed, then split by lead source into Meta Ads, Internshala, Google or Meta web, any other source, and a safety-net branch. The Internshala branch adds two extra checks — page-view medium and whether the Aavataar bot called in the last two days — and its No branch parks the lead in the Avtar LCoffline bot queue."></svg></div>
-      <figcaption>Solid edges are the Yes path, dashed edges the No path. Every box carries its LeadSquared card id so it can be found in the automation builder. Diagram scrolls sideways on narrow screens.</figcaption>
+    <h2>How a lead is routed</h2>
+    <p>Two stages: every lead goes through the same entry checks, then it is sorted by where it came from.
+       Click any step to read the exact LeadSquared criteria behind it.</p>
+
+    <div class="stage">
+      <div class="stage-h"><span class="sn">1</span><h3>Every lead starts here</h3></div>
+      <ol class="chain" id="chainA"></ol>
+    </div>
+
+    <div class="stage">
+      <div class="stage-h"><span class="sn">2</span><h3>Then it is sorted by source</h3></div>
+      <p style="margin-top:6px">The four sources are checked in order and the first match wins, so a lead
+         only ever takes one of these routes.</p>
+      <div class="lanes" id="lanes"></div>
+      <div class="callout info" id="centreNote"></div>
     </div>
     <div class="callout" id="mapCallout"></div>
   </section>
 
   <section id="v-paths" hidden>
     <h2>Every path a lead can take</h2>
-    <p>The same logic read as routes rather than a tree — each row is one complete set of conditions and where it lands.</p>
+    <p>One row per complete route through the flow: every condition a lead must satisfy, in order, and who it ends up with. Conditions are read from the lead\u2019s Source Campaign, Source Medium and page URL.</p>
     <div class="paths" id="pathList"></div>
   </section>
 
@@ -243,19 +414,22 @@
 
   <section id="v-top" hidden>
     <h2 id="topH2"></h2>
-    <p>Each step is triggered by a field the previous step wrote, so the chain is time-staggered rather than event-chained.</p>
-    <div class="card"><div class="scrollx"><svg id="pipe" role="img" style="display:block;min-width:820px;width:100%;height:auto"></svg></div>
-      <figcaption id="pipeCap">The label on each arrow is the field whose change fires the next automation.</figcaption></div>
-    <div class="tw" id="stepTbl"></div>
-    <h3 style="margin-top:22px" id="chanH3"></h3>
+    <p>Before a lead ever reaches the routing map, five automations run in sequence. Each one is
+       fired by a field the previous one wrote, so they are chained by timing rather than by order —
+       the clock times are from one worked example in the workbook.</p>
+    <ol class="pipe" id="pipe"></ol>
+    <h3 style="margin-top:26px" id="chanH3"></h3>
     <div class="tw" id="chanTbl"></div>
+    <h3 style="margin-top:26px">The same five steps, as recorded in the workbook</h3>
+    <div class="tw" id="stepTbl"></div>
   </section>
 
-  <section id="v-open" hidden>
-    <h2>Open questions from the workbook</h2>
-    <ol class="q" id="queries"></ol>
-    <h3 style="margin-top:22px">Conversation Log form — the input that drives stage automations</h3>
-    <div class="tw" id="formTbl"></div>
+  <section id="v-recs" hidden>
+    <h2>How to simplify this</h2>
+    <p>Six changes, ordered by what they cost against what they remove. Each one names the
+       evidence it rests on — counts come from the workbook and move when it does; the
+       effort and impact ratings are a judgement call, not a measurement.</p>
+    <div class="recs" id="recs"></div>
   </section>
 
   <footer id="foot"></footer>
@@ -277,31 +451,105 @@ const saveNotes = () => { try { localStorage.setItem(KEY, JSON.stringify(NOTES))
 const byId = Object.fromEntries(D.nodes.map(n => [n.id, n]));
 const ROLE = {trigger:'var(--trig)', decision:'var(--dec)', action:'var(--act)', terminal:'var(--term)', 'terminal-bot':'var(--bot)', exit:'var(--ink-3)'};
 const RNAME = {trigger:'Trigger', decision:'Decision', action:'Action', terminal:'Destination', 'terminal-bot':'Bot queue', exit:'Exit'};
+/* declared here, not in the board section: the hero tiles use it and run first */
+const SOURCES = Object.values(D.cardLabels);
+const ENDINGS = (() => {
+  const g = new Map();
+  D.nodes.filter(n => n.role.startsWith('terminal')).forEach(n => {
+    const k = n.plain || n.label;
+    if (!g.has(k)) g.set(k, {label: k, ids: [], bot: n.role === 'terminal-bot', owner: n.owner});
+    g.get(k).ids.push(n.id);
+  });
+  return [...g.values()].sort((a, b) => b.ids.length - a.ids.length);
+})();
+
 
 /* ---------- hero ---------- */
 const terms = D.nodes.filter(n => n.role.startsWith('terminal'));
-$('#lede').innerHTML = `Two things decide who owns a lead: <b>where it came from</b> and <b>which centre it names</b>. ` +
+$('#lede').innerHTML = `Two things decide who owns a lead: <b>which source it came from</b> and <b>which centre its campaign name mentions</b>. ` +
   `Start with <b>Trace a lead</b> for the plain answer; the other views open up the ${D.nodes.filter(n=>n.role==='decision').length} decisions ` +
   `and ${terms.length} destinations behind it. Generated from <b>${esc(D.source)}</b>.`;
 $('#tiles').innerHTML = [
-  {v: D.paths.length, k:'complete paths through the flow'},
-  {v: terms.length, k:'places a lead can end up'},
-  {v: D.matrix.length, k:`centre rules, repeated in all ${Object.keys(D.cardLabels).length} branches`},
-  {v: D.diffs, k:`of ${D.matrix.length} centre rules have a different owner by source`, flag:true},
-  {v: 1, k:`decision sends ${D.ext.botPoolShare}% of Internshala leads to the bot queue`, flag:true}
-].map(t => `<div class="tile${t.flag?' flag':''}"><div class="v">${t.v}</div><div class="k">${t.k}</div></div>`).join('');
+  {v: SOURCES.length, k: 'lead sources', s: 'Meta, Internshala, Google/web, everything else — checked in that order'},
+  {v: D.matrix.length, k: 'centres a lead can be sent to', s: `each written out ${Object.keys(D.cardLabels).length} times, once per source`},
+  {v: ENDINGS.length, k: 'places a lead can actually end up', s: `reached through ${terms.length} rule cards — the city-counsellor ending is written out once per source. Listed in full below.`},
+  {v: D.diffs, k: 'centres whose owner depends on the source', s: `out of ${D.matrix.length} — the same city goes to different people`, flag: true},
+  {v: D.ext.botPoolShare + '%', k: 'of Internshala leads wait in the bot queue', s: `as of ${D.ext.botPoolShareAsOf} — one decision puts them there`, flag: true}
+].map(t => `<div class="tile${t.flag?' flag':''}"><div class="v">${t.v}</div><div class="k">${t.k}</div>
+     <div class="s">${t.s}</div></div>`).join('');
+
+/* ---------- custom select ----------
+   A styled listbox with type-ahead: the native control cannot be styled and
+   renders as the OS dropdown, which looked nothing like the rest of the page
+   and gave no room for the per-option detail (who owns that centre). */
+function makeSelect(host, items, onPick, opts){
+  opts = opts || {};
+  const el = typeof host === 'string' ? $(host) : host;
+  let value = items[0] ? items[0].v : '', open = false, active = 0, filtered = items.slice();
+  el.className = 'sel'; el.dataset.open = 'false';
+  el.innerHTML = `<button type="button" class="sel-btn" aria-haspopup="listbox" aria-expanded="false"></button>
+    <div class="sel-pop">${items.length > 8 ? `<input type="text" class="sel-search" placeholder="${esc(opts.search || 'Type to filter…')}" aria-label="${esc(opts.search || 'Filter')}">` : ''}
+      <ul class="sel-list" role="listbox"></ul></div>`;
+  const btn = el.querySelector('.sel-btn'), pop = el.querySelector('.sel-pop'),
+        list = el.querySelector('.sel-list'), search = el.querySelector('.sel-search');
+  const cur = () => items.find(i => i.v === value) || items[0];
+  const paint = () => { btn.textContent = cur() ? cur().label : ''; };
+  function draw(){
+    list.innerHTML = filtered.length ? filtered.map((i, n) =>
+      `<li class="sel-opt${n === active ? ' active' : ''}" role="option" data-v="${esc(i.v)}"
+         aria-selected="${i.v === value}" id="opt-${el.id}-${n}"><span>${esc(i.label)}</span>${
+         i.sub ? `<span class="sub">${esc(i.sub)}</span>` : ''}</li>`).join('')
+      : `<div class="sel-empty">Nothing matches that</div>`;
+    list.querySelectorAll('.sel-opt').forEach(li => {
+      li.onmouseenter = () => { active = filtered.findIndex(i => i.v === li.dataset.v); draw(); };
+      li.onclick = () => pick(li.dataset.v);
+    });
+    const a = list.querySelector('.sel-opt.active');
+    if (a && open) a.scrollIntoView({block:'nearest'});
+  }
+  function show(on){
+    open = on; el.dataset.open = on; btn.setAttribute('aria-expanded', on);
+    if (on){ filtered = items.slice(); active = Math.max(0, filtered.findIndex(i => i.v === value));
+             draw(); if (search){ search.value = ''; search.focus(); } }
+    else btn.focus();
+  }
+  function pick(v){ value = v; paint(); show(false); onPick(v); }
+  btn.onclick = () => show(!open);
+  if (search) search.oninput = () => {
+    const q = search.value.toLowerCase();
+    filtered = items.filter(i => (i.label + ' ' + (i.sub || '')).toLowerCase().includes(q));
+    active = 0; draw();
+  };
+  el.onkeydown = e => {
+    if (e.key === 'Escape' && open){ e.preventDefault(); show(false); return; }
+    if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') && e.target === btn){
+      e.preventDefault(); show(true); return; }
+    if (!open) return;
+    if (e.key === 'ArrowDown'){ e.preventDefault(); active = Math.min(filtered.length-1, active+1); draw(); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); active = Math.max(0, active-1); draw(); }
+    else if (e.key === 'Enter'){ e.preventDefault(); if (filtered[active]) pick(filtered[active].v); }
+    else if (e.key === 'Home'){ e.preventDefault(); active = 0; draw(); }
+    else if (e.key === 'End'){ e.preventDefault(); active = filtered.length-1; draw(); }
+  };
+  document.addEventListener('click', e => { if (open && !el.contains(e.target)) show(false); });
+  paint();
+  return {get value(){ return value; }, set(v){ value = v; paint(); }};
+}
 
 /* ---------- "Where leads land": the same graph, in the words a colleague uses ---------- */
 const SRC_CARD = Object.fromEntries(Object.entries(D.cardLabels).map(([k,v]) => [v,k]));
 const LINE = {'Meta Ads':'var(--meta)','Internshala':'var(--intern)',
               'Google / Meta web':'var(--web)','Other sources':'var(--other)'};
-const SOURCES = Object.values(D.cardLabels);
 
-$('#tSource').innerHTML = SOURCES.map(s => `<option>${esc(s)}</option>`).join('');
-$('#tCentre').innerHTML = D.matrix.map(m => `<option value="${esc(m.sig)}">${esc(m.centre)}</option>`).join('');
+let SRC_SEL, CEN_SEL;
+SRC_SEL = makeSelect('#tSource', SOURCES.map(s => ({v: s, label: s})), () => trace());
+CEN_SEL = makeSelect('#tCentre',
+  D.matrix.map(m => ({v: m.sig, label: m.centre,
+                      sub: m.differs ? 'owner varies by source' : 'same owner everywhere'})),
+  () => trace(), {search: 'Type a centre name…'});
 
 function trace(){
-  const src = $('#tSource').value, sig = $('#tCentre').value;
+  const src = SRC_SEL.value, sig = CEN_SEL.value;
   const card = SRC_CARD[src], row = D.matrix.find(m => m.sig === sig);
   const routes = D.paths.filter(p => p.source === src);
   const centrePath = routes.find(p => p.byCentre);
@@ -341,7 +589,6 @@ function trace(){
   }).join('');
 }
 const SRC_NODE_IDS = ['IfElse74','IfElse115','IfElse198','IfElse218'];
-$('#tSource').onchange = trace; $('#tCentre').onchange = trace;
 
 /* the four routes as a board */
 $('#routes').innerHTML = SOURCES.map(src => {
@@ -350,7 +597,9 @@ $('#routes').innerHTML = SOURCES.map(src => {
   const owned = D.matrix.filter(m => m[card + '_state'] === 'ok').length;
   const stops = [];
   stops.push(`Lead arrives from <b>${esc(src)}</b>`);
-  stops.push(byId['If6'].plain + ' <b>' + esc(byId['If6'].yes) + '</b>');
+  stops.push(byId['If6'].plain + ' <b>' + esc(byId['If6'].yes) + '</b>'
+    + '<span class="sub">Because the Source Campaign contains \u201cLearningCentre\u201d or \u201cCOCO\u201d, '
+    + 'or the page URL is an offline-centre page.</span>');
   stops.push('Held briefly, then sorted by source');
   const diversions = routes.filter(p => !p.byCentre);
   diversions.forEach(p => {
@@ -363,7 +612,7 @@ $('#routes').innerHTML = SOURCES.map(src => {
     stops.push(`${chain}<span class="sub">→ ${esc(p.plainDest)}</span>`);
   });
   const cp = routes.find(p => p.byCentre);
-  const end = cp ? `${cp.plainDest}<span class="sub">${owned} centres have a named counsellor on this route</span>`
+  const end = cp ? `${cp.plainDest}<span class="sub">Which city, again, is read from the Source Campaign / Offline Centre Name / URL. ${owned} of ${D.matrix.length} centres have a named counsellor on this route.</span>`
                  : 'No city route on this source';
   return `<div class="route" style="--line:${LINE[src]}">
     <div class="rh"><span class="dot"></span><span class="nm">${esc(src)}</span>
@@ -383,109 +632,124 @@ $('#landNotes').innerHTML =
 
 trace();
 
-/* ---------- flow diagram ---------- */
-const COLX = [30, 176, 322, 468, 614, 760, 906, 1052, 1236, 1420, 1604];
-const NW = 132, NH = 52, ROWH = 84, TOP = 26;
-const cx = n => COLX[n.col] + NW/2, cy = n => TOP + n.row*ROWH + NH/2;
-function nodeShape(n, traced){
-  const x = COLX[n.col], y = TOP + n.row*ROWH, c = ROLE[n.role];
-  const dim = traced && !traced.has(n.id) ? ' dim' : '';
-  const fill = n.role === 'terminal-bot' ? `fill="${c}" fill-opacity=".14"`
-             : n.role === 'terminal' ? `fill="${c}" fill-opacity=".10"` : `fill="var(--surface)"`;
-  const rx = n.role.startsWith('terminal') ? 24 : n.role === 'decision' ? 6 : 8;
-  const body = n.role === 'decision'
-    ? `<polygon points="${x+8},${y+NH/2} ${x+NW/2},${y+2} ${x+NW-8},${y+NH/2} ${x+NW/2},${y+NH-2}" fill="var(--surface)" stroke="${c}" stroke-width="1.8"/>`
-    : `<rect x="${x}" y="${y}" width="${NW}" height="${NH}" rx="${rx}" ${fill} stroke="${c}" stroke-width="1.8"/>`;
-  const label = wrap(n.label, n.role === 'decision' ? 15 : 17);
-  const ty = y + NH/2 - (label.length-1)*6 + 1;
-  return `<g class="nd${dim}" tabindex="0" role="button" data-id="${n.id}" aria-label="${esc(n.label)} — ${RNAME[n.role]}">
-    ${body}
-    <text x="${x+NW/2}" y="${ty}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">
-      ${label.map((l,i) => `<tspan x="${x+NW/2}" dy="${i?12:0}">${esc(l)}</tspan>`).join('')}</text>
-    <text x="${x+NW/2}" y="${y+NH+12}" text-anchor="middle" font-size="9" font-family="IBM Plex Mono,monospace" fill="var(--ink-3)">${n.id === 'UpdateCard' ? 'Update' : n.id}</text>
-  </g>`;
-}
-function wrap(s, per){
-  const w = s.split(' '), out = []; let cur = '';
-  w.forEach(x => { if ((cur + ' ' + x).trim().length > per){ out.push(cur.trim()); cur = x; } else cur += ' ' + x; });
-  if (cur.trim()) out.push(cur.trim());
-  return out.slice(0,3);
-}
-function edgePath(a, b){
-  const x1 = COLX[a.col] + NW, y1 = cy(a), x2 = COLX[b.col], y2 = cy(b);
-  if (a.row === b.row) return `M${x1} ${y1} H${x2}`;
-  const mid = x1 + (x2 - x1) * 0.45;
-  return `M${x1} ${y1} H${mid-10} Q${mid} ${y1} ${mid} ${y1 + (y2>y1?10:-10)} V${y2 + (y2>y1?-10:10)} Q${mid} ${y2} ${mid+10} ${y2} H${x2}`;
-}
-let TRACE = null;
-function drawFlow(){
-  const W = COLX[10] + NW + 30, H = TOP + 7*ROWH + 30;
-  const traced = TRACE;
-  const edges = D.edges.map(e => {
-    const a = byId[e.f], b = byId[e.t];
-    const on = traced && traced.has(a.id) && traced.has(b.id);
-    const dim = traced && !on ? ' class="dim"' : '';
-    const col = e.lab === 'No' ? 'var(--bot)' : (on ? 'var(--dec)' : 'var(--axis)');
-    const dash = e.lab === 'No' ? ' stroke-dasharray="5 4"' : '';
-    const mx = (COLX[a.col] + NW + COLX[b.col]) / 2, my = (cy(a) + cy(b)) / 2;
-    return `<path d="${edgePath(a,b)}" fill="none" stroke="${col}" stroke-width="${on?2.6:1.7}"${dash} marker-end="url(#ah)"${dim}/>` +
-      (e.lab ? `<text x="${mx}" y="${my-6}" text-anchor="middle" font-size="10" font-weight="600" font-family="IBM Plex Mono,monospace" fill="${col}"${dim}>${e.lab}</text>` : '');
-  }).join('');
-  $('#flow').setAttribute('viewBox', `0 0 ${W} ${H}`);
-  $('#flow').innerHTML =
-    `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
-     <g font-family="IBM Plex Mono,monospace" font-size="9.5" fill="var(--ink-3)">
-       <text x="${COLX[0]}" y="14">ENTRY</text><text x="${COLX[3]}" y="14">ROUTE + STAMP</text>
-       <text x="${COLX[7]}" y="14">SOURCE BRANCH</text><text x="${COLX[10]}" y="14">DESTINATION</text></g>
-     ${edges}${D.nodes.map(n => nodeShape(n, traced)).join('')}`;
-  $('#flow').querySelectorAll('.nd').forEach(g => {
-    g.onclick = () => selectNode(g.dataset.id);
-    g.onkeydown = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectNode(g.dataset.id); } };
-  });
-}
-function ancestors(id){
-  const set = new Set([id]); let added = true;
-  while (added){ added = false;
-    D.edges.forEach(e => { if (set.has(e.t) && !set.has(e.f)){ set.add(e.f); added = true; } }); }
-  return set;
-}
-function selectNode(id){ TRACE = ancestors(id); $('#clearTrace').hidden = false; drawFlow(); openDrawer(byId[id]); }
-$('#clearTrace').onclick = () => { TRACE = null; $('#clearTrace').hidden = true; drawFlow(); };
-drawFlow();
-$('#mapCallout').innerHTML = `<b>One decision creates the pool.</b> <code>IfElse237</code> asks whether the Aavataar bot called this lead in the last two days. ` +
-  `<b>Yes</b> → three named counsellors. <b>No</b> → <code>UpdateLead235</code> parks it in <b>Avtar LCoffline</b>, the bot queue. Click that box to trace the full path.`;
 
-/* ---------- drawer ---------- */
-const drawer = $('#drawer'), scrim = $('#scrim');
-let lastFocus = null;
-function openDrawer(n){
-  lastFocus = document.activeElement;
-  $('#dTitle').textContent = n.label;
-  const p = [`<div class="k">Card</div><pre>${n.id} · ${RNAME[n.role]}${n.sub ? ' · ' + esc(n.sub) : ''}</pre>`];
-  if (n.owner) p.push(`<div class="k">Lands with</div><pre>${esc(n.owner)}</pre>`);
-  if (n.crit) p.push(`<div class="k">Criteria in LeadSquared</div><pre>${esc(n.crit).slice(0,4000)}</pre>`);
-  if (n.exitc) p.push(`<div class="k">Exit criteria</div><pre>${esc(n.exitc)}</pre>`);
-  if (n.comment) p.push(`<div class="k">Comment from the sheet</div><pre>${esc(n.comment)}</pre>`);
-  p.push(`<div class="k">Your note</div><textarea id="noteBox" placeholder="Add a note for the team…">${esc(NOTES[n.id] || '')}</textarea>`);
-  $('#dBody').innerHTML = p.join('');
-  $('#noteBox').oninput = e => { NOTES[n.id] = e.target.value; saveNotes(); };
-  drawer.classList.add('open'); scrim.classList.add('on');
-  $('#dClose').focus();
-}
-function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('on'); if (lastFocus) lastFocus.focus(); }
-$('#dClose').onclick = closeDrawer; scrim.onclick = closeDrawer;
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
-  if (e.key === 'Tab' && drawer.classList.contains('open')){
-    const f = drawer.querySelectorAll('button, textarea'); if (!f.length) return;
-    const first = f[0], last = f[f.length-1];
-    if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+
+/* ---------- flow, rendered as HTML ----------
+   No measurement, no coordinates, no collision arithmetic. The browser lays it
+   out, so a box always contains its text and two labels can never occupy the
+   same point. Arrows are elements with a line and a head, stacked under their
+   own label -- the SVG version put a marker at the end of a 9px stub, which
+   read as an arrowhead floating on its own. */
+const CHAIN = ['Trigger32','If6','IfElse29','DistributeLead8','IfElse226','UpdateCard','Wait11'];
+const SRC_ORDER = ['IfElse74','IfElse115','IfElse198','IfElse218','IfElse225'];
+const LANE_OF = {IfElse74:'Meta Ads', IfElse115:'Internshala',
+                 IfElse198:'Google / Meta web', IfElse218:'Other sources',
+                 IfElse225:'Safety net — still unassigned'};
+const LINE_OF = {'Meta Ads':'var(--meta)', 'Internshala':'var(--intern)',
+                 'Google / Meta web':'var(--web)', 'Other sources':'var(--other)',
+                 'Safety net — still unassigned':'var(--act)'};
+const roleClass = n => n.role === 'decision' ? ' decision' : n.role === 'trigger' ? ' trigger' : '';
+
+/* stage 1 — one continuous vertical sequence */
+$('#chainA').innerHTML = CHAIN.map((id, i) => {
+  const n = byId[id], next = CHAIN[i+1];
+  const edge = next ? (D.edges.find(x => x.f === id && x.t === next) || {}) : null;
+  /* use the step's own wording for its Yes, not a bare "Yes" */
+  const go = edge ? (edge.lab === 'Yes' ? (n.yes || 'Yes') : (edge.lab || 'then')) : '';
+  const off = id === 'If6'
+    ? `<div class="branch"><span class="no">${esc(n.no || 'No')}</span>
+         <span>${esc(byId['EXIT'].why || byId['EXIT'].plain)}</span></div>` : '';
+  return `<li class="cstep${roleClass(n)}">
+    <div class="cnum">${i+1}</div>
+    <div class="cbody">
+      <button type="button" class="step${roleClass(n)}" data-id="${n.id}">
+        <span class="more">criteria &rsaquo;</span>
+        <span class="t">${esc(n.plain || n.label)}</span>
+        ${n.why ? `<span class="w">${esc(n.why)}</span>` : ''}
+        <span class="id">${esc(n.id === 'UpdateCard' ? 'Update card' : n.id)}</span>
+      </button>
+      ${off}
+      ${next ? `<div class="tgo"><span class="ar">&darr;</span>${esc(go)}</div>` : ''}
+    </div></li>`;
+}).join('');
+
+/* stage 2 — one lane per source.
+   Four of the five lanes have a single outcome, so listing "However it arrived
+   -> the counsellor for that city" made them all read identically. What actually
+   differs between them is WHO owns each centre, so each lane now shows its own
+   ownership: how many centres have a named counsellor, how many differ from the
+   other sources, and a few worked examples. */
+const SRC_CARD_OF = {'Meta Ads':'DistributeLead208', 'Internshala':'DistributeLead117',
+                     'Google / Meta web':'DistributeLead221', 'Other sources':'DistributeLead219'};
+$('#lanes').innerHTML = SRC_ORDER.map(srcId => {
+  const src = LANE_OF[srcId];
+  const card = SRC_CARD_OF[src];
+  const paths = D.paths.filter(p => p.steps.some(s => s.id === srcId));
+
+  /* outcomes: only worth listing when this source actually branches */
+  const outs = paths.length > 1 ? paths.map(p => {
+    const q = p.steps.filter(s => !['If6','IfElse29','IfElse226'].includes(s.id) && s.id !== srcId);
+    const conds = q.map(s => { const n = byId[s.id];
+      return `<span class="cnd">${esc(n.plain)} <b>${esc(s.answer === 'Yes' ? (n.yes||'Yes') : (n.no||'No'))}</b></span>`;
+    }).join('<span class="sep">then</span>');
+    return `<div class="out${p.destId === 'UpdateLead235' ? ' bot' : ''}">
+      <span class="conds">${conds}</span>
+      <span class="to"><span class="ar">&rarr;</span>${esc(byId[p.destId].plain)}</span></div>`;
+  }).join('') : `<div class="out"><span class="conds"><span class="always">${
+      esc(srcId === 'IfElse225' ? 'Anything the four rules above did not catch'
+                                : 'Every lead from this source')}</span></span>
+      <span class="to"><span class="ar">&rarr;</span>${esc(byId[paths[0].destId].plain)}</span></div>`;
+
+  /* ownership detail — this is what makes each lane different */
+  let detail = '';
+  if (card){
+    const named = D.matrix.filter(m => m[card + '_state'] === 'ok');
+    const diff  = named.filter(m => m.differs);
+    const egs = diff.slice(0, 3).map(m => `<span class="eg"><b>${esc(m.centre)}</b> &rarr; ${esc(m[card])}</span>`).join('');
+    detail = `<div class="lane-f">
+      <div class="lf">${named.length} of ${D.matrix.length} centres have a named counsellor on this route${
+        D.matrix.length - named.length ? ` · ${D.matrix.length - named.length} closed, so those go to ${
+          esc(D.defaultUser[card] || 'the default user')}` : ''} · <b>${diff.length}</b> send their leads to
+        someone different from the other sources</div>
+      ${egs ? `<div class="egs">${egs}<span class="eg more">…see Centre owners for all ${D.matrix.length}</span></div>` : ''}
+    </div>`;
   }
-});
+  return `<div class="lane" style="--line:${LINE_OF[src]}">
+    <div class="lane-h"><span class="src">${esc(src)}</span>
+      <span class="n">${card ? esc(card) : 'safety net'}</span></div>
+    <div class="outs">${outs}</div>${detail}</div>`;
+}).join('');
 
-/* ---------- paths ---------- */
+/* The flow has 7 terminal cards but only 4 distinct outcomes: "the counsellor for
+   that city" is the same ending repeated once per source. Showing 7 with a
+   four-item list underneath read as a contradiction, which it was. */
+const END_NOTE = {
+  'The counsellor for that city': '',
+  'Three counsellors who take bot-qualified leads': 'Only Internshala page-view leads the calling bot has already spoken to. They skip the city rules entirely.',
+  'Waits in the bot calling queue': 'Not an owner at all — a holding account. The lead sits here until the bot calls it, and nothing takes it back out.',
+  'The central LC Team': 'The safety net, plus every centre that has closed. Not a centre counsellor.',
+};
+$('#ends').innerHTML = ENDINGS.map(e => {
+  let note = END_NOTE[e.label] || '';
+  if (e.label === 'The counsellor for that city')
+    note = `The normal ending. Which counsellor depends on the centre named in the campaign — and for ${D.diffs} of the ${D.matrix.length} centres, on the source as well.`;
+  return `<div class="end${e.bot ? ' bot' : ''}">
+    <div class="eh"><b>${esc(e.label)}</b><span class="ec">${
+      e.ids.length > 1 ? `${e.ids.length} rule cards, one per source` : '1 rule card'}</span></div>
+    <div class="en">${esc(note)}</div>
+    <div class="eids">${e.ids.map(i => `<span>${esc(i)}</span>`).join('')}</div>
+  </div>`;
+}).join('') + `<div class="end out"><div class="eh"><b>${esc(byId['EXIT'].plain)}</b>
+    <span class="ec">not an ending inside the flow</span></div>
+  <div class="en">${esc(byId['EXIT'].why)} It is counted as the eighth route but never reaches an owner.</div>
+  <div class="eids"><span>EXIT</span></div></div>`;
+
+/* one shared note: the campaign name is doing all the work */
+$('#centreNote').innerHTML = `<b>It all hangs on the campaign name.</b> ${esc(D.centreMatch)}`;
+
+/* clicking a step still opens the raw LeadSquared criteria */
+document.querySelectorAll('.step').forEach(b => { b.onclick = () => openDrawer(byId[b.dataset.id]); });
+
 function renderPaths(filter){
   const f = (filter || '').toLowerCase();
   const rows = D.paths.filter(p => !f || (p.dest + p.owner + p.conds.join(' ')).toLowerCase().includes(f));
@@ -495,8 +759,8 @@ function renderPaths(filter){
       return `<span class="cond${no?' no':''}">${esc(c.replace(/ → (Yes|No)$/,''))} <b>${no?'No':'Yes'}</b></span>`; }).join('')}</div></div>`).join('')
     || `<p>No paths match “${esc(filter)}”.</p>`;
   $('#pathList').querySelectorAll('.path').forEach(el => {
-    el.onclick = () => selectNode(el.dataset.id);
-    el.onkeydown = e => { if (e.key === 'Enter'){ selectNode(el.dataset.id); } };
+    el.onclick = () => openDrawer(byId[el.dataset.id]);
+    el.onkeydown = e => { if (e.key === 'Enter'){ openDrawer(byId[el.dataset.id]); } };
   });
 }
 renderPaths('');
@@ -553,40 +817,82 @@ $('#aliases').innerHTML = D.aliases.length
     `. The match conditions are byte-identical in every branch, so all of them route the same leads to the same owner. This is a naming-hygiene item, not a misrouting bug — worth tidying at source so the next reader is not misled, but nothing is broken today.`
   : `<b>Rule names are consistent.</b> Every rule is spelled the same way in each branch it appears in.`;
 
-/* ---------- upstream pipeline ----------
-   The workbook has one row per AUTOMATION, and Step 5 is six parallel automations
-   (one per business unit). The pipeline draws one box per DISTINCT step, and the
-   trigger labels are parsed off the step's own Trigger column rather than typed,
-   so adding a step or a BU can't silently desync the diagram from the table. */
+$('#mapCallout').innerHTML = `<b>One decision creates the pool.</b> <code>IfElse237</code> asks whether the Aavataar bot called this lead in the last two days. ` +
+  `<b>Yes</b> → three named counsellors. <b>No</b> → <code>UpdateLead235</code> parks it in <b>Avtar LCoffline</b>, the bot queue. Click that box to trace the full path.`;
+
+/* ---------- drawer ---------- */
+const drawer = $('#drawer'), scrim = $('#scrim');
+let lastFocus = null;
+function openDrawer(n){
+  lastFocus = document.activeElement;
+  $('#dTitle').textContent = n.label;
+  const p = [`<div class="k">Card</div><pre>${n.id} · ${RNAME[n.role]}${n.sub ? ' · ' + esc(n.sub) : ''}</pre>`];
+  if (n.owner) p.push(`<div class="k">Lands with</div><pre>${esc(n.owner)}</pre>`);
+  /* A distribution card's criteria blob runs to ~8,000 characters, so dumping it
+     into a <pre> and slicing at 4,000 cut it off mid-rule ("Rule Nam"). The rules
+     are already parsed in build.py, so render them as a list and show every one. */
+  const rl = D.cardRules[n.id];
+  if (rl && rl.length){
+    p.push(`<div class="k">${rl.length} rule${rl.length === 1 ? '' : 's'} on this card</div>`);
+    if (D.defaultUserAll[n.id])
+      p.push(`<div class="dflt">Anything that matches none of them goes to <b>${esc(D.defaultUserAll[n.id])}</b>.</div>`);
+    p.push(`<div class="rl">${rl.map((r, i) => `<div class="rli">
+        <div class="rlh"><span class="rn">${i+1}</span><b>${esc(r.name)}</b></div>
+        <div class="rlo">${r.owners.length ? esc(r.owners.join(', '))
+          : '<i>no owner — centre closed, falls to the default user</i>'}</div>
+        <div class="rlc">${esc(r.conds).split('\n').map(l => esc(l)).join('<br>')}</div>
+      </div>`).join('')}</div>`);
+  } else if (n.crit){
+    p.push(`<div class="k">Criteria in LeadSquared</div><pre>${esc(n.crit)}</pre>`);
+  }
+  if (n.exitc) p.push(`<div class="k">Exit criteria</div><pre>${esc(n.exitc)}</pre>`);
+  if (n.comment) p.push(`<div class="k">Comment from the sheet</div><pre>${esc(n.comment)}</pre>`);
+  p.push(`<div class="k">Your note</div><textarea id="noteBox" placeholder="Add a note for the team…">${esc(NOTES[n.id] || '')}</textarea>`);
+  $('#dBody').innerHTML = p.join('');
+  $('#noteBox').oninput = e => { NOTES[n.id] = e.target.value; saveNotes(); };
+  drawer.classList.add('open'); scrim.classList.add('on');
+  $('#dClose').focus();
+}
+function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('on'); if (lastFocus) lastFocus.focus(); }
+$('#dClose').onclick = closeDrawer; scrim.onclick = closeDrawer;
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
+  if (e.key === 'Tab' && drawer.classList.contains('open')){
+    const f = drawer.querySelectorAll('button, textarea'); if (!f.length) return;
+    const first = f[0], last = f[f.length-1];
+    if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+});
+
+/* ---------- upstream steps, as a vertical timeline ----------
+   Read top-to-bottom so each step has the full column width for its purpose.
+   The horizontal version clipped its own text and forced sideways scrolling. */
 const STEPN = [...new Set(D.steps.map(s => s.step))];
 const STEP1 = STEPN.map(n => D.steps.find(s => s.step === n));
 const trigOf = s => (s.trigger || '').split(':').pop().split(/\s+and\s+/)[0].trim();
-$('#topH2').textContent = `What runs before this — the ${NUMW[STEPN.length] ? NUMW[STEPN.length].toLowerCase() : STEPN.length} upstream steps`;
-$('#chanH3').textContent = `${STEP1[STEPN.length-2] ? STEP1[STEPN.length-2].step : 'The previous step'} fans out to ${D.chans.length} channels`;
-(function(){
-  const S = STEP1, x0 = 20, w = 150, gap = 40, y = 40, H = 132;
-  const W = x0 + S.length*(w+gap);
-  const trig = S.map(trigOf);
-  const fan = D.steps.filter(s => s.step === STEPN[STEPN.length-1]).length;
-  $('#pipeCap').textContent = `The label on each arrow is the field whose change fires the next automation. `
-    + `${S[0].time} → ${S[S.length-1].time} on the worked example in the workbook; `
-    + `${STEPN[STEPN.length-1]} is ${fan} parallel automations, one per business unit.`;
-  $('#pipe').setAttribute('aria-label',
-    `${S.length} sequential automations, ${trig.map((t,i)=>`${S[i].step} on ${t}`).join(', ')}.`);
-  $('#pipe').setAttribute('viewBox', `0 0 ${W} ${H}`);
-  $('#pipe').innerHTML = `<defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="var(--axis)"/></marker></defs>` +
-    S.map((s,i) => { const x = x0 + i*(w+gap);
-      const arrow = i < S.length-1 ? `<path d="M${x+w} ${y+26} H${x+w+gap-6}" stroke="var(--axis)" stroke-width="1.6" fill="none" marker-end="url(#ah2)"/>
-        <text x="${x+w+gap/2}" y="${y+18}" text-anchor="middle" font-size="9" font-family="IBM Plex Mono,monospace" fill="var(--ink-3)">${esc(trig[i+1])}</text>` : '';
-      const last = i === S.length-1;
-      return `${arrow}<rect x="${x}" y="${y}" width="${w}" height="52" rx="9" fill="${last?'var(--term)':'var(--surface)'}" fill-opacity="${last?.12:1}" stroke="${last?'var(--term)':'var(--axis)'}" stroke-width="1.8"/>
-        <text x="${x+w/2}" y="${y+21}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)">${esc(s.step)}</text>
-        <text x="${x+w/2}" y="${y+37}" text-anchor="middle" font-size="10" fill="var(--ink-2)">${esc(wrap(s.summary.replace(/[()]/g,''), 24)[0] || '')}</text>
-        <text x="${x+w/2}" y="${y+68}" text-anchor="middle" font-size="9" font-family="IBM Plex Mono,monospace" fill="var(--ink-3)">${esc(s.time)} · ${esc(s.dur)}</text>`;
-    }).join('') +
-    `<text x="${x0}" y="22" font-size="9.5" font-family="IBM Plex Mono,monospace" fill="var(--ink-3)">TRIGGERED BY: ${esc(trig[0])}</text>`;
-})();
+$('#topH2').textContent = `What runs before this — the ${
+  NUMW[STEPN.length] ? NUMW[STEPN.length].toLowerCase() : STEPN.length} upstream steps`;
+$('#chanH3').textContent = `${STEP1[STEPN.length-2] ? STEP1[STEPN.length-2].step : 'The previous step'} sorts every lead into ${D.chans.length} channels`;
+$('#pipe').innerHTML = STEP1.map((s, i) => {
+  const last = i === STEP1.length - 1;
+  const fan = D.steps.filter(x => x.step === s.step);
+  return `<li class="pstep${last ? ' last' : ''}">
+    <div class="pnum">${i+1}</div>
+    <div class="pbody">
+      <div class="ph"><h4>${esc(s.purpose || s.step)}</h4>
+        <span class="pill ${s.applies === 'Fresh Leads' ? 'lo' : 'mid'}">${esc(s.applies)}</span></div>
+      <p class="why">${esc(s.why || s.summary)}</p>
+      <div class="pmeta">
+        <span class="fires">Fires on ${esc(trigOf(s))}</span>
+        <span>${esc(s.time)}</span><span>takes ${esc(s.dur)}</span>
+        ${fan.length > 1 ? `<span>${fan.length} automations in parallel</span>` : ''}
+      </div>
+      ${fan.length > 1 ? `<ul class="bulist">${fan.map(f =>
+          `<li>${esc(f.name.replace(/^#+\s*/, ''))}</li>`).join('')}</ul>` : ''}
+    </div></li>`;
+}).join('');
+
 $('#stepTbl').innerHTML = `<table><thead><tr><th>Step</th><th>Automation</th><th>Trigger</th><th>Runs</th><th>Waits</th><th>Duration</th><th>Writes</th></tr></thead><tbody>${
   D.steps.map(s => `<tr><td><b>${esc(s.step)}</b><div style="font-family:var(--m);font-size:11px;color:var(--ink-3)">${esc(s.applies)}</div></td>
     <td style="max-width:240px">${esc(s.name)}<div style="color:var(--ink-3);font-size:12px;margin-top:3px">${esc(s.summary)}</div></td>
@@ -596,22 +902,58 @@ $('#stepTbl').innerHTML = `<table><thead><tr><th>Step</th><th>Automation</th><th
 $('#chanTbl').innerHTML = `<table><thead><tr><th>Channel</th><th>Owner it assigns</th></tr></thead><tbody>${
   D.chans.map(c => `<tr><td>${esc(c[0])}</td><td style="color:var(--ink-2)">${esc(c[1])}</td></tr>`).join('')}</tbody></table>`;
 
-/* ---------- open questions ---------- */
-$('#queries').innerHTML = D.queries.map(q => `<li>${esc(q)}</li>`).join('');
-$('#formTbl').innerHTML = `<table><thead><tr><th>Page</th><th>Field</th><th>Type</th><th>Mandatory</th><th>Options</th></tr></thead><tbody>${
-  D.form.map(f => `<tr><td>${esc(String(f[0]).replace('.0',''))}</td><td>${esc(f[1])}</td><td>${esc(f[2])}</td><td>${esc(f[3])}</td>
-    <td style="color:var(--ink-2);font-size:12.5px">${esc(f[4])}</td></tr>`).join('')}</tbody></table>`;
+/* ---------- recommendations ----------
+   Counts are interpolated from the parsed workbook so they cannot go stale.
+   Effort/impact are explicitly labelled as judgement in the section intro. */
+const RULESETS = Object.keys(D.cardLabels).length;
+const RECS = [
+  {t: 'Keep one centre rule set, not four',
+   ev: `${D.matrix.length} centre rules x ${RULESETS} source branches = ${D.matrix.length*RULESETS} rule definitions maintained by hand.`,
+   do: `Every branch already carries the <b>same ${D.matrix.length} rules</b> with the same conditions — only the assignee differs. Collapse them into one distribution card keyed on centre, and express source-specific ownership as a lookup rather than three more copies. Opening a centre is then <b>one edit instead of ${RULESETS}</b>.`,
+   p: [['Impact','hi'],['Effort: medium','mid']]},
+
+  {t: 'Decide whether the source should change the owner at all',
+   ev: `${D.diffs} of ${D.matrix.length} centre rules route to a different person depending on which source the lead came from.`,
+   do: `Some of this is deliberate — Internshala leads going to the three bot-qualified counsellors. Much of it looks like drift: Coimbatore has three owners on Meta, one on Internshala, one on Google and a different one again on Other. <b>Confirm intent centre by centre</b>, then unify everything that turns out to be accidental.`,
+   p: [['Impact','hi'],['Effort: low — a decision, not a build','lo']]},
+
+  {t: 'Match on the centre field, not on campaign text',
+   ev: 'Every rule matches Source Campaign / platformUrl / Offline Centre Name with "contains" against a typed string.',
+   do: `A campaign renamed in the ad tool silently stops matching, and the lead falls to the default user with nothing logged as an error. <b>Make Offline Centre Name a controlled picklist and match on that alone</b>, with campaign text as a fallback only where the field is genuinely unset.`,
+   p: [['Impact','hi'],['Effort: high — needs upstream field discipline','mid']]},
+
+  {t: 'Give the bot queue a way out',
+   ev: `About ${D.ext.botPoolShare}% of Internshala arrivals were parked in the bot queue as of ${D.ext.botPoolShareAsOf}.`,
+   do: `A lead the bot has not called goes into the queue, and nothing takes it back out. <b>Add a release rule</b> — if a lead has sat in the queue beyond N days with no bot activity, route it to the centre counsellor it would otherwise have reached.`,
+   p: [['Impact','hi'],['Effort: low','lo']]},
+
+  {t: 'Make closed centres explicit',
+   ev: D.noOwner.length
+        ? `${D.noOwner.map(u => u.centre).join(' and ')} have a blank owner and rely on the card's Default User (${[...new Set(D.noOwner.flatMap(u => u.fallback))].join(', ')}).`
+        : 'Every rule currently names an owner.',
+   do: `A blank "Assigned Users" line works, but it is invisible — nothing on the card says the centre has closed, so the next person to read it sees a bug. <b>Route closed centres to the LC Team by name</b>, and the intent survives without a comment explaining it.`,
+   p: [['Impact','lo'],['Effort: low','lo']]},
+
+  {t: 'Chain the upstream steps on events, not timers',
+   ev: `${new Set(D.steps.map(s => s.step)).size} automations fire on field-change triggers, spanning ${D.steps[0].time} to ${D.steps[D.steps.length-1].time}.`,
+   do: `Each step waits for a field the previous step wrote, so the chain is held together by timing rather than sequence. A slow step does not delay the next one — it lets it run on stale data. <b>Chain them explicitly</b> so ordering is guaranteed rather than probable.`,
+   p: [['Impact','mid'],['Effort: high','mid']]},
+];
+$('#recs').innerHTML = RECS.map((r, i) => `<div class="rec">
+  <div class="n">${String(i+1).padStart(2,'0')}</div>
+  <div><h4>${esc(r.t)}</h4>
+    <div class="ev">${esc(r.ev)}</div>
+    <div class="do">${r.do}</div>
+    <div class="pills">${r.p.map(([lab, k]) => `<span class="pill ${k}">${esc(lab)}</span>`).join('')}</div>
+  </div></div>`).join('');
+
+/* ---------- reference tables ---------- */
 
 /* ---------- views, search, export ---------- */
 $('#views').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   $('#views').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
-  ['land','map','paths','matrix','top','open'].forEach(v => $('#v-' + v).hidden = (v !== b.dataset.v)); };
-$('#q').oninput = e => { renderPaths(e.target.value); renderMatrix(e.target.value);
-  const f = e.target.value.toLowerCase();
-  if (f){ const hit = D.nodes.filter(n => (n.id + n.label + n.crit + n.owner).toLowerCase().includes(f)).map(n => n.id);
-          TRACE = hit.length && hit.length < D.nodes.length ? new Set(hit) : null; }
-  else TRACE = null;
-  $('#clearTrace').hidden = !TRACE; drawFlow(); };
+  ['land','map','paths','matrix','top','recs'].forEach(v => $('#v-' + v).hidden = (v !== b.dataset.v)); };
+$('#q').oninput = e => { renderPaths(e.target.value); renderMatrix(e.target.value); };
 $('#exportBtn').onclick = () => {
   const txt = Object.entries(NOTES).filter(([,v]) => v && v.trim())
     .map(([k,v]) => `${k} (${byId[k] ? byId[k].label : ''}):\n${v}`).join('\n\n') || '(no notes yet)';

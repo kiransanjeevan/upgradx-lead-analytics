@@ -40,6 +40,12 @@ WORKBOOK = Path(os.environ.get("ROUTING_WORKBOOK") or
 
 # Figures that are NOT derivable from the workbook belong here, with their
 # provenance, so they are visible instead of buried in template prose.
+# How a centre is identified. Every one of the 30 rules matches this way, so it
+# belongs next to the centre list rather than repeated in prose.
+CENTRE_MATCH = ("The centre is read from the same free text: Source Campaign, Offline Centre Name "
+                "or the page URL must contain the centre\u2019s name. So one campaign name carries "
+                "both the \u201cthis is a Learning Centre lead\u201d marker and the city.")
+
 EXTERNAL = {
     # share of September Internshala arrivals parked in the Avtar LCoffline bot
     # queue, from the Internshala funnel pull (reports/internshala)
@@ -98,50 +104,79 @@ def rules(t):
 
 
 def owners(u):
-    """Assigned Users line -> display names. Empty list means no owner at all."""
-    return [n for n in (x.split('<')[0].strip().rstrip(',').strip()
+    """Assigned Users line -> display names. Empty list means no owner at all.
+
+    Splitting on '>' leaves each name after the first carrying a LEADING comma
+    (", Tammana Nagar"). rstrip(',') only trims the trailing side, so those
+    commas survived and rendered as "Devika KP, , Tammana Nagar". strip(',')
+    takes both ends.
+    """
+    return [n for n in (x.split('<')[0].strip().strip(',').strip()
                         for x in (u or "").split('>')) if n]
 
 
 # Plain-language wording for the "Where leads land" view, which is read by people
 # who do not know the LeadSquared card names. Keyed by node id so the two views
 # can never describe different logic — they render the same graph.
+# Plain-language wording, keyed by node id, so the diagram and the "Where leads
+# land" view render the same graph and can never describe different logic.
+# `q` is the question a first-time reader would ask; `why` says why the step
+# exists at all -- the LeadSquared label alone ("Route to POC", "Owner = POC")
+# means nothing to someone seeing this for the first time.
 PLAIN = {
-    "If6": ("Did it come from a Learning Centre page or campaign?",
-            "Yes — it belongs to us", "No — it leaves this flow"),
-    "IfElse29": ("Is the lead free to be reassigned?", "Yes", "No"),
-    "IfElse226": ("Did it reach the right point of contact?", "Yes", "No"),
-    "IfElse74": ("Did it come from Meta Ads?", "Yes", ""),
-    "IfElse115": ("Did it come from Internshala?", "Yes", ""),
-    "IfElse234": ("Did the student just browse a page?", "Yes", "No — they filled something in"),
-    "IfElse237": ("Has the calling bot spoken to them in the last 2 days?",
-                  "Yes — the bot qualified them", "Not yet"),
-    "IfElse198": ("Did it come from Google or a Meta web form?", "Yes", ""),
-    "IfElse218": ("Any other source?", "Yes", ""),
-    "IfElse225": ("Is it still sitting unassigned?", "Yes", ""),
+    "Trigger32":  ("A new lead arrives", "Any lead that lands in the Offline & Learning Centre vertical, still owned by the system account.", "", ""),
+    "If6":        ("Is this a Learning Centre lead?",
+                   "Decided entirely by the Source Campaign name and the page URL: the campaign must contain "
+                   "\u201cLearningCentre\u201d or \u201cCOCO\u201d, or the URL must be an offline-centre page "
+                   "(/offline-centres/, upgrad-learning-centre, upgrad-career-centre, or -city). "
+                   "Nothing else marks a lead as ours.",
+                   "Yes — it belongs to us", "No — it leaves this flow"),
+    "IfElse29":   ("Is the lead free to reassign?", "A lead already owned by a person is left alone.", "Yes — nobody owns it yet", "No"),
+    "DistributeLead8": ("Hand it to the Learning Centre desk", "A holding step: the lead gets a temporary owner so the rest of the flow has something to act on.", "", ""),
+    "IfElse226":  ("Did that hand-off work?", "Confirms the temporary owner was actually set before anything else runs.", "Yes", "No"),
+    "UpdateCard": ("Tag it as Offline – Learning Centre", "Stamps the programme, owner and assignment date so later automations and reports can find it.", "", ""),
+    "Wait11":     ("Short pause", "Gives the earlier updates time to save before the lead is sorted by source.", "", ""),
+    "IfElse74":   ("Did it come from Meta Ads?", "", "Yes", ""),
+    "IfElse115":  ("Did it come from Internshala?", "", "Yes", ""),
+    "IfElse234":  ("Did they only browse a page?", "A page view means they showed interest without filling anything in — so there is nothing to call them about yet.",
+                   "Yes — only browsed", "No — they filled something in"),
+    "IfElse237":  ("Has the calling bot spoken to them in the last 2 days?", "Stops the same person being called again straight away.",
+                   "Yes — the bot qualified them", "Not yet"),
+    "IfElse198":  ("Did it come from Google or a Meta web form?", "", "Yes", ""),
+    "IfElse218":  ("Any other source?", "Everything that is not Meta Ads, Internshala, Google or a Meta web form.", "Yes", ""),
+    "IfElse225":  ("Is it still sitting unassigned?", "A safety net: anything the rules above missed is picked up here.", "Yes", ""),
+    "EXIT":       ("It leaves this flow", "Not a Learning Centre lead, so none of these rules apply to it.", "", ""),
+    "DistributeLead208": ("The counsellor for that city", "", "", ""),
+    "DistributeLead117": ("The counsellor for that city", "", "", ""),
+    "DistributeLead221": ("The counsellor for that city", "", "", ""),
+    "DistributeLead219": ("The counsellor for that city", "", "", ""),
+    "DistributeLead238": ("Three counsellors who take bot-qualified leads", "", "", ""),
+    "UpdateLead235":     ("Waits in the bot calling queue", "", "", ""),
+    "DistributeLead216": ("The central LC Team", "", "", ""),
 }
-# What a destination means in business terms.
-DEST = {
-    "DistributeLead208": "The counsellor for that city",
-    "DistributeLead117": "The counsellor for that city",
-    "DistributeLead221": "The counsellor for that city",
-    "DistributeLead219": "The counsellor for that city",
-    "DistributeLead238": "Three named counsellors who take bot-qualified leads",
-    "UpdateLead235": "Waits in the bot calling queue",
-    "DistributeLead216": "The central LC Team",
-    "EXIT": "Not a Learning Centre lead — nothing happens",
+DEST = {k: v[0] for k, v in PLAIN.items()}
+
+# What each upstream automation is actually FOR, in the reader's terms. The
+# workbook's "Applies to" column already says who each step covers; this adds
+# the purpose, which the automation names ("## 03 { New } Interested in Date
+# Changed | Reactivation | Junk pullout | SA") do not convey.
+STEP_PURPOSE = {
+    "Step 1": ("Stamp a brand-new lead", "Fills in the first fields the moment a lead is created — campaign, UTM, and the date the rest of the chain keys off."),
+    "Step 2": ("Catch reactivated leads", "Fires whenever Interested In Date changes. A fresh lead passes through; an existing lead that shows interest again is pulled back in here."),
+    "Step 3": ("Tag international leads", "Adds region details, but only where the lead is outside India."),
+    "Step 4": ("Choose the business unit", "Reads what steps 1-3 wrote and decides which BU the lead belongs to. This is where the Offline & Learning Centre path begins."),
+    "Step 5": ("Assign an owner inside that BU", "One automation per business unit, running in parallel. The Offline & LC one is what the routing map above describes."),
 }
 
 
 # ---- graph: col/row hand-placed for a clean left-to-right read ----
 def n(id, label, role, col, row, sub="", crit=None, comment=None, owner=""):
-    p = PLAIN.get(id)
+    p = PLAIN.get(id, ("", "", "", ""))
     return dict(id=id, label=label, role=role, col=col, row=row, sub=sub,
                 crit=crit if crit is not None else C(id),
                 comment=comment if comment is not None else C(id, "comment"),
                 exitc=C(id, "exit"), owner=owner,
-                plain=p[0] if p else "", yes=p[1] if p else "", no=p[2] if p else "",
-                dest=DEST.get(id, ""))
+                plain=p[0], why=p[1], yes=p[2], no=p[3], dest=DEST.get(id, ""))
 
 
 NODES = [
@@ -274,7 +309,8 @@ no_owner = [{"centre": m["centre"],
 trows = [[("" if v is None else str(v).strip()) for v in r]
          for r in wb['Top Level Routing'].iter_rows(values_only=True)][1:]
 steps = [dict(step=r[0], applies=r[1], name=r[2], summary=r[3], trigger=r[4],
-              time=str(r[5])[:5], wait=r[6], dur=r[7], writes=r[8])
+              time=str(r[5])[:5], wait=r[6], dur=r[7], writes=r[8],
+              purpose=STEP_PURPOSE.get(r[0], ("", ""))[0], why=STEP_PURPOSE.get(r[0], ("", ""))[1])
          for r in trows if any(r) and r[0].startswith('Step')]
 chans = [[r[3], r[8]] for r in trows if any(r) and not r[0] and r[3]]
 queries = [str(r[1]) for r in wb['Queries'].iter_rows(min_row=2, values_only=True) if r[1]]
@@ -287,7 +323,12 @@ D = dict(nodes=NODES, edges=EDGES, paths=paths, matrix=matrix, cardLabels=LBL,
          missing=sum(1 for m in matrix if m["missing"]),
          aliases=aliases, noOwner=no_owner, defaultUser=DEFAULT_USER,
          steps=steps, chans=chans, queries=queries, form=form,
-         ext=EXTERNAL, source=WORKBOOK.name)
+         cardRules={k: [dict(name=r["name"], owners=owners(r["users"]), conds=r["conds"])
+                        for r in rules(C(k))]
+                    for k in list(LBL) + ["DistributeLead8", "DistributeLead238"]},
+         defaultUserAll={k: (re.search(r'Default User\s*:\s*([^\n<]+)', C(k)) or [None, ""])[1].strip()
+                         for k in list(LBL) + ["DistributeLead8", "DistributeLead238"]},
+         ext=EXTERNAL, centreMatch=CENTRE_MATCH, source=WORKBOOK.name)
 
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 out = OUT_DIR / "lsq-routing.html"
