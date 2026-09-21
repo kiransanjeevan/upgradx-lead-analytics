@@ -64,7 +64,7 @@ COLS = ("ProspectID,CreatedOn,mx_First_Call_Date_and_Time,mx_Date_of_Lead_Assign
         "mx_Is_Counselled_Lead,mx_Total_Amount_Paid,mx_Assignment_Date_Current_Owner,"
         # event dates — needed for the Operational view (what happened IN a window,
         # as opposed to how a created cohort eventually converted)
-        "mx_First_Counselling_Date,mx_First_Transaction_Date")
+        "mx_First_Counselling_Date,mx_First_Transaction_Date,mx_Interested_In_Date")
 
 
 MAX_PAGES = 200          # 200k rows per anchor; the assignment anchor is already ~125
@@ -246,6 +246,7 @@ def main():
             mins(L.get("mx_Assignment_Date_Current_Owner")),              # 18 current-owner assign
             mins(L.get("mx_First_Counselling_Date")),                     # 19 counselled ON
             mins(L.get("mx_First_Transaction_Date")),                     # 20 first payment ON
+            mins(L.get("mx_Interested_In_Date")),                         # 21 interested-in ON
         ])
 
     # Any raw Source landing in "Other" with real volume or real money should get its
@@ -309,7 +310,7 @@ def main():
            "cols": ["src", "created", "firstcall", "assign", "owner", "lastactivity",
                     "followup", "attempts", "interacted", "stage", "qual", "pool",
                     "program", "city", "centre", "firstconnect", "counselled", "revenue",
-                    "assign_cur", "counselled_on", "paid_on"],
+                    "assign_cur", "counselled_on", "paid_on", "interested_on"],
            "leads": leads}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
