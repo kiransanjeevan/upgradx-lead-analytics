@@ -103,12 +103,45 @@ def owners(u):
                         for x in (u or "").split('>')) if n]
 
 
+# Plain-language wording for the "Where leads land" view, which is read by people
+# who do not know the LeadSquared card names. Keyed by node id so the two views
+# can never describe different logic — they render the same graph.
+PLAIN = {
+    "If6": ("Did it come from a Learning Centre page or campaign?",
+            "Yes — it belongs to us", "No — it leaves this flow"),
+    "IfElse29": ("Is the lead free to be reassigned?", "Yes", "No"),
+    "IfElse226": ("Did it reach the right point of contact?", "Yes", "No"),
+    "IfElse74": ("Did it come from Meta Ads?", "Yes", ""),
+    "IfElse115": ("Did it come from Internshala?", "Yes", ""),
+    "IfElse234": ("Did the student just browse a page?", "Yes", "No — they filled something in"),
+    "IfElse237": ("Has the calling bot spoken to them in the last 2 days?",
+                  "Yes — the bot qualified them", "Not yet"),
+    "IfElse198": ("Did it come from Google or a Meta web form?", "Yes", ""),
+    "IfElse218": ("Any other source?", "Yes", ""),
+    "IfElse225": ("Is it still sitting unassigned?", "Yes", ""),
+}
+# What a destination means in business terms.
+DEST = {
+    "DistributeLead208": "The counsellor for that city",
+    "DistributeLead117": "The counsellor for that city",
+    "DistributeLead221": "The counsellor for that city",
+    "DistributeLead219": "The counsellor for that city",
+    "DistributeLead238": "Three named counsellors who take bot-qualified leads",
+    "UpdateLead235": "Waits in the bot calling queue",
+    "DistributeLead216": "The central LC Team",
+    "EXIT": "Not a Learning Centre lead — nothing happens",
+}
+
+
 # ---- graph: col/row hand-placed for a clean left-to-right read ----
 def n(id, label, role, col, row, sub="", crit=None, comment=None, owner=""):
+    p = PLAIN.get(id)
     return dict(id=id, label=label, role=role, col=col, row=row, sub=sub,
                 crit=crit if crit is not None else C(id),
                 comment=comment if comment is not None else C(id, "comment"),
-                exitc=C(id, "exit"), owner=owner)
+                exitc=C(id, "exit"), owner=owner,
+                plain=p[0] if p else "", yes=p[1] if p else "", no=p[2] if p else "",
+                dest=DEST.get(id, ""))
 
 
 NODES = [
@@ -155,18 +188,30 @@ byid = {x["id"]: x for x in NODES}
 paths = []
 
 
-def walk(cur, conds):
+def walk(cur, conds, steps):
     kids = [e for e in EDGES if e["f"] == cur]
     if not kids:
         paths.append(dict(dest=byid[cur]["label"], destId=cur, role=byid[cur]["role"],
-                          owner=byid[cur]["owner"], conds=list(conds)))
+                          owner=byid[cur]["owner"], conds=list(conds), steps=list(steps),
+                          plainDest=byid[cur]["dest"]))
         return
     for e in kids:
         node = byid[e["f"]]
-        walk(e["t"], conds + ([f"{node['label']} → {e['lab']}"] if e["lab"] else []))
+        walk(e["t"], conds + ([f"{node['label']} → {e['lab']}"] if e["lab"] else []),
+             steps + ([dict(id=e["f"], answer=e["lab"])] if e["lab"] else []))
 
 
-walk("Trigger32", [])
+walk("Trigger32", [], [])
+
+# Which source branch each path belongs to, so the plain view can group the 8
+# paths under the 4 sources a colleague would actually name.
+SRC_NODE = {"IfElse74": "Meta Ads", "IfElse115": "Internshala",
+            "IfElse198": "Google / Meta web", "IfElse218": "Other sources"}
+for p in paths:
+    p["source"] = next((SRC_NODE[s["id"]] for s in p["steps"] if s["id"] in SRC_NODE), "")
+    # does this path end at the per-city centre rules, or somewhere fixed?
+    p["byCentre"] = p["destId"] in ("DistributeLead208", "DistributeLead117",
+                                    "DistributeLead221", "DistributeLead219")
 
 # ---- centre x source-branch ownership matrix ----
 LBL = {"DistributeLead208": "Meta Ads", "DistributeLead117": "Internshala",

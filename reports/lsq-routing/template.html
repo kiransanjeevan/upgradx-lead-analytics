@@ -1,37 +1,33 @@
-<title>LSQ Lead Routing Map</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<title>LC Lead Routing Map</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
+  /* Committed light theme — a wayfinding board, not a dashboard. Every colour is
+     declared here; there is no dark variant by design, so the page holds its own
+     ground on any host. Source-line hues are validated for CVD separation
+     (worst adjacent pair ΔE 11.5 protan) and carry a text label everywhere they
+     appear, so colour is never the only encoding. */
   :root{
-    --plane:#f6f6f4; --surface:#ffffff; --surface-2:#eeeeea; --ink:#12161a; --ink-2:#4b5358; --ink-3:#838b90;
-    --rule:#dedcd5; --axis:#b9bfbd;
-    --dec:#2a78d6; --bot:#eb6834; --term:#1baf7a; --trig:#4a3aa7; --act:#6b7378;
-    --crit:#c62f2f; --crit-soft:#fbe9e9; --warn:#8a6212; --warn-soft:#fdf3dd; --ok-soft:#e6f5ee;
-    --f:"Inter Tight",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --plane:#eef1f4; --surface:#ffffff; --surface-2:#e7ebef; --surface-3:#f6f8f9;
+    --ink:#0f1720; --ink-2:#55646f; --ink-3:#8593a0;
+    --rule:#d6dde3; --axis:#b3bfc8;
+    --meta:#1565c0; --intern:#d2601a; --web:#00897b; --other:#6a3fb5;
+    --bot:#b3261e; --dec:#1565c0; --term:#00897b; --trig:#6a3fb5; --act:#6b7a86;
+    --crit:#b3261e; --crit-soft:#fbeae8; --warn:#8a6212; --warn-soft:#fdf3dd; --ok-soft:#e4f2ee;
+    --f:"Barlow",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --d:"Barlow Condensed","Barlow",Impact,sans-serif;
     --m:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-    --shadow:0 1px 2px rgba(15,20,25,.05),0 12px 32px -22px rgba(15,20,25,.45);
-  }
-  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-    --plane:#0d0f11; --surface:#181b1c; --surface-2:#212527; --ink:#f1f4f5; --ink-2:#b6bec1; --ink-3:#828a8e;
-    --rule:#2a2f31; --axis:#3b4245;
-    --dec:#3987e5; --bot:#d95926; --term:#199e70; --trig:#9085e9; --act:#8b9398;
-    --crit:#e66767; --crit-soft:#2b1a1a; --warn:#d2a64c; --warn-soft:#2a2418; --ok-soft:#142a22;
-    --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px -22px rgba(0,0,0,.9);
-  }}
-  :root[data-theme="dark"]{
-    --plane:#0d0f11; --surface:#181b1c; --surface-2:#212527; --ink:#f1f4f5; --ink-2:#b6bec1; --ink-3:#828a8e;
-    --rule:#2a2f31; --axis:#3b4245;
-    --dec:#3987e5; --bot:#d95926; --term:#199e70; --trig:#9085e9; --act:#8b9398;
-    --crit:#e66767; --crit-soft:#2b1a1a; --warn:#d2a64c; --warn-soft:#2a2418; --ok-soft:#142a22;
-    --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px -22px rgba(0,0,0,.9);
+    --shadow:0 1px 2px rgba(15,23,32,.05),0 14px 34px -24px rgba(15,23,32,.4);
   }
   *{box-sizing:border-box}
   body{background:var(--plane);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
   .wrap{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:0 72px}
-  h1{font-size:clamp(24px,4vw,33px);line-height:1.12;letter-spacing:-.02em;margin:8px 0 0;text-wrap:balance}
-  h2{font-size:19px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+  h1{font-family:var(--d);font-weight:700;font-size:clamp(30px,5.4vw,46px);line-height:1.04;letter-spacing:.004em;
+     text-transform:uppercase;margin:6px 0 0;text-wrap:balance}
+  h2{font-family:var(--d);font-weight:600;font-size:25px;letter-spacing:.012em;text-transform:uppercase;margin:0;text-wrap:balance}
   h3{font-size:13px;font-weight:600;color:var(--ink-2);margin:0 0 8px;letter-spacing:.01em}
   p{margin:9px 0 0;max-width:74ch;color:var(--ink-2)}
-  .eyebrow{font-family:var(--m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dec)}
+  .eyebrow{font-family:var(--m);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+  .eyebrow b{color:var(--dec);font-weight:500}
   /* top bar */
   .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:color-mix(in srgb,var(--plane) 92%,transparent);
        backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
@@ -48,7 +44,7 @@
   header.hero{padding-block:26px 4px}
   .tiles{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
   .tile{background:var(--surface);padding:13px 15px}
-  .tile .v{font-size:25px;font-weight:600;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+  .tile .v{font-family:var(--d);font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
   .tile.flag .v{color:var(--crit)}
   .tile .k{font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.35}
   section{margin-top:30px;scroll-margin-top:66px}
@@ -105,6 +101,45 @@
   .callout.info b{color:var(--ink)}
   code{font-family:var(--m);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:4px}
   ol.q{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;font-size:14px;color:var(--ink-2)}
+  /* ---- "Where leads land" board ---- */
+  .tracer{margin-top:14px;background:var(--surface);border:1px solid var(--rule);border-radius:14px;
+          padding:18px;box-shadow:var(--shadow)}
+  .tracer .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+  .fld{display:flex;flex-direction:column;gap:5px;flex:1 1 210px;min-width:0}
+  .fld label{font-family:var(--m);font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+  .fld select{font:inherit;font-size:15px;font-weight:500;padding:9px 11px;border-radius:9px;
+              border:1px solid var(--rule);background:var(--surface-3);color:var(--ink);width:100%}
+  .fld select:focus-visible{outline:2px solid var(--dec);outline-offset:2px}
+  .answer{margin-top:18px;border-top:1px solid var(--rule);padding-top:16px}
+  .answer .lands{font-family:var(--m);font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+  .answer .who{font-family:var(--d);font-weight:700;font-size:clamp(23px,4.2vw,32px);line-height:1.12;
+               margin-top:3px;color:var(--ink);text-wrap:balance}
+  .answer .why{margin-top:9px;font-size:14.5px;color:var(--ink-2);max-width:66ch}
+  .answer .why b{color:var(--ink);font-weight:600}
+  .forks{margin-top:14px;display:grid;gap:9px}
+  .fork{display:flex;gap:12px;align-items:flex-start;background:var(--surface-3);border-radius:10px;
+        padding:11px 13px;border-left:3px solid var(--axis)}
+  .fork.q{border-left-color:var(--term)} .fork.b{border-left-color:var(--bot)}
+  .fork .cond{font-size:13px;color:var(--ink-2);flex:1;background:none;padding:0;white-space:normal}
+  .fork .to{font-weight:600;font-size:13.5px;color:var(--ink);white-space:nowrap}
+  /* route strips */
+  .routes{margin-top:14px;display:grid;gap:12px}
+  .route{background:var(--surface);border:1px solid var(--rule);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .route > .rh{display:flex;gap:11px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--rule)}
+  .route .dot{width:13px;height:13px;border-radius:50%;flex:none;border:3px solid var(--line)}
+  .route .nm{font-family:var(--d);font-weight:600;font-size:21px;text-transform:uppercase;letter-spacing:.01em;color:var(--ink)}
+  .route .share{margin-left:auto;font-family:var(--m);font-size:11px;color:var(--ink-3);text-align:right}
+  .stations{list-style:none;margin:0;padding:14px 16px 16px;display:grid;gap:0}
+  .stn{display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start;padding-bottom:13px;position:relative}
+  .stn:last-child{padding-bottom:0}
+  .stn::before{content:"";position:absolute;left:10px;top:15px;bottom:-1px;width:2px;background:var(--line);opacity:.35}
+  .stn:last-child::before{display:none}
+  .stn .pip{width:21px;height:21px;border-radius:50%;border:2px solid var(--line);background:var(--surface);
+            display:grid;place-items:center;font-family:var(--m);font-size:10px;color:var(--line);font-weight:500;z-index:1}
+  .stn .tx{font-size:14.5px;color:var(--ink-2);padding-top:1px}
+  .stn.end .pip{background:var(--line);border-color:var(--line);color:#fff}
+  .stn.end .tx{color:var(--ink);font-weight:600;font-size:15.5px}
+  .stn .sub{display:block;font-size:13px;font-weight:400;color:var(--ink-3);margin-top:2px}
   /* drawer */
   .scrim{position:fixed;inset:0;background:rgba(10,12,14,.42);z-index:50;opacity:0;pointer-events:none;transition:opacity .16s}
   .scrim.on{opacity:1;pointer-events:auto}
@@ -127,7 +162,8 @@
 
 <div class="bar"><div class="bar-in">
   <div class="seg" id="views">
-    <button type="button" data-v="map" aria-pressed="true">Routing map</button>
+    <button type="button" data-v="land" aria-pressed="true">Where leads land</button>
+    <button type="button" data-v="map" aria-pressed="false">Routing map</button>
     <button type="button" data-v="paths" aria-pressed="false">Every path</button>
     <button type="button" data-v="matrix" aria-pressed="false">Centre owners</button>
     <button type="button" data-v="top" aria-pressed="false">Upstream steps</button>
@@ -141,13 +177,35 @@
 
 <div class="wrap">
   <header class="hero">
-    <div class="eyebrow">upGrad X · LeadSquared</div>
-    <h1>Lead routing map — Offline &amp; Learning Centre</h1>
+    <div class="eyebrow"><b>upGrad X</b> · Offline &amp; Learning Centre · LeadSquared</div>
+    <h1>Where every lead lands</h1>
     <p id="lede"></p>
     <div class="tiles" id="tiles"></div>
   </header>
 
-  <section id="v-map">
+  <section id="v-land">
+    <h2>Trace a lead</h2>
+    <p>Pick where a lead came from and which centre it names. No card ids, no rule names — just where it ends up and why.</p>
+    <div class="tracer">
+      <div class="row">
+        <div class="fld"><label for="tSource">Lead came from</label><select id="tSource"></select></div>
+        <div class="fld"><label for="tCentre">Centre it names</label><select id="tCentre"></select></div>
+      </div>
+      <div class="answer">
+        <div class="lands">Ends up with</div>
+        <div class="who" id="tWho"></div>
+        <div class="why" id="tWhy"></div>
+        <div class="forks" id="tForks"></div>
+      </div>
+    </div>
+
+    <h2 style="margin-top:30px">The four routes</h2>
+    <p>Every lead is tested against these in order. The first one that matches decides the route.</p>
+    <div class="routes" id="routes"></div>
+    <div class="callout info" id="landNotes"></div>
+  </section>
+
+  <section id="v-map" hidden>
     <h2>Where a lead can end up</h2>
     <p>Left to right: entry checks, then one branch per lead source, then the seven places a lead lands. <b>Click any box to trace its full path</b> and read the exact LeadSquared criteria.</p>
     <div class="card">
@@ -222,8 +280,9 @@ const RNAME = {trigger:'Trigger', decision:'Decision', action:'Action', terminal
 
 /* ---------- hero ---------- */
 const terms = D.nodes.filter(n => n.role.startsWith('terminal'));
-$('#lede').innerHTML = `Every routing automation for the Offline &amp; Learning Centre vertical, generated from <b>LSQ Lead Routing Logic.xlsx</b>. ` +
-  `A lead passes ${D.nodes.filter(n=>n.role==='decision').length} decisions and can land in ${terms.length} places. Node ids match the LeadSquared card names.`;
+$('#lede').innerHTML = `Two things decide who owns a lead: <b>where it came from</b> and <b>which centre it names</b>. ` +
+  `Start with <b>Trace a lead</b> for the plain answer; the other views open up the ${D.nodes.filter(n=>n.role==='decision').length} decisions ` +
+  `and ${terms.length} destinations behind it. Generated from <b>${esc(D.source)}</b>.`;
 $('#tiles').innerHTML = [
   {v: D.paths.length, k:'complete paths through the flow'},
   {v: terms.length, k:'places a lead can end up'},
@@ -231,6 +290,98 @@ $('#tiles').innerHTML = [
   {v: D.diffs, k:`of ${D.matrix.length} centre rules have a different owner by source`, flag:true},
   {v: 1, k:`decision sends ${D.ext.botPoolShare}% of Internshala leads to the bot queue`, flag:true}
 ].map(t => `<div class="tile${t.flag?' flag':''}"><div class="v">${t.v}</div><div class="k">${t.k}</div></div>`).join('');
+
+/* ---------- "Where leads land": the same graph, in the words a colleague uses ---------- */
+const SRC_CARD = Object.fromEntries(Object.entries(D.cardLabels).map(([k,v]) => [v,k]));
+const LINE = {'Meta Ads':'var(--meta)','Internshala':'var(--intern)',
+              'Google / Meta web':'var(--web)','Other sources':'var(--other)'};
+const SOURCES = Object.values(D.cardLabels);
+
+$('#tSource').innerHTML = SOURCES.map(s => `<option>${esc(s)}</option>`).join('');
+$('#tCentre').innerHTML = D.matrix.map(m => `<option value="${esc(m.sig)}">${esc(m.centre)}</option>`).join('');
+
+function trace(){
+  const src = $('#tSource').value, sig = $('#tCentre').value;
+  const card = SRC_CARD[src], row = D.matrix.find(m => m.sig === sig);
+  const routes = D.paths.filter(p => p.source === src);
+  const centrePath = routes.find(p => p.byCentre);
+  const others = routes.filter(p => !p.byCentre);
+
+  /* who owns it on the by-centre route */
+  const state = row[card + '_state'], who = row[card];
+  const owner = state === 'ok' ? who
+    : state === 'unassigned' ? `${D.defaultUser[card] || 'the default user'}`
+    : 'nobody — this branch has no rule for that centre';
+
+  $('#tWho').textContent = owner;
+  const closed = state === 'unassigned';
+  const lead = `A lead from <b>${esc(src)}</b> naming <b>${esc(row.centre)}</b>`;
+  const tail = closed
+    ? ` — that centre has closed, so there is no counsellor there and the lead goes to <b>${esc(owner)}</b> instead.`
+    : ` goes to <b>${esc(owner)}</b>, the counsellor for that city.`;
+  $('#tWhy').innerHTML =
+    lead +
+    (others.length
+      ? ` reaches the city rules only if it is not diverted first (below)${closed ? '' : ', and then'}`
+      : '') +
+    tail +
+    (row.aliases.length ? ` <span class="hint">(this rule is also written “${row.aliases.map(esc).join('”, “')}” in some branches — same rule)</span>` : '');
+
+  /* the diversions that happen before the city rule is reached */
+  $('#tForks').innerHTML = others.map(p => {
+    const q = p.steps.filter(s => byId[s.id] && byId[s.id].plain &&
+                                  !['If6','IfElse29','IfElse226'].includes(s.id) && !SRC_NODE_IDS.includes(s.id));
+    const txt = q.map(s => {
+      const n = byId[s.id];
+      return `${n.plain} <b>${esc(s.answer === 'Yes' ? (n.yes || 'Yes') : (n.no || 'No'))}</b>`;
+    }).join(' · ');
+    const bot = p.destId === 'UpdateLead235';
+    return `<div class="fork ${bot ? 'b' : 'q'}"><span class="cond">${txt || 'Otherwise'}</span>` +
+           `<span class="to">→ ${esc(p.plainDest)}</span></div>`;
+  }).join('');
+}
+const SRC_NODE_IDS = ['IfElse74','IfElse115','IfElse198','IfElse218'];
+$('#tSource').onchange = trace; $('#tCentre').onchange = trace;
+
+/* the four routes as a board */
+$('#routes').innerHTML = SOURCES.map(src => {
+  const routes = D.paths.filter(p => p.source === src);
+  const card = SRC_CARD[src];
+  const owned = D.matrix.filter(m => m[card + '_state'] === 'ok').length;
+  const stops = [];
+  stops.push(`Lead arrives from <b>${esc(src)}</b>`);
+  stops.push(byId['If6'].plain + ' <b>' + esc(byId['If6'].yes) + '</b>');
+  stops.push('Held briefly, then sorted by source');
+  const diversions = routes.filter(p => !p.byCentre);
+  diversions.forEach(p => {
+    const chain = p.steps
+      .filter(s => byId[s.id] && byId[s.id].plain
+                   && !['If6','IfElse29','IfElse226'].includes(s.id) && !SRC_NODE_IDS.includes(s.id))
+      .map(s => { const n = byId[s.id];
+                  return `${n.plain} <b>${esc(s.answer === 'Yes' ? (n.yes || 'Yes') : (n.no || 'No'))}</b>`; })
+      .join('<br>');
+    stops.push(`${chain}<span class="sub">→ ${esc(p.plainDest)}</span>`);
+  });
+  const cp = routes.find(p => p.byCentre);
+  const end = cp ? `${cp.plainDest}<span class="sub">${owned} centres have a named counsellor on this route</span>`
+                 : 'No city route on this source';
+  return `<div class="route" style="--line:${LINE[src]}">
+    <div class="rh"><span class="dot"></span><span class="nm">${esc(src)}</span>
+      <span class="share">${routes.length} route${routes.length === 1 ? '' : 's'}</span></div>
+    <ol class="stations">${
+      stops.map(s => `<li class="stn"><span class="pip">•</span><span class="tx">${s}</span></li>`).join('')
+    }<li class="stn end"><span class="pip">▪</span><span class="tx">${end}</span></li></ol></div>`;
+}).join('');
+
+$('#landNotes').innerHTML =
+  `<b>Two things worth knowing.</b> ` +
+  (D.noOwner.length ? `${D.noOwner.map(u => esc(u.centre)).join(' and ')} ` +
+    `${D.noOwner.length === 1 ? 'has' : 'have'} closed — leads naming them still arrive, and go to ` +
+    `${[...new Set(D.noOwner.flatMap(u => u.fallback))].map(esc).join(', ')} instead of a centre counsellor. ` : '') +
+  `And on the Internshala route, a lead the bot has not yet called waits in the bot queue rather than reaching a person — ` +
+  `about ${D.ext.botPoolShare}% of Internshala arrivals sat there as of ${esc(D.ext.botPoolShareAsOf)}.`;
+
+trace();
 
 /* ---------- flow diagram ---------- */
 const COLX = [30, 176, 322, 468, 614, 760, 906, 1052, 1236, 1420, 1604];
@@ -454,7 +605,7 @@ $('#formTbl').innerHTML = `<table><thead><tr><th>Page</th><th>Field</th><th>Type
 /* ---------- views, search, export ---------- */
 $('#views').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   $('#views').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
-  ['map','paths','matrix','top','open'].forEach(v => $('#v-' + v).hidden = (v !== b.dataset.v)); };
+  ['land','map','paths','matrix','top','open'].forEach(v => $('#v-' + v).hidden = (v !== b.dataset.v)); };
 $('#q').oninput = e => { renderPaths(e.target.value); renderMatrix(e.target.value);
   const f = e.target.value.toLowerCase();
   if (f){ const hit = D.nodes.filter(n => (n.id + n.label + n.crit + n.owner).toLowerCase().includes(f)).map(n => n.id);
