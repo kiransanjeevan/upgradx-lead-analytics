@@ -117,6 +117,7 @@
            border:1px solid var(--rule);border-radius:12px;box-shadow:0 2px 6px rgba(15,23,32,.07),0 18px 44px -20px rgba(15,23,32,.5);
            overflow:hidden;display:none}
   .sel[data-open="true"] .sel-pop{display:block}
+  .sel[data-up="true"] .sel-pop{top:auto;bottom:calc(100% + 6px)}
   .sel-search{width:100%;font:inherit;font-size:14px;border:0;border-bottom:1px solid var(--rule);
               padding:11px 13px;background:var(--surface-3);color:var(--ink)}
   .sel-search:focus{outline:none;border-bottom-color:var(--dec)}
@@ -292,6 +293,9 @@
   @media (max-width:560px){
     .chain{flex-direction:column;align-items:stretch}
     .step{max-width:none}
+    /* the destination name is long and must not force the page sideways */
+    .fork{flex-wrap:wrap}
+    .fork .to{white-space:normal}
     .arrow{width:100%;min-width:0;padding:7px 0}
     .arrow .line{width:2px;height:22px;min-width:0}
     .arrow .line::after{right:-4px;top:auto;bottom:-1px;border-left:5px solid transparent;
@@ -494,27 +498,68 @@ function makeSelect(host, items, onPick, opts){
         list = el.querySelector('.sel-list'), search = el.querySelector('.sel-search');
   const cur = () => items.find(i => i.v === value) || items[0];
   const paint = () => { btn.textContent = cur() ? cur().label : ''; };
+  const rows = () => list.querySelectorAll('.sel-opt');
+  /* Move the highlight by toggling a class — never by re-rendering. The first
+     version called draw() from every option's mouseenter, which replaced the
+     whole list. The <li> the pointer was pressed on was destroyed between
+     mousedown and mouseup, so the browser never fired a click on it and the
+     pick was silently swallowed: the widget looked dead to the mouse. */
+  function mark(scroll){
+    const r = rows();
+    r.forEach((li, n) => li.classList.toggle('active', n === active));
+    if (scroll && r[active]) r[active].scrollIntoView({block:'nearest'});
+  }
   function draw(){
     list.innerHTML = filtered.length ? filtered.map((i, n) =>
-      `<li class="sel-opt${n === active ? ' active' : ''}" role="option" data-v="${esc(i.v)}"
+      `<li class="sel-opt" role="option" data-v="${esc(i.v)}"
          aria-selected="${i.v === value}" id="opt-${el.id}-${n}"><span>${esc(i.label)}</span>${
          i.sub ? `<span class="sub">${esc(i.sub)}</span>` : ''}</li>`).join('')
       : `<div class="sel-empty">Nothing matches that</div>`;
-    list.querySelectorAll('.sel-opt').forEach(li => {
-      li.onmouseenter = () => { active = filtered.findIndex(i => i.v === li.dataset.v); draw(); };
-      li.onclick = () => pick(li.dataset.v);
-    });
-    const a = list.querySelector('.sel-opt.active');
-    if (a && open) a.scrollIntoView({block:'nearest'});
+    mark(open);
   }
-  function show(on){
+  /* one delegated handler each, so the option nodes stay put */
+  list.addEventListener('mouseover', e => {
+    const li = e.target.closest('.sel-opt'); if (!li) return;
+    const n = [...rows()].indexOf(li);
+    if (n >= 0 && n !== active){ active = n; mark(false); }
+  });
+  list.addEventListener('click', e => {
+    const li = e.target.closest('.sel-opt'); if (li) pick(li.dataset.v);
+  });
+  /* Open into whichever side has more room and cap the list to fit it. In a
+     short artifact pane a 30-row list otherwise opens entirely below the fold,
+     which from the reader's seat is indistinguishable from not opening. */
+  function place(){
+    const r = btn.getBoundingClientRect();
+    const below = innerHeight - r.bottom - 12, above = r.top - 12;
+    const up = below < 220 && above > below;
+    el.dataset.up = up ? 'true' : 'false';
+    list.style.maxHeight = Math.min(264, Math.max(110, (up ? above : below) - (search ? 46 : 0) - 12)) + 'px';
+  }
+  function show(on, refocus){
     open = on; el.dataset.open = on; btn.setAttribute('aria-expanded', on);
     if (on){ filtered = items.slice(); active = Math.max(0, filtered.findIndex(i => i.v === value));
-             draw(); if (search){ search.value = ''; search.focus(); } }
-    else btn.focus();
+             draw(); place(); mark(true); if (search){ search.value = ''; search.focus(); } }
+    else if (refocus !== false) btn.focus();
   }
   function pick(v){ value = v; paint(); show(false); onPick(v); }
-  btn.onclick = () => show(!open);
+  /* Open on pointerdown and swallow the click that the same press generates. A
+     toggle driven by click alone closes again the instant anything delivers the
+     gesture twice, which is indistinguishable from a dropdown that never opens.
+     The click path is kept as the fallback for keyboard and assistive clicks. */
+  let swallow = false, lastAct = 0;
+  function act(){                     /* two activations inside 120ms are one gesture */
+    const t = performance.now();
+    if (t - lastAct < 120) return;
+    lastAct = t; show(!open);
+  }
+  btn.addEventListener('pointerdown', e => {
+    if (e.button) return;
+    e.preventDefault();               /* the click still fires; focus is ours to set */
+    swallow = true; act();
+    if (!search || !open) btn.focus();
+  });
+  btn.addEventListener('click', () => { if (swallow){ swallow = false; return; } act(); });
   if (search) search.oninput = () => {
     const q = search.value.toLowerCase();
     filtered = items.filter(i => (i.label + ' ' + (i.sub || '')).toLowerCase().includes(q));
@@ -523,15 +568,19 @@ function makeSelect(host, items, onPick, opts){
   el.onkeydown = e => {
     if (e.key === 'Escape' && open){ e.preventDefault(); show(false); return; }
     if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') && e.target === btn){
-      e.preventDefault(); show(true); return; }
+      e.preventDefault(); swallow = true; show(true); return; }
     if (!open) return;
-    if (e.key === 'ArrowDown'){ e.preventDefault(); active = Math.min(filtered.length-1, active+1); draw(); }
-    else if (e.key === 'ArrowUp'){ e.preventDefault(); active = Math.max(0, active-1); draw(); }
+    if (e.key === 'ArrowDown'){ e.preventDefault(); active = Math.min(filtered.length-1, active+1); mark(true); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); active = Math.max(0, active-1); mark(true); }
     else if (e.key === 'Enter'){ e.preventDefault(); if (filtered[active]) pick(filtered[active].v); }
-    else if (e.key === 'Home'){ e.preventDefault(); active = 0; draw(); }
-    else if (e.key === 'End'){ e.preventDefault(); active = filtered.length-1; draw(); }
+    else if (e.key === 'Home'){ e.preventDefault(); active = 0; mark(true); }
+    else if (e.key === 'End'){ e.preventDefault(); active = filtered.length-1; mark(true); }
   };
-  document.addEventListener('click', e => { if (open && !el.contains(e.target)) show(false); });
+  /* capture phase, on both events: nothing downstream can stop the close, and
+     the press that opens this widget can never be the one that closes it */
+  const away = e => { if (open && !el.contains(e.target)) show(false, false); };
+  document.addEventListener('pointerdown', away, true);
+  document.addEventListener('click', away, true);
   paint();
   return {get value(){ return value; }, set(v){ value = v; paint(); }};
 }
