@@ -314,8 +314,6 @@
   .dbody .k:first-child{margin-top:0}
   .dbody pre{white-space:pre-wrap;font-family:var(--m);font-size:12px;line-height:1.55;color:var(--ink-2);background:var(--surface-2);
              border-radius:8px;padding:11px 12px;margin:6px 0 0}
-  .dbody textarea{width:100%;margin-top:6px;font:inherit;font-size:13px;padding:9px 11px;border-radius:8px;border:1px solid var(--rule);
-                  background:var(--surface-2);color:var(--ink);min-height:84px;resize:vertical}
   .dflt{font-size:12.5px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-top:6px}
   .rl{margin-top:8px;display:grid;gap:7px}
   .rli{border:1px solid var(--rule);border-radius:9px;padding:9px 11px;background:var(--surface)}
@@ -340,8 +338,6 @@
     <button type="button" data-v="recs" aria-pressed="false">Recommendations</button>
   </div>
   <input type="search" id="q" placeholder="Search paths and centre owners…" aria-label="Search">
-  <button type="button" class="ghost" id="exportBtn">Export notes</button>
-  <span class="hint" id="hint"></span>
 </div></div>
 
 <div class="wrap">
@@ -449,9 +445,6 @@
 const D = __DATA__;
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const KEY = 'lsq-routing-notes-v2';
-let NOTES = {}; try { NOTES = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ NOTES = {}; }
-const saveNotes = () => { try { localStorage.setItem(KEY, JSON.stringify(NOTES)); $('#hint').textContent = 'notes saved'; setTimeout(()=>$('#hint').textContent='',2500); } catch(e){} };
 const byId = Object.fromEntries(D.nodes.map(n => [n.id, n]));
 const ROLE = {trigger:'var(--trig)', decision:'var(--dec)', action:'var(--act)', terminal:'var(--term)', 'terminal-bot':'var(--bot)', exit:'var(--ink-3)'};
 const RNAME = {trigger:'Trigger', decision:'Decision', action:'Action', terminal:'Destination', 'terminal-bot':'Bot queue', exit:'Exit'};
@@ -896,9 +889,7 @@ function openDrawer(n){
   }
   if (n.exitc) p.push(`<div class="k">Exit criteria</div><pre>${esc(n.exitc)}</pre>`);
   if (n.comment) p.push(`<div class="k">Comment from the sheet</div><pre>${esc(n.comment)}</pre>`);
-  p.push(`<div class="k">Your note</div><textarea id="noteBox" placeholder="Add a note for the team…">${esc(NOTES[n.id] || '')}</textarea>`);
   $('#dBody').innerHTML = p.join('');
-  $('#noteBox').oninput = e => { NOTES[n.id] = e.target.value; saveNotes(); };
   drawer.classList.add('open'); scrim.classList.add('on');
   $('#dClose').focus();
 }
@@ -998,17 +989,11 @@ $('#recs').innerHTML = RECS.map((r, i) => `<div class="rec">
 
 /* ---------- reference tables ---------- */
 
-/* ---------- views, search, export ---------- */
+/* ---------- views and search ---------- */
 $('#views').onclick = e => { const b = e.target.closest('button'); if (!b) return;
   $('#views').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
   ['land','map','paths','matrix','top','recs'].forEach(v => $('#v-' + v).hidden = (v !== b.dataset.v)); };
 $('#q').oninput = e => { renderPaths(e.target.value); renderMatrix(e.target.value); };
-$('#exportBtn').onclick = () => {
-  const txt = Object.entries(NOTES).filter(([,v]) => v && v.trim())
-    .map(([k,v]) => `${k} (${byId[k] ? byId[k].label : ''}):\n${v}`).join('\n\n') || '(no notes yet)';
-  navigator.clipboard?.writeText(txt).then(() => { $('#hint').textContent = 'notes copied'; setTimeout(()=>$('#hint').textContent='',2500); })
-    .catch(() => { $('#hint').textContent = 'copy failed'; });
-};
 $('#foot').innerHTML = `Generated from <b>LSQ Lead Routing Logic.xlsx</b> — Top Level Routing, Offline BU Level Routing, Queries and Conversation Log Form. ` +
-  `Node ids match the LeadSquared card names. Notes are stored in this browser only; use Export notes to share them.`;
+  `Node ids match the LeadSquared card names, so anything here can be found in the automation builder.`;
 </script>
