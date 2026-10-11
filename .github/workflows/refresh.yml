@@ -64,12 +64,24 @@ jobs:
           LSQ_POOLS: ${{ vars.LSQ_POOLS }}   # optional; defaults to "Avtar LCoffline,Futworks Lc" in the script
         run: python scripts/pull.py
 
+      # Talk Time report: last 7 complete IST days of Ameyo call activity (~90 API calls).
+      # Runs after the lead pull; a failure here must not block the main refresh.
+      - name: Pull talk-time data
+        if: steps.freshness.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          LSQ_HOST: ${{ secrets.LSQ_HOST }}
+          LSQ_ACCESS: ${{ secrets.LSQ_ACCESS }}
+          LSQ_SECRET: ${{ secrets.LSQ_SECRET }}
+          LSQ_POOLS: ${{ vars.LSQ_POOLS }}
+        run: python scripts/pull_talktime.py
+
       - name: Commit refreshed data
         if: steps.freshness.outputs.skip != 'true'
         run: |
           git config user.name  "lsq-refresh-bot"
           git config user.email "actions@github.com"
-          git add data/universe.json
+          git add data/universe.json data/talktime.json
           if git diff --staged --quiet; then
             echo "No data change."
           else
