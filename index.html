@@ -73,6 +73,7 @@ tr.totrow td{background:var(--surface-2);font-weight:700;color:var(--ink);border
 .tt-hours{display:grid;grid-template-columns:repeat(9,14px);gap:2px;justify-content:start;}
 .tt-hours span{width:14px;height:14px;border-radius:3px;background:var(--surface-2);border:1px solid var(--line);}
 #tt-note div{margin-top:5px;}
+.isframe{display:block;width:100%;min-height:70vh;border:0;background:transparent;}
 #tt-tbl td{white-space:nowrap;}
 tr.tt-centre td{background:var(--surface-2);font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-2);text-align:left;}
 tr.tt-sub td{font-weight:700;color:var(--ink);border-top:1px solid var(--line-2);}
@@ -282,7 +283,7 @@ input[type=checkbox]{width:20px;height:20px;}
   <div class="hero-eyebrow">Learning Centre · Performance Analytics</div>
   <h1 class="hero-h1">Lead Analytics</h1>
   <p class="hero-sub">A single place to analyse lead performance across the upGradX offline vertical — response speed, ageing, counsellor effort, source quality and pipeline stage. All reports run live off LeadSquared (read-only, IST). Pick a report below.</p>
-  <div class="navgrid"><button class="ncard" onclick="show('speed')" title="Time from creation / first-call / assignment to first contact — by source and owner, with SLA compliance."><span class="ic">⏱️</span><span class="t">Speed to Lead</span></button><button class="ncard" onclick="show('ageing')" title="How long a chosen creation cohort has sat since creation — pending-first-attempt, no-activity and overdue-follow-up across age buckets, filtered by stage."><span class="ic">📅</span><span class="t">Lead Ageing</span></button><button class="ncard" onclick="show('owner')" title="Per-counsellor accountability — leads, coverage, attempts, speed, SLA and overdue follow-ups."><span class="ic">🧑‍💼</span><span class="t">Owner Scorecard</span></button><button class="ncard" onclick="show('source')" title="Per-source volume, attempted, connected, connect %, avg attempts and speed to lead."><span class="ic">📊</span><span class="t">Source Performance</span></button><button class="ncard" onclick="show('attempts')" title="Dialling effort by owner / source — total & average attempts, connected leads, attempt-distribution buckets."><span class="ic">📞</span><span class="t">Average Attempts</span></button><button class="ncard" onclick="show('connect')" title="Attempted vs connected (proxy), connect % and average attempts to connect, by source / owner."><span class="ic">🔌</span><span class="t">Connectability</span></button><button class="ncard" onclick="show('funnel')" title="Created → Attempted → Connected → Counselled → Enrolled, with L2C/C2P/L2P, path integrity and the full ProspectStage distribution."><span class="ic">🪜</span><span class="t">Funnel / Stage</span></button><button class="ncard" onclick="show('talk')" title="Per-counsellor working day: talk time, active and idle time (10:00–19:00), connected leads split fresh vs old, and landed leads not attempted."><span class="ic">🎧</span><span class="t">Talk Time</span></button></div>
+  <div class="navgrid"><button class="ncard" onclick="show('speed')" title="Time from creation / first-call / assignment to first contact — by source and owner, with SLA compliance."><span class="ic">⏱️</span><span class="t">Speed to Lead</span></button><button class="ncard" onclick="show('ageing')" title="How long a chosen creation cohort has sat since creation — pending-first-attempt, no-activity and overdue-follow-up across age buckets, filtered by stage."><span class="ic">📅</span><span class="t">Lead Ageing</span></button><button class="ncard" onclick="show('owner')" title="Per-counsellor accountability — leads, coverage, attempts, speed, SLA and overdue follow-ups."><span class="ic">🧑‍💼</span><span class="t">Owner Scorecard</span></button><button class="ncard" onclick="show('source')" title="Per-source volume, attempted, connected, connect %, avg attempts and speed to lead."><span class="ic">📊</span><span class="t">Source Performance</span></button><button class="ncard" onclick="show('attempts')" title="Dialling effort by owner / source — total & average attempts, connected leads, attempt-distribution buckets."><span class="ic">📞</span><span class="t">Average Attempts</span></button><button class="ncard" onclick="show('connect')" title="Attempted vs connected (proxy), connect % and average attempts to connect, by source / owner."><span class="ic">🔌</span><span class="t">Connectability</span></button><button class="ncard" onclick="show('funnel')" title="Created → Attempted → Connected → Counselled → Enrolled, with L2C/C2P/L2P, path integrity and the full ProspectStage distribution."><span class="ic">🪜</span><span class="t">Funnel / Stage</span></button><button class="ncard" onclick="show('talk')" title="Per-counsellor working day: talk time, active and idle time (10:00–19:00), connected leads split fresh vs old, and landed leads not attempted."><span class="ic">🎧</span><span class="t">Talk Time</span></button><button class="ncard" onclick="show('internshala')" title="Internshala leads since the window start: arrivals, pooling, human vs bot calling and outcomes, on three date bases."><span class="ic">🎓</span><span class="t">Internshala Funnel</span></button></div>
   <div class="mdsect" style="margin-top:26px">
     <div class="modeseg" id="h-mode">
       <button data-m="cohort" class="on">Cohort performance</button>
@@ -834,6 +835,10 @@ input[type=checkbox]{width:20px;height:20px;}
 
   <p class="xnote" id="xnote"></p>
   <footer id="foot"></footer>
+</template>
+<template id="tpl-internshala">
+  <iframe id="is-frame" class="isframe" src="data/internshala-funnel.html" title="Internshala funnel"></iframe>
+  <p class="xnote" id="is-err" hidden>Could not load the Internshala report (data/internshala-funnel.html). It is rebuilt by the daily refresh.</p>
 </template>
 <template id="tpl-talk">
   <div class="eyebrow">LSQ · TALK TIME</div>
@@ -2844,6 +2849,35 @@ function init_talk(){
     render();
   }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="16" style="text-align:left;color:var(--crit);padding:18px">Could not load call data (data/talktime.json).</td></tr>'; });
 }
+// ---- Internshala funnel: a self-contained page built nightly by reports/internshala/build.py
+// into data/. Embedded same-origin, so the dashboard can size the frame to its content and
+// re-skin it with the dashboard's own colour tokens and theme (the builder's page carries
+// its own palette from when it was a standalone artifact).
+function skinFrame(f){
+  const d=f.contentDocument; if(!d||!d.documentElement) return;
+  const t=document.documentElement.getAttribute("data-theme");
+  if(t) d.documentElement.setAttribute("data-theme",t); else d.documentElement.removeAttribute("data-theme");
+  const cs=getComputedStyle(document.documentElement), v=n=>cs.getPropertyValue(n).trim();
+  const map={"--plane":"--bg","--surface":"--surface","--surface-2":"--surface-2","--ink":"--ink","--ink-2":"--ink-2","--ink-3":"--muted",
+    "--grid":"--line","--axis":"--line-2","--s1":"--accent","--crit":"--crit","--f":"--sans","--m":"--mono"};
+  let st=d.getElementById("dash-skin"); if(!st){ st=d.createElement("style"); st.id="dash-skin"; d.head.appendChild(st); }
+  st.textContent=":root,:root[data-theme]{"+Object.entries(map).map(([k,p])=>v(p)?k+":"+v(p)+";":"").join("")+"}"
+    +"body{background:transparent!important;margin:0;}.wrap{max-width:none!important;padding:0 0 24px!important;}";
+}
+function init_internshala(){
+  const f=document.getElementById("is-frame");
+  const fit=()=>{ try{ f.style.height=f.contentDocument.documentElement.scrollHeight+"px"; }catch(_){} };
+  f.addEventListener("load",()=>{
+    const d=f.contentDocument;
+    if(!d||!/Internshala/.test(d.title||"")){   // a 404 page also "loads"
+       f.hidden=true; document.getElementById("is-err").hidden=false; return; }
+    skinFrame(f); fit();
+    new ResizeObserver(fit).observe(d.body);
+    // follow the dashboard's light/dark toggle while this view is open
+    const mo=new MutationObserver(()=>{ if(!f.isConnected){ mo.disconnect(); return; } skinFrame(f); });
+    mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+  });
+}
 const VIEWS={
   speed:{title:"Speed to Lead",init:init_speed},
   ageing:{title:"Lead Ageing",init:init_ageing},
@@ -2852,7 +2886,8 @@ const VIEWS={
   attempts:{title:"Average Attempts",init:init_attempts},
   connect:{title:"Connectability",init:init_connect},
   funnel:{title:"Funnel / Stage",init:init_funnel},
-  talk:{title:"Talk Time",init:init_talk}
+  talk:{title:"Talk Time",init:init_talk},
+  internshala:{title:"Internshala Funnel",init:init_internshala}
 };
 function show(key){
   const view=document.getElementById("view");

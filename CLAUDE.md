@@ -100,6 +100,9 @@ Each `reports/<name>/` holds `build.py` + `template.html` (committed) and writes
   (`INTERNSHALA_DATA_DIR`, `INTERNSHALA_OUT_DIR`, `INTERNSHALA_WINDOW_START`,
   `INTERNSHALA_AS_OF`, `ROUTING_WORKBOOK`).
 - Large raw API pulls and generated HTML are **not** committed. Only code is.
+- One exception, written by CI not by hand: the daily Action builds the Internshala
+  funnel into `data/internshala-funnel.html`, which the dashboard embeds. Like
+  `universe.json` it is machine-written; on a conflict take the remote copy.
 
 ## 8. Publishing artifacts
 

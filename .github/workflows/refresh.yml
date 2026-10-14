@@ -76,12 +76,27 @@ jobs:
           LSQ_POOLS: ${{ vars.LSQ_POOLS }}
         run: python scripts/pull_talktime.py
 
+      # Internshala funnel: every Internshala lead plus the activity log since 1 Sep (a few
+      # hundred API calls), built into one self-contained page the dashboard embeds.
+      # As-of = yesterday IST, the last complete day. A failure keeps yesterday's page.
+      - name: Build Internshala funnel
+        if: steps.freshness.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          LSQ_HOST: ${{ secrets.LSQ_HOST }}
+          LSQ_ACCESS: ${{ secrets.LSQ_ACCESS }}
+          LSQ_SECRET: ${{ secrets.LSQ_SECRET }}
+        run: |
+          export INTERNSHALA_AS_OF=$(TZ=Asia/Kolkata date -d yesterday +%F)
+          python reports/internshala/fetch_data.py
+          INTERNSHALA_OUT_DIR=data python reports/internshala/build.py
+
       - name: Commit refreshed data
         if: steps.freshness.outputs.skip != 'true'
         run: |
           git config user.name  "lsq-refresh-bot"
           git config user.email "actions@github.com"
-          git add data/universe.json data/talktime.json
+          git add data/universe.json data/talktime.json data/internshala-funnel.html
           if git diff --staged --quiet; then
             echo "No data change."
           else
