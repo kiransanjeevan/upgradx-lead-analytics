@@ -22,8 +22,12 @@ import json, os, sys, urllib.request, urllib.parse
 from datetime import datetime, timezone, timedelta
 
 HOST   = os.environ.get("LSQ_HOST", "https://api-in21.leadsquared.com/v2").rstrip("/")
-ACCESS = os.environ["LSQ_ACCESS"]
-SECRET = os.environ["LSQ_SECRET"]
+# .get(), not [], because this module is imported for grp() alone by
+# reports/aavtaar/build_cohort.py — the source-bucket table must have exactly ONE
+# definition in this repo, and a KeyError at import time would have forced a second
+# copy of it. main() still refuses to run without credentials, below.
+ACCESS = os.environ.get("LSQ_ACCESS")
+SECRET = os.environ.get("LSQ_SECRET")
 BASE_DATE = os.environ.get("LSQ_START") or "2026-09-01"   # empty env var -> default
 BASE   = datetime.strptime(BASE_DATE + " 00:00:00", "%Y-%m-%d %H:%M:%S")
 IST    = 330  # API returns UTC; dashboard buckets days in IST (+5:30)
@@ -51,8 +55,11 @@ REFRESH_IST = (os.environ.get("LSQ_REFRESH_IST") or "07:00").strip()
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "data", "universe.json")
 
-qs  = urllib.parse.urlencode({"accessKey": ACCESS, "secretKey": SECRET})
-URL = f"{HOST}/LeadManagement.svc/Leads.Get?{qs}"
+def api_url():
+    """Built on demand rather than at import, so importing this module for grp()
+    never needs credentials and never bakes a `secretKey=None` URL into a global."""
+    qs = urllib.parse.urlencode({"accessKey": ACCESS, "secretKey": SECRET})
+    return f"{HOST}/LeadManagement.svc/Leads.Get?{qs}"
 
 # Only the fields the dashboard needs — keeps each page ~14 fields instead of 640,
 # which makes the pull ~4-5x faster and the payload far smaller (critical for wide date windows).
@@ -74,13 +81,14 @@ def pull(lookup):
     """Paginate one anchor. Raises rather than returning a short list: a truncated
     pull that reports success is worse than a failed run, because the dashboard
     deploys wrong numbers with no way to tell them from right ones."""
+    url = api_url()
     out, page = [], 1
     while page <= MAX_PAGES:
         body = {"Parameter": {"LookupName": lookup, "LookupValue": START, "SqlOperator": ">="},
                 "Columns": {"Include_CSV": COLS},
                 "Sorting": {"ColumnName": lookup, "Direction": "0"},
                 "Paging": {"PageIndex": page, "PageSize": 1000}}
-        req = urllib.request.Request(URL, data=json.dumps(body).encode(),
+        req = urllib.request.Request(url, data=json.dumps(body).encode(),
                                      headers={"Content-Type": "application/json"})
         d = json.loads(urllib.request.urlopen(req, timeout=90).read().decode())
         # A non-list is LeadSquared reporting a fault (rate limit, transient error).
@@ -188,6 +196,8 @@ def grp(s):
 
 
 def main():
+    if not (ACCESS and SECRET):
+        raise SystemExit("LSQ_ACCESS and LSQ_SECRET must be set (GitHub Secrets in CI).")
     print("pulling created...");   a = pull("CreatedOn")
     print("pulling first-call..."); b = pull("mx_First_Call_Date_and_Time")
     print("pulling assignment..."); c = pull("mx_Assignment_Date_Current_Owner")
