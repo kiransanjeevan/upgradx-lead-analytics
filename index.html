@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>:root{--bg:#f7f8fa;--surface:#fff;--surface-2:#eef1f5;--ink:#1a2230;--ink-2:#3c4859;--muted:#586472;--line:#e3e7ec;--line-2:#ccd3dc;--accent:#2560ad;--accent-2:#1c4a88;--accent-soft:#e9f0fa;--good:#15683e;--good-soft:#eaf4ee;--good-line:#a7cdb7;--warn:#875008;--warn-soft:#fbf0da;--warn-line:#e4bd80;--crit:#9c302b;--crit-soft:#f9ebe9;--crit-line:#e3aca7;--shadow:0 1px 2px rgb(20 30 45/.05),0 2px 8px rgb(20 30 45/.05);--sans:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
 @media(prefers-color-scheme:dark){:root{--bg:#0f141b;--surface:#171f29;--surface-2:#1d2732;--ink:#e9edf2;--ink-2:#b0bbc8;--muted:#8794a3;--line:#28323f;--line-2:#3a4653;--accent:#79a4e6;--accent-2:#9abbf0;--accent-soft:#17273e;--good:#5cc089;--good-soft:#12241c;--good-line:#2d5a43;--warn:#e3a852;--warn-soft:#2a2012;--warn-line:#5f4a22;--crit:#e0746d;--crit-soft:#2a1615;--crit-line:#5a2c29;}}
@@ -71,8 +72,8 @@ tr.totrow td{background:var(--surface-2);font-weight:700;color:var(--ink);border
 .tt-ctl select{font-family:var(--sans);font-size:14px;border:1px solid var(--line-2);border-radius:8px;padding:8px 11px;background:var(--surface);color:var(--ink);}
 .tt-hours{display:grid;grid-template-columns:repeat(9,14px);gap:2px;justify-content:start;}
 .tt-hours span{width:14px;height:14px;border-radius:3px;background:var(--surface-2);border:1px solid var(--line);}
-.tt-bar{position:relative;height:8px;border-radius:4px;background:var(--surface-2);min-width:70px;overflow:hidden;}
-.tt-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:4px;}
+#tt-note div{margin-top:5px;}
+#tt-tbl td{white-space:nowrap;}
 tr.tt-centre td{background:var(--surface-2);font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-2);text-align:left;}
 tr.tt-sub td{font-weight:700;color:var(--ink);border-top:1px solid var(--line-2);}
 td.tt-low{color:var(--crit);font-weight:600;}
@@ -227,6 +228,45 @@ letter-spacing:.14em;color:var(--muted);}
 .rcard .go{font-size:12.5px;font-weight:600;color:var(--accent);margin-top:2px;}
 .homefoot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.6;}
 #view>.wrap{padding-top:22px;}
+/* Form controls: one look for every field. Without appearance:none Safari and iOS draw
+   their own chrome and ignore most of the rules above. :where() keeps this at zero
+   specificity, so the per-report rules (.rowfilter, #sla, .dwrap .dtext) still win. */
+:where(input:not([type=checkbox],[type=radio],[type=date]),.txt){-webkit-appearance:none;appearance:none;font-family:var(--sans);font-size:14px;line-height:1.3;border:1px solid var(--line-2);border-radius:8px;padding:8px 11px;background:var(--surface);color:var(--ink);}
+input:not([type=checkbox]):not([type=radio]):not([type=date]):not(.dtext):hover{border-color:var(--muted);}
+input:not([type=checkbox]):not([type=radio]):not([type=date]):not(.dtext):focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.dwrap:focus-within{box-shadow:0 0 0 3px var(--accent-soft);}
+input::placeholder{color:var(--muted);opacity:.85;}
+input[type=number]{-moz-appearance:textfield;appearance:textfield;font-variant-numeric:tabular-nums;}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;margin:0;}
+/* Dropdowns: see upgradeSelects(). The native <select> stays in the DOM holding the value. */
+.xsel{position:relative;display:inline-block;max-width:100%;}
+.xsel select{position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;}
+.xsel-btn{display:inline-flex;align-items:center;justify-content:space-between;gap:10px;min-width:96px;max-width:100%;font-family:var(--sans);font-size:14px;font-weight:400;line-height:1.3;text-align:left;border:1px solid var(--line-2);border-radius:8px;padding:8px 11px;background:var(--surface);color:var(--ink);cursor:pointer;}
+.xsel-btn:hover{border-color:var(--muted);}
+.xsel-btn:focus-visible,.xsel.open .xsel-btn{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.xsel-lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.xsel-car{flex:none;display:block;width:12px;height:12px;color:var(--muted);transition:transform .12s;}
+.xsel.open .xsel-car{transform:rotate(180deg);}
+.xsel-pop{position:fixed;z-index:50;overflow:auto;padding:4px;max-width:calc(100vw - 16px);background:var(--surface);border:1px solid var(--line-2);border-radius:10px;box-shadow:0 8px 28px rgb(20 30 45/.18);}
+.xsel-opt{position:relative;padding:8px 12px 8px 30px;border-radius:6px;font-family:var(--sans);font-size:14px;font-weight:400;line-height:1.35;color:var(--ink-2);cursor:pointer;}
+.xsel-opt.act{background:var(--surface-2);color:var(--ink);}
+.xsel-opt[aria-selected="true"]{color:var(--accent-2);font-weight:600;}
+.xsel-opt[aria-selected="true"]::before{content:"";position:absolute;left:11px;top:50%;width:9px;height:5px;border-left:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:translateY(-75%) rotate(-45deg);}
+/* <select multiple>: every row is a tick box and the list stays open while you pick. */
+.xsel-pop.multi .xsel-opt{padding-left:34px;}
+.xsel-pop.multi .xsel-opt::after{content:"";position:absolute;left:10px;top:50%;width:14px;height:14px;margin-top:-8px;border:1.5px solid var(--line-2);border-radius:4px;background:var(--surface);}
+.xsel-pop.multi .xsel-opt[aria-selected="true"]::after{background:var(--accent);border-color:var(--accent);}
+.xsel-pop.multi .xsel-opt[aria-selected="true"]::before{left:14px;z-index:1;border-color:var(--surface);}
+/* Touch screens: iOS zooms the page when a focused field's text is under 16px, and
+   fingers need a taller target than a mouse pointer does. */
+@media(pointer:coarse){
+input:not([type=checkbox]):not([type=radio]):not([type=date]),.xsel-btn,.xsel-opt{font-size:16px;}
+.xsel-btn{min-height:44px;}
+.xsel-opt{padding-top:11px;padding-bottom:11px;}
+.dwrap .dtext{width:122px;}
+input[type=checkbox]{width:20px;height:20px;}
+}
 </style>
 <title>upGradX Lead Analytics</title>
 <div class="topnav">
@@ -801,14 +841,14 @@ letter-spacing:.14em;color:var(--muted);}
   <p class="tt-lede">What each counsellor did with the working day (<b id="tt-wd"></b> IST): how much of it was spent on calls, how much was idle, how many leads they connected with, and whether those were fresh or old leads. Built from Ameyo call activities in LSQ.</p>
   <div class="panel"><div class="tt-ctl">
     <label for="tt-day">Day<select id="tt-day"></select></label>
-    <label for="tt-centre">Centre<select id="tt-centre"></select></label>
+    <label for="tt-centre">Centre<select id="tt-centre" multiple data-all="All centres" data-noun="centres"></select></label>
     <label for="tt-min">Min dials<input type="number" id="tt-min" value="1" min="0" step="1" style="width:90px"></label>
     <label for="tt-other" style="display:flex;align-items:center;gap:8px;font-weight:500"><input type="checkbox" id="tt-other"> Include callers outside the LC user list</label>
   </div></div>
   <div class="tiles" id="tt-tiles"></div>
   <div class="shrow"><div class="sh" id="tt-head">By centre and counsellor</div>
     <input type="text" id="tt-filter" class="txt rowfilter" placeholder="Filter counsellor…"></div>
-  <div class="tblwrap"><table id="tt-tbl" style="min-width:1180px"><thead><tr id="tt-thr"></tr></thead><tbody id="tt-tb"></tbody></table></div>
+  <div class="tblwrap"><table id="tt-tbl" style="min-width:1240px"><thead><tr id="tt-thr"></tr></thead><tbody id="tt-tb"></tbody></table></div>
   <div class="xnote" id="tt-note"></div>
 </template>
 
@@ -2715,32 +2755,37 @@ function init_talk(){
     $("tt-wd").textContent=WD[0]+"–"+WD[1];
     const fmtDay=d=>{const[y,m,dd]=d.split("-");return dd+"-"+m+"-"+y;};
     const days=T.days.slice().reverse();
-    $("tt-day").innerHTML='<option value="avg">Daily average (days each counsellor worked)</option>'+days.map(d=>'<option value="'+d+'">'+fmtDay(d)+'</option>').join("");
+    $("tt-day").innerHTML='<option value="avg">Daily average</option>'+days.map(d=>'<option value="'+d+'">'+fmtDay(d)+'</option>').join("");
     $("tt-day").value=days[0];
     const isOther=uid=>(A[uid]||{}).centre==="Not in user list";
     const centres=[...new Set(Object.keys(A).filter(u=>!isOther(u)).map(u=>A[u].centre))].sort();
-    $("tt-centre").innerHTML='<option value="">All centres</option>'+centres.map(c=>'<option>'+c+'</option>').join("");
+    $("tt-centre").innerHTML=centres.map(c=>'<option>'+c+'</option>').join("");
+    const mins=t=>{const[a,b]=t.split(":").map(Number);return a*60+b;}, clock=m=>{m=Math.round(m);return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");};
     const hm=s=>{s=Math.round(s/60);return s<60?s+"m":Math.floor(s/60)+"h "+String(s%60).padStart(2,"0")+"m";};
     const heat=m=>{const a=Math.min(1,m/60);return a<=0?"":"background:color-mix(in srgb,var(--accent) "+Math.round(15+75*a)+"%,var(--surface))";};
-    const COLS=["Counsellor","Calls (first–last)","Dials","Answered","Talk time","Active","Idle","Active share","Active by hour","Connected leads","Fresh: 1st call today","Fresh: created today","Old leads","Landed today","Not attempted"];
+    const COLS=["Counsellor","First call","Last call","Total time","Talk time","Active","Idle","Dialled","Answered","Connected leads","Fresh: 1st call today","Fresh: created today","Old leads","Landed today","Not attempted","Active by hour"];
     $("tt-thr").innerHTML=COLS.map(c=>"<th>"+c+"</th>").join("");
     function agg(rows){ // sum rows of one counsellor (avg mode divides by days)
-      const o={dials:0,inbound:0,answered:0,talk_s:0,active_s:0,connected:0,conn_fresh_first:0,conn_fresh_created:0,conn_old:0,landed:0,not_attempted:0,h:Array(9).fill(0),first:"",last:""};
+      const o={dials:0,inbound:0,answered:0,talk_s:0,active_s:0,act_span_s:0,connected:0,conn_fresh_first:0,conn_fresh_created:0,conn_old:0,landed:0,not_attempted:0,h:Array(9).fill(0),fm:0,lm:0,cd:0,span_s:null}; // fm/lm = first/last call as minutes of the day, summed over the cd days that had calls
       rows.forEach(r=>{["dials","inbound","answered","talk_s","active_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted"].forEach(k=>o[k]+=r[H[k]]);
+        o.act_span_s+=r[H.active_span_s]||0;
         r[H.hourly_active_min].forEach((v,i)=>o.h[i]+=v);
-        if(r[H.first_call]&&(!o.first||r[H.first_call]<o.first))o.first=r[H.first_call];
-        if(r[H.last_call]&&r[H.last_call]>o.last)o.last=r[H.last_call];});
+        if(r[H.first_call]){o.fm+=mins(r[H.first_call]);o.lm+=mins(r[H.last_call]);o.cd++;}});
       return o;
     }
     function render(){
-      const day=$("tt-day").value, centre=$("tt-centre").value, minD=+$("tt-min").value||0, other=$("tt-other").checked, q=$("tt-filter").value.trim().toLowerCase();
+      const day=$("tt-day").value, cset=new Set([...$("tt-centre").selectedOptions].map(o=>o.value)), minD=+$("tt-min").value||0, other=$("tt-other").checked, q=$("tt-filter").value.trim().toLowerCase();
             const pick=T.rows.filter(r=>(day==="avg"||r[H.day]===day)&&(other||!isOther(r[H.user])));
       const byU={}; pick.forEach(r=>(byU[r[H.user]]=byU[r[H.user]]||[]).push(r));
       let list=Object.entries(byU).map(([u,rs])=>{const o=agg(rs);
         const nd=day==="avg"?rs.length:1; // average over the days this counsellor actually worked
         ["dials","inbound","answered","talk_s","active_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted"].forEach(k=>o[k]=o[k]/nd);
+        o.act_span_s=o.cd?o.act_span_s/o.cd:0;
+        if(o.cd){o.fm/=o.cd;o.lm/=o.cd;o.span_s=(o.lm-o.fm)*60;} // avg mode: mean clock times, so Total = Last - First still holds
+        // Active and Idle are measured inside first call -> last call, so Active + Idle = Total time
+        o.active_s=o.act_span_s; o.idle_s=o.span_s==null?0:Math.max(0,o.span_s-o.act_span_s);
         o.h=o.h.map(v=>v/nd); o.nd=rs.length; o.uid=u; o.name=(A[u]||{}).name||"Unknown"; o.login=(A[u]||{}).login||""; o.centre=(A[u]||{}).centre||"?"; return o;})
-        .filter(o=>o.dials>=minD&&(!centre||o.centre===centre)&&(!q||o.name.toLowerCase().includes(q)||o.login.toLowerCase().includes(q)));
+        .filter(o=>o.dials>=minD&&(!cset.size||cset.has(o.centre))&&(!q||o.name.toLowerCase().includes(q)||o.login.toLowerCase().includes(q)));
       const r1=v=>day==="avg"?(Math.round(v*10)/10).toLocaleString("en-IN"):Math.round(v).toLocaleString("en-IN");
       // tiles
       const sum=k=>list.reduce((a,o)=>a+o[k],0), med=k=>{const v=list.map(o=>o[k]).sort((a,b)=>a-b);return v.length?v[Math.floor(v.length/2)]:0;};
@@ -2749,41 +2794,55 @@ function init_talk(){
         [list.length,"counsellors shown"],
         [hm(med("talk_s")),"median talk time"+per],
         [hm(med("active_s")),"median active time"+per],
-        [hm(DAYSEC-med("active_s")),"median idle time"+per,"warn"],
+        [hm(med("idle_s")),"median idle time"+per,"warn"],
         [r1(sum("connected")),"leads connected"+per],
         [r1(sum("conn_fresh_first")),"…of which first-ever call"],
         [r1(sum("not_attempted")),"landed leads not attempted"+per,"unc"]
       ].map(t=>'<div class="tile '+(t[2]||"")+'"><div class="n">'+t[0]+'</div><div class="l">'+t[1]+'</div></div>').join("");
       // table grouped by centre
       const groups={}; list.forEach(o=>(groups[o.centre]=groups[o.centre]||[]).push(o));
-      const row=(o,cls)=>{const share=Math.min(1,o.active_s/DAYSEC), idle=Math.max(0,DAYSEC-o.active_s);
+      const row=(o,cls)=>{const share=o.span_s?o.active_s/o.span_s:1, idle=o.idle_s;
         return '<tr class="'+(cls||"")+'"><td class="dim">'+o.name+(o.login&&!cls?'<div style="font-size:11px;color:var(--muted);font-weight:400">'+o.login+'</div>':"")+'</td>'
-        +'<td>'+(o.first?o.first+"–"+o.last:"—")+'</td><td>'+r1(o.dials)+'</td><td>'+r1(o.answered)+'</td><td>'+hm(o.talk_s)+'</td><td>'+hm(o.active_s)+'</td>'
+        +'<td>'+(o.cd?clock(o.fm):"—")+'</td><td>'+(o.cd?clock(o.lm):"—")+'</td><td>'+(o.span_s==null?"—":hm(o.span_s))+'</td>'
+        +'<td>'+hm(o.talk_s)+'</td><td>'+hm(o.active_s)+'</td>'
         +'<td class="'+(share<0.25&&!cls?"tt-low":"")+'">'+hm(idle)+'</td>'
-        +'<td><div class="tt-bar" title="'+Math.round(share*100)+'% of the working day"><i style="width:'+Math.round(share*100)+'%"></i></div></td>'
-        +'<td><div class="tt-hours" title="Active minutes per hour, '+WD[0]+' onwards">'+o.h.map((m,i)=>'<span style="'+heat(m)+'" title="'+(10+i)+':00 · '+Math.round(m)+' min"></span>').join("")+'</div></td>'
+        +'<td>'+r1(o.dials)+'</td><td>'+r1(o.answered)+'</td>'
         +'<td>'+r1(o.connected)+'</td><td>'+r1(o.conn_fresh_first)+'</td><td>'+r1(o.conn_fresh_created)+'</td><td>'+r1(o.conn_old)+'</td><td>'+r1(o.landed)+'</td>'
-        +'<td class="'+(o.not_attempted>0&&!cls?"crit":"")+'">'+r1(o.not_attempted)+'</td></tr>';};
+        +'<td class="'+(o.not_attempted>0&&!cls?"crit":"")+'">'+r1(o.not_attempted)+'</td>'
+        +'<td><div class="tt-hours" title="Active minutes per hour, '+WD[0]+' onwards">'+o.h.map((m,i)=>'<span style="'+heat(m)+'" title="'+(10+i)+':00 · '+Math.round(m)+' min"></span>').join("")+'</div></td></tr>';};
       let html="";
       Object.keys(groups).sort((a,b)=>a==="No centre group"?1:b==="No centre group"?-1:a==="Not in user list"?1:b==="Not in user list"?-1:a.localeCompare(b)).forEach(c=>{
         const g=groups[c].sort((a,b)=>b.talk_s-a.talk_s);
-        html+='<tr class="tt-centre"><td colspan="15">'+c+' · '+g.length+' counsellor'+(g.length>1?"s":"")+'</td></tr>'+g.map(o=>row(o)).join("");
+        html+='<tr class="tt-centre"><td colspan="16">'+c+' · '+g.length+' counsellor'+(g.length>1?"s":"")+'</td></tr>'+g.map(o=>row(o)).join("");
         if(g.length>1){const t=agg([]);["dials","answered","talk_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted"].forEach(k=>t[k]=g.reduce((a,o)=>a+o[k],0));
-          t.active_s=g.reduce((a,o)=>a+o.active_s,0)/g.length; t.h=t.h.map((_,i)=>g.reduce((a,o)=>a+o.h[i],0)/g.length); t.name=c+" total (active, idle = per-counsellor average)";
+          t.active_s=g.reduce((a,o)=>a+o.active_s,0)/g.length; t.idle_s=g.reduce((a,o)=>a+o.idle_s,0)/g.length; t.h=t.h.map((_,i)=>g.reduce((a,o)=>a+o.h[i],0)/g.length); const sp=g.filter(o=>o.span_s!=null); t.span_s=sp.length?sp.reduce((a,o)=>a+o.span_s,0)/sp.length:null; t.name=c+" total (total time, active, idle = per-counsellor average)";
           html+=row(t,"tt-sub");}
       });
-      $("tt-tb").innerHTML=html||'<tr><td colspan="15" style="text-align:left;color:var(--muted);padding:18px">No counsellors match these filters.</td></tr>';
+      $("tt-tb").innerHTML=html||'<tr><td colspan="16" style="text-align:left;color:var(--muted);padding:18px">No counsellors match these filters.</td></tr>';
       $("tt-head").textContent=(day==="avg"?"Daily average, "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1]):"On "+fmtDay(day))+" · by centre and counsellor";
     }
     ["tt-day","tt-centre","tt-other"].forEach(id=>$(id).onchange=render); ["tt-min","tt-filter"].forEach(id=>$(id).oninput=render);
-    $("tt-note").innerHTML="<b>How this is measured.</b> Calls = Ameyo outbound (22) and inbound (21) call activities logged in LSQ by a counsellor; bot, vendor and system calls are excluded. "
-      +"<b>Active</b> = time on calls (ringing + talking, start to end) plus "+T.wrap_min+" minutes of wrap-up after each call, with overlaps counted once, inside "+WD[0]+"–"+WD[1]+". <b>Idle</b> = the rest of that window. "
-      +"Calls made on personal phones, walk-in counselling and other work that leaves no call record show up as idle, so idle is an upper bound. "
-      +"<b>Connected leads</b> = unique leads with at least one answered call that day. <b>Fresh: 1st call today</b> = the lead had never had a human call before that day; <b>Old</b> = it had. <b>Fresh: created today</b> = the lead record was created that day (it can overlap with both). "
-      +"<b>Landed today</b> = leads created or assigned to the counsellor that day (current owner only); <b>Not attempted</b> = of those, no human call from anyone by "+WD[1]+". "
-      +"Data covers "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1])+", refreshed "+T.generated_at+".";
+    $("tt-note").innerHTML="<b>How this is measured</b>"+[
+      ["Calls counted","Ameyo outbound (22) and inbound (21) call activities logged in LSQ by a counsellor. Bot, vendor and system calls are excluded."],
+      ["First call / Last call","the time the counsellor's first and last call of the day started, including calls outside "+WD[0]+"–"+WD[1]+"."],
+      ["Total time","Last call minus First call. Active + Idle = Total time."],
+      ["Talk time","time in conversation on answered calls."],
+      ["Active","time on calls (ringing + talking, start to end) plus "+T.wrap_min+" minutes of wrap-up after each call, with overlaps counted once, between First call and Last call."],
+      ["Idle","Total time minus Active. Calls on personal phones, walk-in counselling and other work that leaves no call record show up as idle, so idle is an upper bound."],
+      ["Dialled","outbound calls placed."],
+      ["Answered","calls that were picked up, outbound and inbound."],
+      ["Connected leads","unique leads with at least one answered call that day."],
+      ["Fresh: 1st call today","connected leads that had never had a human call before that day."],
+      ["Fresh: created today","connected leads whose record was created that day. It can overlap with both Fresh: 1st call and Old."],
+      ["Old leads","connected leads that had a human call before that day."],
+      ["Landed today","leads created or assigned to the counsellor that day (current owner only)."],
+      ["Not attempted","of the landed leads, those with no human call from anyone by "+WD[1]+"."],
+      ["Active by hour","one square per hour from "+WD[0]+" to "+WD[1]+". Darker means more active minutes in that hour."],
+      ["Daily average","each figure divided by the days that counsellor had activity. First call and Last call become average clock times."]
+    ].map(d=>"<div><b>"+d[0]+"</b> = "+d[1]+"</div>").join("")
+      +"<div>Data covers "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1])+", refreshed "+T.generated_at+".</div>";
     render();
-  }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="15" style="text-align:left;color:var(--crit);padding:18px">Could not load call data (data/talktime.json).</td></tr>'; });
+  }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="16" style="text-align:left;color:var(--crit);padding:18px">Could not load call data (data/talktime.json).</td></tr>'; });
 }
 const VIEWS={
   speed:{title:"Speed to Lead",init:init_speed},
@@ -2802,7 +2861,7 @@ function show(key){
     view.innerHTML=document.getElementById("tpl-home").innerHTML;
     init_home();
     const strip=view.querySelector("#kpis"); if(strip) strip.insertAdjacentHTML("beforebegin", refreshBanner());
-    upgradeDates();
+    upgradeDates(); upgradeSelects();
     crumb.innerHTML=""; window.scrollTo(0,0);
     location.hash=""; return;
   }
@@ -2810,7 +2869,7 @@ function show(key){
   VIEWS[key].init();
   // one banner, every report: the pool exclusion must never be invisible
   const lede=view.querySelector(".lede"); if(lede) lede.insertAdjacentHTML("afterend", refreshBanner()+poolBanner());
-  upgradeDates();
+  upgradeDates(); upgradeSelects();
   crumb.innerHTML=" / <b>"+VIEWS[key].title+"</b>";
   window.scrollTo(0,0); location.hash=key;
 }
@@ -2889,6 +2948,98 @@ function upgradeDates(){
   syncDateText();
 }
 // keep the visible text in step with programmatic .value changes made by reports
+// <select> has the same problem as <input type="date">: the OS draws it. Safari and iOS
+// ignore most CSS on it and open their own menu, so it never matches the page. Same fix
+// as upgradeDates(): the native control stays in the DOM holding the value (every report
+// keeps reading .value and listening for "change"), and a button + listbox built from its
+// options is what people see and use.
+function upgradeSelects(){
+  document.querySelectorAll('select').forEach(nat=>{
+    if(nat.closest('.xsel')) return;                        // already upgraded
+    const wrap=document.createElement('span'); wrap.className='xsel';
+    const btn=document.createElement('button'); btn.type='button'; btn.className='xsel-btn';
+    btn.setAttribute('aria-haspopup','listbox'); btn.setAttribute('aria-expanded','false');
+    const multi=nat.multiple;           // tick-box list that stays open; value lives in selectedOptions
+    const lab=document.createElement('span'); lab.className='xsel-lab'; btn.appendChild(lab);
+    btn.insertAdjacentHTML('beforeend','<svg class="xsel-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    const pop=document.createElement('div'); pop.className='xsel-pop'+(multi?' multi':''); pop.setAttribute('role','listbox'); pop.hidden=true;
+    if(multi) pop.setAttribute('aria-multiselectable','true');
+    nat.parentNode.insertBefore(wrap, nat);
+    wrap.append(btn, pop, nat);
+    nat.tabIndex=-1;                    // invisible: keyboard users tab to the button
+    nat.addEventListener('focus', ()=>btn.focus());         // a <label for> click lands here
+    wrap.addEventListener('click', e=>e.preventDefault());  // and must not re-fire through the label
+
+    let act=-1, picks=[];
+    const fire=()=>nat.dispatchEvent(new Event('change',{bubbles:true}));
+    const sync=()=>{
+      if(multi){ const sel=[...nat.selectedOptions];
+        lab.textContent=!sel.length?(nat.dataset.all||'All'):sel.length===1?sel[0].textContent:sel.length+' '+(nat.dataset.noun||'selected'); return; }
+      const o=nat.options[nat.selectedIndex]; lab.textContent=o?o.textContent:'';
+    };
+    const mark=()=>[...pop.children].forEach((el,i)=>{ el.classList.toggle('act', i===act); if(i===act) el.scrollIntoView({block:'nearest'}); });
+    const close=()=>{ if(pop.hidden) return; pop.hidden=true; wrap.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
+    const choose=i=>{ if(picks[i]) picks[i](); else close(); };
+    const open=()=>{
+      pop.textContent=''; picks=[];
+      const add=(text,sel,pick)=>{
+        const i=picks.length, el=document.createElement('div'); el.className='xsel-opt'; el.setAttribute('role','option');
+        el.setAttribute('aria-selected', String(sel)); el.textContent=text;
+        el.addEventListener('click', ()=>choose(i));
+        el.addEventListener('pointermove', ()=>{ if(act!==i){ act=i; mark(); } });
+        pop.appendChild(el); picks.push(pick);
+      };
+      if(multi){
+        // first row clears the selection (nothing ticked = everything shown)
+        const refresh=()=>{ [...pop.children].forEach((el,i)=>el.setAttribute('aria-selected', String(i?nat.options[i-1].selected:!nat.selectedOptions.length))); sync(); fire(); };
+        add(nat.dataset.all||'All', !nat.selectedOptions.length, ()=>{ [...nat.options].forEach(o=>o.selected=false); refresh(); });
+        [...nat.options].forEach(o=>add(o.textContent, o.selected, ()=>{ o.selected=!o.selected; refresh(); }));
+      } else [...nat.options].forEach((o,i)=>add(o.textContent, i===nat.selectedIndex, ()=>{
+        close(); btn.focus();
+        if(i===nat.selectedIndex) return;
+        nat.selectedIndex=i; sync(); fire();
+      }));
+      pop.hidden=false; wrap.classList.add('open'); btn.setAttribute('aria-expanded','true');
+      // position:fixed, placed from the button's box: the control rows sit inside panels
+      // with overflow:hidden, which would clip a list positioned inside them.
+      const r=btn.getBoundingClientRect(), below=innerHeight-r.bottom-12, above=r.top-12;
+      const up=below<180 && above>below;
+      pop.style.minWidth=r.width+'px';
+      pop.style.maxHeight=Math.max(120, Math.min(340, up?above:below))+'px';
+      pop.style.top=up?'':(r.bottom+4)+'px';
+      pop.style.bottom=up?(innerHeight-r.top+4)+'px':'';
+      pop.style.left=Math.max(8, Math.min(r.left, innerWidth-8-pop.offsetWidth))+'px';
+      act=multi?0:nat.selectedIndex; mark();
+    };
+    wrap._close=close;
+    btn.addEventListener('click', ()=>pop.hidden?open():close());
+    btn.addEventListener('keydown', e=>{
+      const n=pop.children.length, k=e.key;
+      if(pop.hidden){
+        if(k==='ArrowDown'||k==='ArrowUp'||k==='Enter'||k===' '){ e.preventDefault(); open(); }
+        return;
+      }
+      if(k==='ArrowDown'){ e.preventDefault(); act=Math.min(n-1, act+1); mark(); }
+      else if(k==='ArrowUp'){ e.preventDefault(); act=Math.max(0, act-1); mark(); }
+      else if(k==='Home'){ e.preventDefault(); act=0; mark(); }
+      else if(k==='End'){ e.preventDefault(); act=n-1; mark(); }
+      else if(k==='Enter'||k===' '){ e.preventDefault(); choose(act); }
+      else if(k==='Escape'){ e.preventDefault(); close(); }
+      else if(k==='Tab'){ close(); }
+    });
+    // Reports fill their options after the data loads and set .value in code, neither of
+    // which fires an event — so watch the option list, and re-read on every change.
+    new MutationObserver(sync).observe(nat,{childList:true});
+    nat.addEventListener('change', sync);
+    sync();
+  });
+}
+// One set of page-level listeners for every dropdown, registered once: views are rebuilt
+// on each navigation, so per-control document listeners would pile up.
+function closeSelects(except){ document.querySelectorAll('.xsel.open').forEach(w=>{ if(w!==except) w._close(); }); }
+document.addEventListener('pointerdown', e=>closeSelects(e.target.closest && e.target.closest('.xsel')));
+window.addEventListener('scroll', e=>{ if(!(e.target.closest && e.target.closest('.xsel-pop'))) closeSelects(); }, true);
+window.addEventListener('resize', ()=>closeSelects());
 function syncDateText(){
   document.querySelectorAll('.dwrap').forEach(w=>{
     const nat=w.querySelector('input[type=date]'), txt=w.querySelector('.dtext');

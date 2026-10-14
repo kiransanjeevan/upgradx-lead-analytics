@@ -9,6 +9,9 @@ For every counsellor and every IST day in the window it writes one row:
   active / idle (10:00-19:00 IST)   each call occupies [start, end] plus a wrap-up allowance
                                     (WRAP_MIN, default 5 min); overlapping spans are merged,
                                     clipped to the working day, and summed. Idle = day - active.
+  active_span_s                     the same merged spans clipped to [first call start, last call
+                                    start] instead, so the dashboard's Idle = (last - first) - this
+                                    is never negative and covers calls outside the working day.
   connected leads                   unique leads with >=1 answered call that day, split into
                                     fresh-by-first-call (never called before that day),
                                     fresh-by-creation (created that day) and old
@@ -191,7 +194,7 @@ def union_seconds(spans, lo, hi):
 
 HDR = ["user", "day", "dials", "inbound", "answered", "talk_s", "active_s", "hourly_active_min",
        "connected", "conn_fresh_first", "conn_fresh_created", "conn_old",
-       "landed", "not_attempted", "first_call", "last_call", "calls_outside_hours"]
+       "landed", "not_attempted", "first_call", "last_call", "calls_outside_hours", "active_span_s"]
 rows = []
 by = {}
 for c in calls:
@@ -229,7 +232,8 @@ for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}
                  len(land), len(not_att),
                  min(c["start"] for c in cs).strftime("%H:%M") if cs else "",
                  max(c["start"] for c in cs).strftime("%H:%M") if cs else "",
-                 sum(1 for c in cs if not (lo <= c["start"] < hi))])
+                 sum(1 for c in cs if not (lo <= c["start"] < hi)),
+                 union_seconds(spans, min(c["start"] for c in cs), max(c["start"] for c in cs)) if cs else 0])
 
 agents = {uid: users[uid] for uid in {r[0] for r in rows} if uid in users}
 for uid in {r[0] for r in rows} - set(agents):
