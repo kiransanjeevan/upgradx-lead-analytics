@@ -2934,7 +2934,7 @@ function init_talk(){
     ].map(d=>"<div><b>"+d[0]+"</b> = "+d[1]+"</div>").join("")
       +"<div>Data covers "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1])+", refreshed "+T.generated_at+".</div>";
     render();
-  }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="18" style="text-align:left;color:var(--crit);padding:18px">Could not load call data (data/talktime.json).</td></tr>'; });
+  }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="18" style="text-align:left;color:var(--crit);padding:18px">Could not load call data. If the dashboard was updated while this tab was open, reload the page (⌘⇧R / Ctrl+Shift+R).</td></tr>'; });
 }
 // ---- Internshala funnel: a self-contained page built nightly by reports/internshala/build.py
 // into data/. Embedded same-origin, so the dashboard can size the frame to its content and
