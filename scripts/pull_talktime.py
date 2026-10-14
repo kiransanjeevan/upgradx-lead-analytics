@@ -1,40 +1,52 @@
 """Daily talk-time pull for the dashboard's Talk Time report.
 
 READ-ONLY. Calls Leads.Get, Leads/Retrieve/ByIds, User/AdvancedSearch and
-CustomActivity/RetrieveByActivityEvent. Never writes to LeadSquared.
+CustomActivity/RetrieveByActivityEvent (21, 22, 310). Never writes to LeadSquared.
 
 For every counsellor and every IST day in the window it writes one row:
 
   dials / answered / talk time      Ameyo outbound (22) + inbound (21) call activities
-  active / idle (10:00-19:00 IST)   each call occupies [start, end] plus a wrap-up allowance
-                                    (WRAP_MIN, default 5 min); overlapping spans are merged,
-                                    clipped to the working day, and summed. Idle = day - active.
-  active_span_s                     the same merged spans clipped to [first call start, last call
-                                    start] instead, so the dashboard's Idle = (last - first) - this
-                                    is never negative and covers calls outside the working day.
+  on_call_s                         time on calls, ringing + talking ([start, end], overlaps once);
+                                    Ameyo's auto wrap-up timer is removed (see "wrap.timeout" below)
+  active_s                          the counsellor's own day runs from first call start to last
+                                    call start (no fixed office hours). Inside it, time on calls
+                                    plus every gap between calls of <= GAP_MIN (default 3 min)
+                                    counts as active - dialling the next lead, writing notes.
+                                    Longer gaps are idle, so the dashboard's Idle = span - active.
+                                    Measured, not assumed: an earlier flat 5-min wrap-up after every
+                                    call (answered or not) padded fast diallers' active time.
+  hourly_active_min                 active minutes in each IST hour 00-23 (24 values)
+  no_log                            answered calls with no LSQ Conversation Log (activity 310) by the
+                                    same counsellor on the same lead from 5 min before the call to
+                                    LOG_WINDOW_MIN (60) after it. The 310 form drives stage
+                                    automations, so this is the compliance metric. (Ameyo's own
+                                    outcome screen isn't: most who skip it log in LSQ instead.)
   connected leads                   unique leads with >=1 answered call that day, split into
                                     fresh-by-first-call (never called before that day),
                                     fresh-by-creation (created that day) and old
-  landed / not attempted            leads created or assigned to the counsellor that day
-                                    (current owner) with no human call from anyone by 19:00
+  landed / not attempted            leads created or assigned to the counsellor that day (current
+                                    owner). Not attempted = no human call from anyone AFTER the lead
+                                    landed, by the end of that IST day. Calls made before a
+                                    reassignment don't count. Leads that landed after the
+                                    counsellor's last call are left out (they had no chance);
+                                    for someone who made no calls, every landed lead counts.
 
 Output: data/talktime.json (compact rows; header list in the file).
 
 Env: LSQ_HOST, LSQ_ACCESS, LSQ_SECRET (required); TT_DAYS (default 7);
-     TT_AS_OF (IST date, default yesterday); TT_WORKDAY ("10:00-19:00"); TT_WRAP_MIN (5);
+     TT_AS_OF (IST date, default yesterday); TT_GAP_MIN (3); TT_LOG_WINDOW_MIN (60);
      LSQ_POOLS (same pool list as pull.py).
 """
-import json, os, re, sys, time, urllib.request, urllib.parse
+import bisect, json, os, re, sys, time, urllib.request, urllib.parse
 from datetime import datetime, timedelta, date, timezone
 from pathlib import Path
 
 HOST = os.environ.get("LSQ_HOST", "https://api-in21.leadsquared.com/v2").rstrip("/")
 ACCESS, SECRET = os.environ.get("LSQ_ACCESS"), os.environ.get("LSQ_SECRET")
 IST = timedelta(hours=5, minutes=30)
-DAYS = int(os.environ.get("TT_DAYS") or 7)
+DAYS = int(os.environ.get("TT_DAYS") or 14)
 AS_OF = date.fromisoformat(os.environ["TT_AS_OF"]) if os.environ.get("TT_AS_OF") else (datetime.now(timezone.utc).replace(tzinfo=None) + IST).date() - timedelta(days=1)
-WD0, WD1 = (os.environ.get("TT_WORKDAY") or "10:00-19:00").split("-")
-WRAP = timedelta(minutes=int(os.environ.get("TT_WRAP_MIN") or 5))
+GAP = timedelta(minutes=int(os.environ.get("TT_GAP_MIN") or 3))
 POOLS = {o.strip().lower() for o in (os.environ.get("LSQ_POOLS") or "Avtar LCoffline,Futworks Lc").split(",") if o.strip()}
 NON_COUNSELLORS = POOLS | {"lc team", "arrowhead lcoffline", "system", "upgrad dev user"}
 OUT = Path(__file__).resolve().parent.parent / "data" / "talktime.json"
@@ -67,11 +79,6 @@ def ts(s):
         except ValueError:
             pass
     return None
-
-
-def at(d, hhmm):
-    h, m = map(int, hhmm.split(":"))
-    return datetime(d.year, d.month, d.day, h, m)
 
 
 # ---------- users -> name, centre ----------
@@ -129,19 +136,52 @@ for d in DAY_LIST + [AS_OF + timedelta(days=1)]:
             if who.lower() in NON_COUNSELLORS:
                 continue
             sd = source_data(a)
-            s, e = ts(sd.get("StartTime")), ts(sd.get("EndTime"))            # Ameyo times, already IST
-            if not s:
-                base = ts(a.get("mx_Custom_2")) or ts(a.get("CreatedOn"))     # UTC
-                s = base + IST if base else None
+            # CreatedOn (UTC) + 5:30 equals Ameyo's StartTime to the second for ~99.9% of calls;
+            # the rest carry a UTC StartTime, which put them 5.5 h early. So the clock comes from
+            # CreatedOn and Ameyo only supplies the call's length (EndTime - StartTime).
+            s0, e0 = ts(sd.get("StartTime")), ts(sd.get("EndTime"))
+            base = ts(a.get("CreatedOn")) or ts(a.get("mx_Custom_2"))
+            s = base + IST if base else s0
             if not s:
                 continue
             dur = int(float(a.get("mx_Custom_3") or sd.get("CallDuration") or 0))
-            if not e or e < s:
-                e = s + timedelta(seconds=dur)
+            e = s + (e0 - s0) if s0 and e0 and e0 >= s0 else s + timedelta(seconds=dur)
             calls.append({"ev": ev, "user": a.get("CreatedBy"), "name": who, "lead": a.get("RelatedProspectId"),
                           "start": s, "end": max(e, s + timedelta(seconds=dur)), "dur": dur,
-                          "ans": (a.get("Status") or "").lower() == "answered"})
+                          "ans": (a.get("Status") or "").lower() == "answered",
+                          "wrap_timeout": sd.get("CallNotes") == "wrap.timeout"})
     print(d, "calls so far", len(calls), flush=True)
+
+# When the counsellor doesn't submit the call outcome, Ameyo holds the call open on its own
+# wrap-up timer (~75 s) and EndTime includes it (CallNotes = "wrap.timeout"): ~111 s of non-talk
+# time vs ~30-40 s when the outcome is submitted. That timer is not time on the phone, so those
+# calls get the median ringing of normally closed calls (answered / not answered separately).
+ring = {}
+for ans in (True, False):
+    v = sorted((c["end"] - c["start"]).total_seconds() - c["dur"] for c in calls if c["ans"] == ans and not c["wrap_timeout"])
+    ring[ans] = timedelta(seconds=max(0, v[len(v) // 2])) if v else timedelta()
+for c in calls:
+    if c["wrap_timeout"]:
+        c["end"] = min(c["end"], c["start"] + timedelta(seconds=c["dur"]) + ring[c["ans"]])
+# ---------- Conversation Log (310): the LSQ form that records each call's outcome ----------
+LOG_WIN = timedelta(minutes=int(os.environ.get("TT_LOG_WINDOW_MIN") or 60))
+conv = {}
+for d in DAY_LIST + [AS_OF + timedelta(days=1)]:
+    for a in activities(310, d):
+        t = ts(a.get("CreatedOn"))
+        if t and a.get("RelatedProspectId"):
+            conv.setdefault((a.get("CreatedBy"), a["RelatedProspectId"]), []).append(t + IST)
+for v in conv.values():
+    v.sort()
+
+
+def has_log(c):
+    v = conv.get((c["user"], c["lead"]), [])
+    i = bisect.bisect_left(v, c["start"] - timedelta(minutes=5))
+    return i < len(v) and v[i] <= c["start"] + LOG_WIN
+
+
+print("median ringing (s): answered", ring[True].total_seconds(), "not answered", ring[False].total_seconds())
 
 
 # ---------- leads: landed with a counsellor in the window, plus every lead called ----------
@@ -192,9 +232,9 @@ def union_seconds(spans, lo, hi):
     return int(total)
 
 
-HDR = ["user", "day", "dials", "inbound", "answered", "talk_s", "active_s", "hourly_active_min",
+HDR = ["user", "day", "dials", "inbound", "answered", "talk_s", "on_call_s", "active_s", "hourly_active_min",
        "connected", "conn_fresh_first", "conn_fresh_created", "conn_old",
-       "landed", "not_attempted", "first_call", "last_call", "calls_outside_hours", "active_span_s"]
+       "landed", "not_attempted", "first_call", "last_call", "no_log"]
 rows = []
 by = {}
 for c in calls:
@@ -206,34 +246,42 @@ for pid, x in leads.items():
     own = x.get("OwnerId")
     if not own or own not in users or users[own]["name"].lower() in NON_COUNSELLORS:
         continue
-    days = {t.date() for t in (ist_of(x.get("CreatedOn")), ist_of(x.get("mx_Assignment_Date_Current_Owner"))) if t}
-    for d in days:
-        if d in DAY_LIST:
-            landed.setdefault((own, d), set()).add(pid)
+    cr, asg = ist_of(x.get("CreatedOn")), ist_of(x.get("mx_Assignment_Date_Current_Owner"))
+    for t in {cr, asg} - {None}:
+        d = t.date()
+        if d in DAY_LIST:      # landed at: the assignment if it happened that day, else creation
+            landed.setdefault((own, d), {})[pid] = asg if asg and asg.date() == d else cr
+call_times = {}
+for c in calls:
+    if c["lead"]:
+        call_times.setdefault(c["lead"], []).append(c["start"])
 
 for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}).get("name", ""))):
     uid, d = key
-    cs = by.get(key, [])
-    lo, hi = at(d, WD0), at(d, WD1)
-    spans = [(c["start"], c["end"] + WRAP) for c in cs]
-    active = union_seconds(spans, lo, hi)
-    hourly = [round(union_seconds(spans, lo + timedelta(hours=h), lo + timedelta(hours=h + 1)) / 60)
-              for h in range(int((hi - lo).total_seconds() // 3600))]
+    cs = sorted(by.get(key, []), key=lambda c: c["start"])
+    day0, eod = datetime(d.year, d.month, d.day), datetime(d.year, d.month, d.day) + timedelta(days=1)
+    on_call = [(c["start"], c["end"]) for c in cs]
+    # a short gap before the next call is work; a long one is idle
+    work = [(c["start"], n["start"] if n["start"] - c["end"] <= GAP else c["end"]) for c, n in zip(cs, cs[1:])]
+    first, last = (cs[0]["start"], cs[-1]["start"]) if cs else (None, None)
+    active = union_seconds(on_call + work, first, last) if cs else 0
+    hourly = [round(union_seconds(on_call + work, max(first, day0 + timedelta(hours=h)), min(last, day0 + timedelta(hours=h + 1))) / 60)
+              if cs and day0 + timedelta(hours=h + 1) > first and day0 + timedelta(hours=h) < last else 0 for h in range(24)]
     conn = {c["lead"] for c in cs if c["ans"] and c["lead"]}
     fresh_first = {l for l in conn if first_call.get(l) and first_call[l].date() == d}
     fresh_created = {l for l in conn if ist_of(leads.get(l, {}).get("CreatedOn")) and ist_of(leads[l]["CreatedOn"]).date() == d}
     old = conn - fresh_first
-    land = landed.get(key, set())
-    not_att = {l for l in land if not (first_call.get(l) and first_call[l] <= hi)}
+    land = landed.get(key, {})
+    not_att = {l for l, t in land.items() if (not cs or t <= last)
+               and not any(t <= ct < eod for ct in call_times.get(l, []))}
     dials = [c for c in cs if c["ev"] == 22]
     rows.append([uid, str(d), len(dials), sum(1 for c in cs if c["ev"] == 21), sum(1 for c in cs if c["ans"]),
-                 sum(c["dur"] for c in cs if c["ans"]), active, hourly,
+                 sum(c["dur"] for c in cs if c["ans"]), union_seconds(on_call, day0, eod + timedelta(hours=6)), active, hourly,
                  len(conn), len(fresh_first), len(fresh_created), len(old),
                  len(land), len(not_att),
-                 min(c["start"] for c in cs).strftime("%H:%M") if cs else "",
-                 max(c["start"] for c in cs).strftime("%H:%M") if cs else "",
-                 sum(1 for c in cs if not (lo <= c["start"] < hi)),
-                 union_seconds(spans, min(c["start"] for c in cs), max(c["start"] for c in cs)) if cs else 0])
+                 first.strftime("%H:%M") if cs else "",
+                 last.strftime("%H:%M") if cs else "",
+                 sum(1 for c in cs if c["ans"] and not has_log(c))])
 
 agents = {uid: users[uid] for uid in {r[0] for r in rows} if uid in users}
 for uid in {r[0] for r in rows} - set(agents):
@@ -242,6 +290,6 @@ for uid in {r[0] for r in rows} - set(agents):
 
 OUT.write_text(json.dumps({
     "generated_at": (datetime.now(timezone.utc).replace(tzinfo=None) + IST).strftime("%Y-%m-%d %H:%M IST"),
-    "days": [str(d) for d in DAY_LIST], "workday": [WD0, WD1], "wrap_min": int(WRAP.total_seconds() // 60),
+    "days": [str(d) for d in DAY_LIST], "gap_min": int(GAP.total_seconds() // 60),
     "header": HDR, "agents": agents, "rows": rows, "api_calls": calls_api}, separators=(",", ":")))
 print(f"wrote {OUT.name}: {len(rows)} counsellor-days, {len(agents)} counsellors, {len(calls)} calls, {calls_api} API calls")

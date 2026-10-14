@@ -84,6 +84,7 @@ tr.totrow td{background:var(--surface-2);font-weight:700;color:var(--ink);border
 tr.tt-centre td{background:var(--surface-2);font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-2);text-align:left;}
 tr.tt-sub td{font-weight:700;color:var(--ink);border-top:1px solid var(--line-2);}
 td.tt-low{color:var(--crit);font-weight:600;}
+.tt-pct{font-size:11px;color:var(--muted);font-weight:400;}
 .xnote{font-size:12.5px;color:var(--muted);margin-top:16px;line-height:1.6;border-left:3px solid var(--line-2);padding-left:12px;}
 .xnote b{color:var(--ink-2);}
 footer{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.6;}
@@ -186,6 +187,9 @@ td.owncol{white-space:nowrap;}
 .dwrap .dtext{border:none;border-radius:0;background:transparent;width:104px;padding:8px 0 8px 11px;font-variant-numeric:tabular-nums;}
 .dwrap .dtext:focus{outline:none;}
 .dwrap .dtext.bad{color:var(--crit);}
+.dwrap .dk{align-self:center;padding-left:11px;}
+.dwrap .dk+.dtext{width:92px;padding-left:8px;}
+.dwrap.off{opacity:.45;pointer-events:none;}
 .dcal{position:relative;display:grid;place-items:center;width:32px;cursor:pointer;color:var(--muted);border-left:1px solid var(--line);}
 .dcal:hover{color:var(--accent);background:var(--surface-2);}
 .dcal svg{width:15px;height:15px;pointer-events:none;}
@@ -277,7 +281,16 @@ input[type=checkbox]{width:20px;height:20px;}
 /* ---- App shell: sticky top bar + sticky report rail ---- */
 .shell{display:grid;grid-template-columns:228px minmax(0,1fr);align-items:start;}
 .side{position:sticky;top:var(--topH,58px);height:calc(100vh - var(--topH,58px));overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:14px 12px 16px;background:var(--surface);border-right:1px solid var(--line);}
-.sgrp{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:18px 12px 6px;}
+.sgrp{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:12px;padding:8px 12px;border:0;border-radius:7px;background:none;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;cursor:pointer;}
+.sgrp:hover{color:var(--ink-2);background:var(--surface-2);}
+.sgrp:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.sgrp svg{width:12px;height:12px;flex:none;transition:transform .18s ease;}
+.sgrp[aria-expanded="false"] svg{transform:rotate(-90deg);}
+/* 0fr -> 1fr animates the group open/closed without measuring heights in JS */
+.sbody{display:grid;grid-template-rows:1fr;transition:grid-template-rows .18s ease;}
+.sbody>div{min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:2px;}
+.sgrp[aria-expanded="false"]+.sbody{grid-template-rows:0fr;}
+.sgrp[aria-expanded="false"]+.sbody .sitem{visibility:hidden;}
 .sitem{position:relative;display:block;padding:8px 12px;border-radius:7px;font-size:13.5px;font-weight:550;line-height:1.3;color:var(--ink-2);text-decoration:none;}
 .sitem:hover{background:var(--surface-2);color:var(--ink);}
 .sitem:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
@@ -903,9 +916,10 @@ input[type=checkbox]{width:20px;height:20px;}
 <template id="tpl-talk">
   <div class="eyebrow">LSQ · TALK TIME</div>
   <h1>Talk Time &amp; Activity</h1>
-  <p class="tt-lede">What each counsellor did with the working day (<b id="tt-wd"></b> IST): how much of it was spent on calls, how much was idle, how many leads they connected with, and whether those were fresh or old leads. Built from Ameyo call activities in LSQ.</p>
+  <p class="tt-lede">What each counsellor did with their day, from their first call to their last (all times IST): how much of it was spent on calls, how much was idle, how many leads they connected with, and whether those were fresh or old leads. Built from Ameyo call activities in LSQ.</p>
   <div class="fbar" id="tt-fbar">
-    <select id="tt-day" data-label="Day" aria-label="Day"></select>
+    <input type="date" id="tt-day" data-label="Day" aria-label="Day">
+    <label class="fswitch"><input type="checkbox" id="tt-avg" role="switch"><span class="trk"></span>Daily average</label>
     <select id="tt-centre" multiple data-label="Centre" data-all="All centres" data-noun="centres" aria-label="Centre"></select>
     <div class="fnum" role="group" aria-label="Minimum dials"><span class="fk">Min dials</span><button type="button" data-d="-1" aria-label="Fewer dials">−</button><input type="number" id="tt-min" value="1" min="0" step="1" inputmode="numeric" aria-label="Minimum dials"><button type="button" data-d="1" aria-label="More dials">+</button></div>
     <label class="fswitch"><input type="checkbox" id="tt-other" role="switch"><span class="trk"></span>Include callers outside the LC user list</label>
@@ -914,7 +928,7 @@ input[type=checkbox]{width:20px;height:20px;}
   <div class="tiles" id="tt-tiles"></div>
   <div class="shrow"><div class="sh" id="tt-head">By centre and counsellor</div>
     <input type="text" id="tt-filter" class="txt rowfilter" placeholder="Filter counsellor…"></div>
-  <div class="tblwrap"><table id="tt-tbl" style="min-width:1240px"><thead><tr id="tt-thr"></tr></thead><tbody id="tt-tb"></tbody></table></div>
+  <div class="tblwrap"><table id="tt-tbl" style="min-width:1420px"><thead><tr id="tt-thr"></tr></thead><tbody id="tt-tb"></tbody></table></div>
   <div class="xnote" id="tt-note"></div>
 </template>
 
@@ -2814,42 +2828,39 @@ function dmyHome(i){
 // ---- Talk Time report: reads data/talktime.json (scripts/pull_talktime.py) ----
 function init_talk(){
   const $=id=>document.getElementById(id);
-  $("tt-tb").innerHTML='<tr><td colspan="16" style="text-align:left;color:var(--muted);padding:18px">Loading call data…</td></tr>';
+  $("tt-tb").innerHTML='<tr><td colspan="18" style="text-align:left;color:var(--muted);padding:18px">Loading call data…</td></tr>';
   fetch("data/talktime.json",{cache:"no-cache"}).then(r=>{if(!r.ok)throw 0;return r.json();}).then(T=>{
     const H={}; T.header.forEach((h,i)=>H[h]=i);
-    const A=T.agents, WD=T.workday, DAYSEC=(()=>{const[a,b]=WD.map(x=>x.split(":").map(Number));return (b[0]*60+b[1]-a[0]*60-a[1])*60;})();
-    $("tt-wd").textContent=WD[0]+"–"+WD[1];
+    const A=T.agents;
     const fmtDay=d=>{const[y,m,dd]=d.split("-");return dd+"-"+m+"-"+y;};
     const days=T.days.slice().reverse();
-    $("tt-day").innerHTML='<option value="avg">Daily average</option>'+days.map(d=>'<option value="'+d+'">'+fmtDay(d)+'</option>').join("");
-    $("tt-day").value=days[0];
+    $("tt-day").min=T.days[0]; $("tt-day").max=days[0]; $("tt-day").value=days[0]; syncDateText();   // the calendar only offers days the pull covers
     const isOther=uid=>(A[uid]||{}).centre==="Not in user list";
     const centres=[...new Set(Object.keys(A).filter(u=>!isOther(u)).map(u=>A[u].centre))].sort();
     $("tt-centre").innerHTML=centres.map(c=>'<option>'+c+'</option>').join("");
     const mins=t=>{const[a,b]=t.split(":").map(Number);return a*60+b;}, clock=m=>{m=Math.round(m);return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");};
     const hm=s=>{s=Math.round(s/60);return s<60?s+"m":Math.floor(s/60)+"h "+String(s%60).padStart(2,"0")+"m";};
     const heat=m=>{const a=Math.min(1,m/60);return a<=0?"":"background:color-mix(in srgb,var(--accent) "+Math.round(15+75*a)+"%,var(--surface))";};
-    const COLS=["Counsellor","First call","Last call","Total time","Talk time","Active","Idle","Dialled","Answered","Connected leads","Fresh: 1st call today","Fresh: created today","Old leads","Landed today","Not attempted","Active by hour"];
+    const COLS=["Counsellor","First call","Last call","Total time","Talk time","On calls","Active","Idle","Dialled","Answered","No LSQ log","Connected leads","Fresh: 1st call today","Fresh: created today","Old leads","Landed today","Not attempted","Active by hour"];
     $("tt-thr").innerHTML=COLS.map(c=>"<th>"+c+"</th>").join("");
     function agg(rows){ // sum rows of one counsellor (avg mode divides by days)
-      const o={dials:0,inbound:0,answered:0,talk_s:0,active_s:0,act_span_s:0,connected:0,conn_fresh_first:0,conn_fresh_created:0,conn_old:0,landed:0,not_attempted:0,h:Array(9).fill(0),fm:0,lm:0,cd:0,span_s:null}; // fm/lm = first/last call as minutes of the day, summed over the cd days that had calls
-      rows.forEach(r=>{["dials","inbound","answered","talk_s","active_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted"].forEach(k=>o[k]+=r[H[k]]);
-        o.act_span_s+=r[H.active_span_s]||0;
+      const o={dials:0,inbound:0,answered:0,talk_s:0,on_call_s:0,active_s:0,connected:0,conn_fresh_first:0,conn_fresh_created:0,conn_old:0,landed:0,not_attempted:0,no_log:0,h:Array(24).fill(0),fm:0,lm:0,cd:0,span_s:null}; // fm/lm = first/last call as minutes of the day, summed over the cd days that had calls
+      rows.forEach(r=>{["dials","inbound","answered","talk_s","on_call_s","active_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>o[k]+=r[H[k]]);
         r[H.hourly_active_min].forEach((v,i)=>o.h[i]+=v);
         if(r[H.first_call]){o.fm+=mins(r[H.first_call]);o.lm+=mins(r[H.last_call]);o.cd++;}});
       return o;
     }
     function render(){
-      const day=$("tt-day").value, cset=new Set([...$("tt-centre").selectedOptions].map(o=>o.value)), minD=+$("tt-min").value||0, other=$("tt-other").checked, q=$("tt-filter").value.trim().toLowerCase();
+      const day=$("tt-avg").checked?"avg":$("tt-day").value, cset=new Set([...$("tt-centre").selectedOptions].map(o=>o.value)), minD=+$("tt-min").value||0, other=$("tt-other").checked, q=$("tt-filter").value.trim().toLowerCase();
             const pick=T.rows.filter(r=>(day==="avg"||r[H.day]===day)&&(other||!isOther(r[H.user])));
       const byU={}; pick.forEach(r=>(byU[r[H.user]]=byU[r[H.user]]||[]).push(r));
       let list=Object.entries(byU).map(([u,rs])=>{const o=agg(rs);
         const nd=day==="avg"?rs.length:1; // average over the days this counsellor actually worked
-        ["dials","inbound","answered","talk_s","active_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted"].forEach(k=>o[k]=o[k]/nd);
-        o.act_span_s=o.cd?o.act_span_s/o.cd:0;
+        ["dials","inbound","answered","talk_s","on_call_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>o[k]=o[k]/nd);
+        o.active_s=o.cd?o.active_s/o.cd:0;   // active only exists on days with calls
         if(o.cd){o.fm/=o.cd;o.lm/=o.cd;o.span_s=(o.lm-o.fm)*60;} // avg mode: mean clock times, so Total = Last - First still holds
         // Active and Idle are measured inside first call -> last call, so Active + Idle = Total time
-        o.active_s=o.act_span_s; o.idle_s=o.span_s==null?0:Math.max(0,o.span_s-o.act_span_s);
+        o.idle_s=o.span_s==null?0:Math.max(0,o.span_s-o.active_s);
         o.h=o.h.map(v=>v/nd); o.nd=rs.length; o.uid=u; o.name=(A[u]||{}).name||"Unknown"; o.login=(A[u]||{}).login||""; o.centre=(A[u]||{}).centre||"?"; return o;})
         .filter(o=>o.dials>=minD&&(!cset.size||cset.has(o.centre))&&(!q||o.name.toLowerCase().includes(q)||o.login.toLowerCase().includes(q)));
       const r1=v=>day==="avg"?(Math.round(v*10)/10).toLocaleString("en-IN"):Math.round(v).toLocaleString("en-IN");
@@ -2860,63 +2871,70 @@ function init_talk(){
       $("tt-tiles").innerHTML=[
         [list.length,"counsellors shown","","Counsellors who placed at least "+minD+" outbound call"+(minD===1?"":"s")+(day==="avg"?" on an average working day":" that day")+", in the centres selected. Change Min dials or Centre to widen or narrow this."],
         [hm(med("talk_s")),"median talk time"+per,"",scope+"half the counsellors shown spent longer than this in conversation on answered calls, and half spent less. A median, so one very heavy caller doesn't pull it up."],
-        [hm(med("active_s")),"median active time"+per,"","The typical counsellor's time on calls (ringing + talking) plus "+T.wrap_min+" minutes of wrap-up after each, counted between their first and last call."],
+        [hm(med("active_s")),"median active time"+per,"","The typical counsellor's working time between their first and last call: time on calls (ringing + talking) plus every gap of up to "+T.gap_min+" minutes before the next call, which is dialling and notes. Longer gaps count as idle."],
         [hm(med("idle_s")),"median idle time"+per,"warn","The typical counsellor's Total time (first to last call) minus Active time. Calls from personal phones and walk-in counselling leave no call record and land here, so treat it as an upper bound."],
         [r1(sum("connected")),"leads connected"+per,"","Unique leads that picked up at least one call, added up across the counsellors shown."],
         [r1(sum("conn_fresh_first")),"…of which first-ever call","","Of the connected leads, those that had never had a human call before. These are brand-new conversations, not follow-ups."],
-        [r1(sum("not_attempted")),"landed leads not attempted"+per,"unc",scope+"leads that were created or assigned to these counsellors (current owner) that no one had called by "+WD[1]+". Each one is still waiting for its first call. The Not attempted column shows who holds them."]
+        [sum("answered")?Math.round(100*sum("no_log")/sum("answered"))+"%":"—","answered calls with no LSQ log","unc","Share of answered calls with no Conversation Log in LSQ by the same counsellor on the same lead within an hour. That form records the outcome and moves the lead's stage, so an unlogged call leaves the lead stuck. "+r1(sum("no_log"))+" of "+r1(sum("answered"))+" answered calls"+per+"."],
+        [r1(sum("not_attempted")),"landed leads not attempted"+per,"unc",scope+"leads that were created or assigned to these counsellors (current owner) and got no call from anyone after they landed, by midnight. Calls made before a reassignment don't count. Leads that landed after the counsellor's last call are left out. The Not attempted column shows who holds them."]
       ].map(t=>'<div class="tile '+(t[2]||"")+'"><div class="n">'+t[0]+'</div><div class="l">'+t[1]+'</div>'+tipBtn(t[3])+'</div>').join("");
+      $("tt-day").closest(".dwrap").classList.toggle("off",day==="avg");
       $("tt-reset").hidden=day===days[0]&&!cset.size&&minD===1&&!other&&!q;
+      // hour squares span the hours anyone in view was active, not fixed office hours
+      let h0=24,h1=-1; list.forEach(o=>o.h.forEach((m,i)=>{ if(m>0){ h0=Math.min(h0,i); h1=Math.max(h1,i); } })); if(h1<0){h0=10;h1=18;}
       // table grouped by centre
       const groups={}; list.forEach(o=>(groups[o.centre]=groups[o.centre]||[]).push(o));
       const row=(o,cls)=>{const share=o.span_s?o.active_s/o.span_s:1, idle=o.idle_s;
         return '<tr class="'+(cls||"")+'"><td class="dim">'+o.name+(o.login&&!cls?'<div style="font-size:11px;color:var(--muted);font-weight:400">'+o.login+'</div>':"")+'</td>'
         +'<td>'+(o.cd?clock(o.fm):"—")+'</td><td>'+(o.cd?clock(o.lm):"—")+'</td><td>'+(o.span_s==null?"—":hm(o.span_s))+'</td>'
-        +'<td>'+hm(o.talk_s)+'</td><td>'+hm(o.active_s)+'</td>'
+        +'<td>'+hm(o.talk_s)+'</td><td>'+hm(o.on_call_s)+'</td><td>'+hm(o.active_s)+'</td>'
         +'<td class="'+(share<0.25&&!cls?"tt-low":"")+'">'+hm(idle)+'</td>'
         +'<td>'+r1(o.dials)+'</td><td>'+r1(o.answered)+'</td>'
+        +'<td class="'+(o.answered&&o.no_log/o.answered>=0.15&&!cls?"crit":"")+'">'+r1(o.no_log)+(o.answered?' <span class="tt-pct">'+Math.round(100*o.no_log/o.answered)+'%</span>':"")+'</td>'
         +'<td>'+r1(o.connected)+'</td><td>'+r1(o.conn_fresh_first)+'</td><td>'+r1(o.conn_fresh_created)+'</td><td>'+r1(o.conn_old)+'</td><td>'+r1(o.landed)+'</td>'
         +'<td class="'+(o.not_attempted>0&&!cls?"crit":"")+'">'+r1(o.not_attempted)+'</td>'
-        +'<td><div class="tt-hours" title="Active minutes per hour, '+WD[0]+' onwards">'+o.h.map((m,i)=>'<span style="'+heat(m)+'" title="'+(10+i)+':00 · '+Math.round(m)+' min"></span>').join("")+'</div></td></tr>';};
+        +'<td><div class="tt-hours" title="Active minutes per hour, '+h0+':00 to '+(h1+1)+':00">'+o.h.slice(h0,h1+1).map((m,i)=>'<span style="'+heat(m)+'" title="'+String(h0+i).padStart(2,"0")+':00 · '+Math.round(m)+' min"></span>').join("")+'</div></td></tr>';};
       let html="";
       Object.keys(groups).sort((a,b)=>a==="No centre group"?1:b==="No centre group"?-1:a==="Not in user list"?1:b==="Not in user list"?-1:a.localeCompare(b)).forEach(c=>{
         const g=groups[c].sort((a,b)=>b.talk_s-a.talk_s);
-        html+='<tr class="tt-centre"><td colspan="16">'+c+' · '+g.length+' counsellor'+(g.length>1?"s":"")+'</td></tr>'+g.map(o=>row(o)).join("");
-        if(g.length>1){const t=agg([]);["dials","answered","talk_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted"].forEach(k=>t[k]=g.reduce((a,o)=>a+o[k],0));
-          t.active_s=g.reduce((a,o)=>a+o.active_s,0)/g.length; t.idle_s=g.reduce((a,o)=>a+o.idle_s,0)/g.length; t.h=t.h.map((_,i)=>g.reduce((a,o)=>a+o.h[i],0)/g.length); const sp=g.filter(o=>o.span_s!=null); t.span_s=sp.length?sp.reduce((a,o)=>a+o.span_s,0)/sp.length:null; t.name=c+" total (total time, active, idle = per-counsellor average)";
+        html+='<tr class="tt-centre"><td colspan="18">'+c+' · '+g.length+' counsellor'+(g.length>1?"s":"")+'</td></tr>'+g.map(o=>row(o)).join("");
+        if(g.length>1){const t=agg([]);["dials","answered","talk_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>t[k]=g.reduce((a,o)=>a+o[k],0));
+          t.on_call_s=g.reduce((a,o)=>a+o.on_call_s,0)/g.length; t.active_s=g.reduce((a,o)=>a+o.active_s,0)/g.length; t.idle_s=g.reduce((a,o)=>a+o.idle_s,0)/g.length; t.h=t.h.map((_,i)=>g.reduce((a,o)=>a+o.h[i],0)/g.length); const sp=g.filter(o=>o.span_s!=null); t.span_s=sp.length?sp.reduce((a,o)=>a+o.span_s,0)/sp.length:null; t.name=c+" total (total time, on calls, active, idle = per-counsellor average)";
           html+=row(t,"tt-sub");}
       });
-      $("tt-tb").innerHTML=html||'<tr><td colspan="16" style="text-align:left;color:var(--muted);padding:18px">No counsellors match these filters.</td></tr>';
+      $("tt-tb").innerHTML=html||'<tr><td colspan="18" style="text-align:left;color:var(--muted);padding:18px">No counsellors match these filters.</td></tr>';
       $("tt-head").textContent=(day==="avg"?"Daily average, "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1]):"On "+fmtDay(day))+" · by centre and counsellor";
     }
-    ["tt-day","tt-centre","tt-other"].forEach(id=>$(id).onchange=render); ["tt-min","tt-filter"].forEach(id=>$(id).oninput=render);
+    ["tt-day","tt-avg","tt-centre","tt-other"].forEach(id=>$(id).onchange=render); ["tt-min","tt-filter"].forEach(id=>$(id).oninput=render);
     $("tt-fbar").querySelectorAll(".fnum button").forEach(b=>b.onclick=()=>{ const i=$("tt-min"); i.value=Math.max(0,(+i.value||0)+(+b.dataset.d)); render(); });
     $("tt-reset").onclick=()=>{
-      $("tt-day").value=days[0]; [...$("tt-centre").options].forEach(o=>o.selected=false);
+      $("tt-day").value=days[0]; syncDateText(); $("tt-avg").checked=false; [...$("tt-centre").options].forEach(o=>o.selected=false);
       $("tt-min").value=1; $("tt-other").checked=false; $("tt-filter").value="";
-      ["tt-day","tt-centre"].forEach(id=>$(id).dispatchEvent(new Event("change")));   // re-labels the dropdowns, then renders
+      ["tt-centre"].forEach(id=>$(id).dispatchEvent(new Event("change")));   // re-labels the dropdowns, then renders
     };
     $("tt-note").innerHTML="<b>How this is measured</b>"+[
       ["Calls counted","Ameyo outbound (22) and inbound (21) call activities logged in LSQ by a counsellor. Bot, vendor and system calls are excluded."],
-      ["First call / Last call","the time the counsellor's first and last call of the day started, including calls outside "+WD[0]+"–"+WD[1]+"."],
+      ["First call / Last call","the time the counsellor's first and last call of the day started. This is their working day; there are no fixed office hours."],
       ["Total time","Last call minus First call. Active + Idle = Total time."],
       ["Talk time","time in conversation on answered calls."],
-      ["Active","time on calls (ringing + talking, start to end) plus "+T.wrap_min+" minutes of wrap-up after each call, with overlaps counted once, between First call and Last call."],
-      ["Idle","Total time minus Active. Calls on personal phones, walk-in counselling and other work that leaves no call record show up as idle, so idle is an upper bound."],
+      ["On calls","time on the phone, ringing + talking, including calls that weren't answered. Always at least Talk time. When a counsellor doesn't submit the call outcome, Ameyo keeps the call open on its own wrap-up timer; that timer is removed and the call gets the typical ringing time instead."],
+      ["Active","On calls plus every gap of up to "+T.gap_min+" minutes before the next call (dialling, notes), between First call and Last call. Someone dialling back-to-back is active even when few calls connect."],
+      ["Idle","Total time minus Active: the gaps longer than "+T.gap_min+" minutes. Calls on personal phones, walk-in counselling and other work that leaves no call record show up as idle, so idle is an upper bound."],
       ["Dialled","outbound calls placed."],
       ["Answered","calls that were picked up, outbound and inbound."],
+      ["No LSQ log","answered calls with no Conversation Log in LSQ, by the same counsellor on the same lead, from 5 minutes before the call to an hour after. The percentage is of Answered. Red at 15% or more. Ameyo's own outcome screen isn't counted: most people who skip it log in LSQ instead."],
       ["Connected leads","unique leads with at least one answered call that day."],
       ["Fresh: 1st call today","connected leads that had never had a human call before that day."],
       ["Fresh: created today","connected leads whose record was created that day. It can overlap with both Fresh: 1st call and Old."],
       ["Old leads","connected leads that had a human call before that day."],
       ["Landed today","leads created or assigned to the counsellor that day (current owner only)."],
-      ["Not attempted","of the landed leads, those with no human call from anyone by "+WD[1]+"."],
-      ["Active by hour","one square per hour from "+WD[0]+" to "+WD[1]+". Darker means more active minutes in that hour."],
+      ["Not attempted","of the landed leads, those with no human call from anyone after they landed, by midnight. Calls made before a reassignment don't count. Leads that landed after the counsellor's last call are left out; for someone who made no calls, every landed lead counts."],
+      ["Active by hour","one square per hour, covering the hours anyone shown was active. Darker means more active minutes in that hour."],
       ["Daily average","each figure divided by the days that counsellor had activity. First call and Last call become average clock times."]
     ].map(d=>"<div><b>"+d[0]+"</b> = "+d[1]+"</div>").join("")
       +"<div>Data covers "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1])+", refreshed "+T.generated_at+".</div>";
     render();
-  }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="16" style="text-align:left;color:var(--crit);padding:18px">Could not load call data (data/talktime.json).</td></tr>'; });
+  }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="18" style="text-align:left;color:var(--crit);padding:18px">Could not load call data (data/talktime.json).</td></tr>'; });
 }
 // ---- Internshala funnel: a self-contained page built nightly by reports/internshala/build.py
 // into data/. Embedded same-origin, so the dashboard can size the frame to its content and
@@ -2968,10 +2986,20 @@ const NAV_TIP={
 };
 function buildSide(){
   const side=document.getElementById("side");
-  side.innerHTML=NAV.map(([g,items])=>(g?'<div class="sgrp">'+g+'</div>':'')+items.map(([k,label,tip])=>
-    '<a class="sitem" href="#'+(k==="home"?"":k)+'" data-v="'+k+'" title="'+(tip||NAV_TIP[k]||"")+'">'+(label||VIEWS[k].title)+'</a>').join("")).join("")
+  // collapsed groups are a per-viewer convenience, so browser storage is enough (and optional)
+  let shut=[]; try{ shut=JSON.parse(localStorage.getItem("side-shut")||"[]"); }catch(_){}
+  const link=([k,label,tip])=>'<a class="sitem" href="#'+(k==="home"?"":k)+'" data-v="'+k+'" title="'+(tip||NAV_TIP[k]||"")+'">'+(label||VIEWS[k].title)+'</a>';
+  side.innerHTML=NAV.map(([g,items],i)=>!g?items.map(link).join(""):
+    '<button type="button" class="sgrp" id="sg'+i+'" aria-expanded="'+!shut.includes(g)+'" aria-controls="sb'+i+'" data-g="'+g+'">'+g
+      +'<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
+    +'<div class="sbody" id="sb'+i+'" role="region" aria-labelledby="sg'+i+'"><div>'+items.map(link).join("")+'</div></div>').join("")
     +'<div class="sfoot">Read-only from LeadSquared · all times IST</div>';
-  side.addEventListener("click",e=>{ const a=e.target.closest(".sitem"); if(!a) return; e.preventDefault(); show(a.dataset.v); });
+  side.addEventListener("click",e=>{
+    const g=e.target.closest(".sgrp");
+    if(g){ g.setAttribute("aria-expanded",String(g.getAttribute("aria-expanded")==="false"));
+      try{ localStorage.setItem("side-shut",JSON.stringify([...side.querySelectorAll('.sgrp[aria-expanded="false"]')].map(b=>b.dataset.g))); }catch(_){}
+      return; }
+    const a=e.target.closest(".sitem"); if(!a) return; e.preventDefault(); show(a.dataset.v); });
   const menu=document.getElementById("nav-menu"), scrim=document.getElementById("scrim");
   const setOpen=o=>{ side.classList.toggle("open",o); scrim.hidden=!o; menu.setAttribute("aria-expanded",String(o)); if(o) (side.querySelector(".sitem.on")||side.querySelector(".sitem")).focus(); };
   menu.onclick=()=>setOpen(!side.classList.contains("open"));
@@ -2983,7 +3011,8 @@ function buildSide(){
   new ResizeObserver(()=>document.documentElement.style.setProperty("--topH",top.offsetHeight+"px")).observe(top);
 }
 function markSide(key){
-  document.querySelectorAll(".sitem").forEach(a=>{ const on=a.dataset.v===key; a.classList.toggle("on",on); on?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"); });
+  document.querySelectorAll(".sitem").forEach(a=>{ const on=a.dataset.v===key; a.classList.toggle("on",on); on?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current");
+    if(on){ const b=a.closest(".sbody"); if(b) b.previousElementSibling.setAttribute("aria-expanded","true"); } });   // never hide the report you're on
   if(window.__closeSide) window.__closeSide();
 }
 const INFO_SVG='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="4.9" r=".95" fill="currentColor"/></svg>';
@@ -3049,6 +3078,7 @@ function upgradeDates(){
     const cal=document.createElement('span'); cal.className='dcal'; cal.innerHTML=CAL_SVG;
     cal.title='Pick from a calendar';
     nat.parentNode.insertBefore(wrap, nat);
+    if(nat.dataset.label){ const k=document.createElement('span'); k.className='xsel-k dk'; k.textContent=nat.dataset.label; wrap.appendChild(k); }
     wrap.appendChild(txt); wrap.appendChild(cal); cal.appendChild(nat);
 
     // An empty date field produced NaN day-indexes and every formatter downstream threw
