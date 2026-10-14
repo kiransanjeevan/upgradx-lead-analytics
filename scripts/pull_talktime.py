@@ -8,13 +8,17 @@ For every counsellor and every IST day in the window it writes one row:
   dials / answered / talk time      Ameyo outbound (22) + inbound (21) call activities
   on_call_s                         time on calls, ringing + talking ([start, end], overlaps once);
                                     Ameyo's auto wrap-up timer is removed (see "wrap.timeout" below)
-  active_s                          the counsellor's own day runs from first call start to last
-                                    call start (no fixed office hours). Inside it, time on calls
+  first_call / last_call            start of the first call / END of the last call (HH:MM IST). The
+                                    counsellor's own day is the span between them (no fixed office
+                                    hours), so Total = last - first and it contains every call.
+  active_s                          inside that day, time on calls
                                     plus every gap between calls of <= GAP_MIN (default 3 min)
                                     counts as active - dialling the next lead, writing notes.
                                     Longer gaps are idle, so the dashboard's Idle = span - active.
                                     Measured, not assumed: an earlier flat 5-min wrap-up after every
                                     call (answered or not) padded fast diallers' active time.
+  longest_break_s / _at             the longest idle gap (> GAP_MIN) between calls and the HH:MM it
+                                    began - tells one long break apart from many short ones
   hourly_active_min                 active minutes in each IST hour 00-23 (24 values)
   no_log                            answered calls with no LSQ Conversation Log (activity 310) by the
                                     same counsellor on the same lead from 5 min before the call to
@@ -22,8 +26,8 @@ For every counsellor and every IST day in the window it writes one row:
                                     automations, so this is the compliance metric. (Ameyo's own
                                     outcome screen isn't: most who skip it log in LSQ instead.)
   connected leads                   unique leads with >=1 answered call that day, split into
-                                    fresh-by-first-call (never called before that day),
-                                    fresh-by-creation (created that day) and old
+                                    new (first-ever human call that day; the rest are follow-ups),
+                                    and created-that-day (always a subset of new)
   landed / not attempted            leads created or assigned to the counsellor that day (current
                                     owner). Not attempted = no human call from anyone AFTER the lead
                                     landed, by the end of that IST day. Calls made before a
@@ -33,7 +37,7 @@ For every counsellor and every IST day in the window it writes one row:
 
 Output: data/talktime.json (compact rows; header list in the file).
 
-Env: LSQ_HOST, LSQ_ACCESS, LSQ_SECRET (required); TT_DAYS (default 7);
+Env: LSQ_HOST, LSQ_ACCESS, LSQ_SECRET (required); TT_DAYS (default 14);
      TT_AS_OF (IST date, default yesterday); TT_GAP_MIN (3); TT_LOG_WINDOW_MIN (60);
      LSQ_POOLS (same pool list as pull.py).
 """
@@ -234,7 +238,8 @@ def union_seconds(spans, lo, hi):
 
 HDR = ["user", "day", "dials", "inbound", "answered", "talk_s", "on_call_s", "active_s", "hourly_active_min",
        "connected", "conn_fresh_first", "conn_fresh_created", "conn_old",
-       "landed", "not_attempted", "first_call", "last_call", "no_log"]
+       "landed", "not_attempted", "first_call", "last_call", "no_log",
+       "longest_break_s", "longest_break_at"]
 rows = []
 by = {}
 for c in calls:
@@ -263,8 +268,14 @@ for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}
     on_call = [(c["start"], c["end"]) for c in cs]
     # a short gap before the next call is work; a long one is idle
     work = [(c["start"], n["start"] if n["start"] - c["end"] <= GAP else c["end"]) for c, n in zip(cs, cs[1:])]
-    first, last = (cs[0]["start"], cs[-1]["start"]) if cs else (None, None)
+    # the day ends when the last call ends (capped at midnight), so Active always covers On calls
+    first, last = (cs[0]["start"], min(max(c["end"] for c in cs), eod - timedelta(minutes=1))) if cs else (None, None)
     active = union_seconds(on_call + work, first, last) if cs else 0
+    brk, brk_at, reach = 0, "", None          # longest idle gap; reach = latest call end so far (calls can overlap)
+    for c in cs:
+        if reach is not None and (c["start"] - reach) > GAP and (c["start"] - reach).total_seconds() > brk:
+            brk, brk_at = int((c["start"] - reach).total_seconds()), reach.strftime("%H:%M")
+        reach = c["end"] if reach is None else max(reach, c["end"])
     hourly = [round(union_seconds(on_call + work, max(first, day0 + timedelta(hours=h)), min(last, day0 + timedelta(hours=h + 1))) / 60)
               if cs and day0 + timedelta(hours=h + 1) > first and day0 + timedelta(hours=h) < last else 0 for h in range(24)]
     conn = {c["lead"] for c in cs if c["ans"] and c["lead"]}
@@ -281,7 +292,7 @@ for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}
                  len(land), len(not_att),
                  first.strftime("%H:%M") if cs else "",
                  last.strftime("%H:%M") if cs else "",
-                 sum(1 for c in cs if c["ans"] and not has_log(c))])
+                 sum(1 for c in cs if c["ans"] and not has_log(c)), brk, brk_at])
 
 agents = {uid: users[uid] for uid in {r[0] for r in rows} if uid in users}
 for uid in {r[0] for r in rows} - set(agents):

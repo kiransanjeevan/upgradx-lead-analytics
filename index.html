@@ -952,7 +952,7 @@ input[type=checkbox]{width:20px;height:20px;}
   <div class="tiles" id="tt-tiles"></div>
   <div class="shrow"><div class="sh" id="tt-head">By centre and counsellor</div>
     <input type="text" id="tt-filter" class="txt rowfilter" placeholder="Filter counsellor…"></div>
-  <div class="tblwrap" id="tt-wrap"><table id="tt-tbl" style="min-width:1420px"><thead id="tt-thead"></thead><tbody id="tt-tb"></tbody></table></div>
+  <div class="tblwrap" id="tt-wrap"><table id="tt-tbl" style="min-width:1500px"><thead id="tt-thead"></thead><tbody id="tt-tb"></tbody></table></div>
   <details class="xnote xfold" id="tt-note"></details>
 </template>
 
@@ -2852,7 +2852,7 @@ function dmyHome(i){
 // ---- Talk Time report: reads data/talktime.json (scripts/pull_talktime.py) ----
 function init_talk(){
   const $=id=>document.getElementById(id);
-  $("tt-tb").innerHTML='<tr><td colspan="18" style="text-align:left;color:var(--muted);padding:18px">Loading call data…</td></tr>';
+  $("tt-tb").innerHTML='<tr><td colspan="19" style="text-align:left;color:var(--muted);padding:18px">Loading call data…</td></tr>';
   fetch("data/talktime.json",{cache:"no-cache"}).then(r=>{if(!r.ok)throw 0;return r.json();}).then(T=>{
     const H={}; T.header.forEach((h,i)=>H[h]=i);
     const A=T.agents;
@@ -2868,12 +2868,13 @@ function init_talk(){
     // one set of definitions, used by the column headers' info overlays and the legend below the table
     const DEFS=[
       ["Calls counted","Ameyo outbound (22) and inbound (21) call activities logged in LSQ by a counsellor. Bot, vendor and system calls are excluded. Callers outside the LC user list are hidden unless that switch is on."],
-      ["First call / Last call","the time the counsellor's first and last call of the day started. This is their working day; there are no fixed office hours."],
-      ["Total time","Last call minus First call. Active + Idle = Total time."],
+      ["First call / Last call","when the counsellor's first call of the day started and their last call ended. That span is their working day; there are no fixed office hours."],
+      ["Total time","Last call minus First call, so every call falls inside it. Active + Idle = Total time."],
       ["Talk time","time in conversation on answered calls."],
       ["On calls","time on the phone, ringing + talking, including calls that weren't answered, so it is normally more than Talk time. When a counsellor doesn't submit the call outcome, Ameyo keeps the call open on its own wrap-up timer; that timer is removed and the call gets the typical ringing time instead."],
-      ["Active","On calls plus every gap of up to "+T.gap_min+" minutes before the next call (dialling, notes), between First call and Last call. Someone dialling back-to-back is active even when few calls connect."],
+      ["Active","On calls plus every gap of up to "+T.gap_min+" minutes before the next call (dialling, notes). Always at least On calls. Someone dialling back-to-back is active even when few calls connect."],
       ["Idle","Total time minus Active: the gaps longer than "+T.gap_min+" minutes. Calls on personal phones, walk-in counselling and other work that leaves no call record show up as idle, so idle is an upper bound. Red when less than a quarter of the day was active."],
+      ["Longest break","the longest single idle gap (over "+T.gap_min+" minutes) between two calls, and the time it began. Tells one long break, like lunch or a walk-in, apart from many short ones. Daily average shows the average length only."],
       ["Dialled","outbound calls placed."],
       ["Answered","calls that were picked up, outbound and inbound. Dialled counts outbound only, so Answered ÷ Dialled is not a connect rate."],
       ["No LSQ log","answered calls with no Conversation Log in LSQ, by the same counsellor on the same lead, from 5 minutes before the call to an hour after. The percentage is of Answered. Red at 15% or more. Ameyo's own outcome screen isn't counted: most people who skip it log in LSQ instead."],
@@ -2884,21 +2885,21 @@ function init_talk(){
       ["Landed today","leads created or assigned to the counsellor that day (current owner only)."],
       ["Not attempted","of the landed leads, those with no human call from anyone after they landed, by midnight. Calls made before a reassignment don't count. Leads that landed after the counsellor's last call are left out; for someone who made no calls, every landed lead counts."],
       ["Active by hour","one square per hour, covering the hours anyone shown was active. Darker means more active minutes in that hour."],
-      ["Centre total","calls and leads are added up across the centre's counsellors. Time columns (Total, Talk, On calls, Active, Idle) and Active by hour are the average per counsellor."],
+      ["Centre total","calls and leads are added up across the centre's counsellors. Time columns (Total, Talk, On calls, Active, Idle, Longest break) and Active by hour are the average per counsellor."],
       ["Daily average","counts are divided by the days the counsellor appears (calls made or leads landed); time columns by the days they made calls. First call and Last call become average clock times."]
     ];
     const DEF=Object.fromEntries(DEFS), cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
-    // [header label, definition key]; groups give the header a band so 18 columns read as 3 questions
-    const GROUPS=[["Time",[["First call","First call / Last call"],["Last call","First call / Last call"],["Total","Total time"],["Talk","Talk time"],["On calls"],["Active"],["Idle"]]],
+    // [header label, definition key]; groups give the header a band so 19 columns read as 3 questions
+    const GROUPS=[["Time",[["First call","First call / Last call"],["Last call","First call / Last call"],["Total","Total time"],["Talk","Talk time"],["On calls"],["Active"],["Idle"],["Longest break"]]],
       ["Calls",[["Dialled"],["Answered"],["No LSQ log"]]],
       ["Leads",[["Connected","Connected leads"],["New","New: 1st call today"],["…created &amp; connected today","Created & connected today"],["Follow-up"],["Landed","Landed today"],["Not attempted"]]]];
     $("tt-thead").innerHTML='<tr class="tt-band"><th rowspan="2">Counsellor</th>'+GROUPS.map(([g,cs])=>'<th class="tt-g tt-gs" colspan="'+cs.length+'">'+g+'</th>').join("")
       +'<th rowspan="2" class="tt-gs">Active by hour'+tipBtn(cap(DEF["Active by hour"]),1)+'</th></tr><tr>'
       +GROUPS.map(([g,cs])=>cs.map(([l,k],i)=>'<th'+(i?'':' class="tt-gs"')+'>'+l+tipBtn(cap(DEF[k||l]),1)+'</th>').join("")).join("")+'</tr>';
     function agg(rows){ // sum rows of one counsellor (avg mode divides by days)
-      const o={dials:0,inbound:0,answered:0,talk_s:0,on_call_s:0,active_s:0,connected:0,conn_fresh_first:0,conn_fresh_created:0,conn_old:0,landed:0,not_attempted:0,no_log:0,h:Array(24).fill(0),fm:0,lm:0,cd:0,span_s:null}; // fm/lm = first/last call as minutes of the day, summed over the cd days that had calls
+      const o={dials:0,inbound:0,answered:0,talk_s:0,on_call_s:0,active_s:0,connected:0,conn_fresh_first:0,conn_fresh_created:0,conn_old:0,landed:0,not_attempted:0,no_log:0,brk:0,brk_at:"",h:Array(24).fill(0),fm:0,lm:0,cd:0,span_s:null}; // fm/lm = first/last call as minutes of the day, summed over the cd days that had calls
       rows.forEach(r=>{["dials","inbound","answered","talk_s","on_call_s","active_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>o[k]+=r[H[k]]);
-        r[H.hourly_active_min].forEach((v,i)=>o.h[i]+=v);
+        r[H.hourly_active_min].forEach((v,i)=>o.h[i]+=v); o.brk+=r[H.longest_break_s]||0; o.brk_at=r[H.longest_break_at]||"";
         if(r[H.first_call]){o.fm+=mins(r[H.first_call]);o.lm+=mins(r[H.last_call]);o.cd++;}});
       return o;
     }
@@ -2910,6 +2911,7 @@ function init_talk(){
         const nd=day==="avg"?rs.length:1; // average over the days this counsellor actually worked
         ["dials","inbound","answered","talk_s","on_call_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>o[k]=o[k]/nd);
         o.active_s=o.cd?o.active_s/o.cd:0;   // active only exists on days with calls
+        o.brk=o.cd?o.brk/o.cd:0; if(day==="avg") o.brk_at="";   // a clock time only means something for one day
         if(o.cd){o.fm/=o.cd;o.lm/=o.cd;o.span_s=(o.lm-o.fm)*60;} // avg mode: mean clock times, so Total = Last - First still holds
         // Active and Idle are measured inside first call -> last call, so Active + Idle = Total time
         o.idle_s=o.span_s==null?0:Math.max(0,o.span_s-o.active_s);
@@ -2941,6 +2943,7 @@ function init_talk(){
         +'<td class="tt-gs">'+(o.cd?clock(o.fm):"—")+'</td><td>'+(o.cd?clock(o.lm):"—")+'</td><td>'+(o.span_s==null?"—":hm(o.span_s))+'</td>'
         +'<td>'+hm(o.talk_s)+'</td><td>'+hm(o.on_call_s)+'</td><td>'+hm(o.active_s)+'</td>'
         +'<td class="'+(share<0.25&&!cls?"tt-low":"")+'">'+hm(idle)+'</td>'
+        +'<td>'+(o.brk?hm(o.brk)+(o.brk_at?' <span class="tt-pct">'+o.brk_at+'</span>':""):"—")+'</td>'
         +'<td class="tt-gs">'+r1(o.dials)+'</td><td>'+r1(o.answered)+'</td>'
         +'<td class="'+(o.answered&&o.no_log/o.answered>=0.15&&!cls?"crit":"")+'">'+r1(o.no_log)+(o.answered?' <span class="tt-pct">'+Math.round(100*o.no_log/o.answered)+'%</span>':"")+'</td>'
         +'<td class="tt-gs">'+r1(o.connected)+'</td><td>'+r1(o.conn_fresh_first)+'</td><td>'+r1(o.conn_fresh_created)+'</td><td>'+r1(o.conn_old)+'</td><td>'+r1(o.landed)+'</td>'
@@ -2949,12 +2952,12 @@ function init_talk(){
       let html="";
       Object.keys(groups).sort((a,b)=>a==="No centre group"?1:b==="No centre group"?-1:a==="Not in user list"?1:b==="Not in user list"?-1:a.localeCompare(b)).forEach(c=>{
         const g=groups[c].sort((a,b)=>b.talk_s-a.talk_s);
-        html+='<tr class="tt-centre"><td colspan="18"><span>'+c+' · '+g.length+' counsellor'+(g.length>1?"s":"")+'</span></td></tr>'+g.map(o=>row(o)).join("");
+        html+='<tr class="tt-centre"><td colspan="19"><span>'+c+' · '+g.length+' counsellor'+(g.length>1?"s":"")+'</span></td></tr>'+g.map(o=>row(o)).join("");
         if(g.length>1){const t=agg([]);["dials","answered","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>t[k]=g.reduce((a,o)=>a+o[k],0));
-          t.talk_s=g.reduce((a,o)=>a+o.talk_s,0)/g.length; t.on_call_s=g.reduce((a,o)=>a+o.on_call_s,0)/g.length; t.active_s=g.reduce((a,o)=>a+o.active_s,0)/g.length; t.idle_s=g.reduce((a,o)=>a+o.idle_s,0)/g.length; t.h=t.h.map((_,i)=>g.reduce((a,o)=>a+o.h[i],0)/g.length); const sp=g.filter(o=>o.span_s!=null); t.span_s=sp.length?sp.reduce((a,o)=>a+o.span_s,0)/sp.length:null; t.name=c+" total"; t.tip=cap(DEF["Centre total"]);
+          t.talk_s=g.reduce((a,o)=>a+o.talk_s,0)/g.length; t.on_call_s=g.reduce((a,o)=>a+o.on_call_s,0)/g.length; t.active_s=g.reduce((a,o)=>a+o.active_s,0)/g.length; t.idle_s=g.reduce((a,o)=>a+o.idle_s,0)/g.length; t.brk=g.reduce((a,o)=>a+o.brk,0)/g.length; t.h=t.h.map((_,i)=>g.reduce((a,o)=>a+o.h[i],0)/g.length); const sp=g.filter(o=>o.span_s!=null); t.span_s=sp.length?sp.reduce((a,o)=>a+o.span_s,0)/sp.length:null; t.name=c+" total"; t.tip=cap(DEF["Centre total"]);
           html+=row(t,"tt-sub");}
       });
-      $("tt-tb").innerHTML=html||'<tr><td colspan="18" style="text-align:left;color:var(--muted);padding:18px">No counsellors match these filters.</td></tr>';
+      $("tt-tb").innerHTML=html||'<tr><td colspan="19" style="text-align:left;color:var(--muted);padding:18px">No counsellors match these filters.</td></tr>';
       $("tt-head").textContent=(day==="avg"?"Daily average, "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1]):"On "+fmtDay(day))+" · by centre and counsellor";
     }
     ["tt-day","tt-avg","tt-centre","tt-other"].forEach(id=>$(id).onchange=render); ["tt-min","tt-filter"].forEach(id=>$(id).oninput=render);
@@ -2967,7 +2970,7 @@ function init_talk(){
     $("tt-note").innerHTML="<summary>How this is measured<span>Definitions for every column · data "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1])+"</span></summary>"+DEFS.map(d=>"<div><b>"+d[0]+"</b> = "+d[1]+"</div>").join("")
       +"<div>Data covers "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1])+", refreshed "+T.generated_at+".</div>";
     render();
-  }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="18" style="text-align:left;color:var(--crit);padding:18px">Could not load call data. If the dashboard was updated while this tab was open, reload the page (⌘⇧R / Ctrl+Shift+R).</td></tr>'; });
+  }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="19" style="text-align:left;color:var(--crit);padding:18px">Could not load call data. If the dashboard was updated while this tab was open, reload the page (⌘⇧R / Ctrl+Shift+R).</td></tr>'; });
 }
 // ---- Internshala funnel: a self-contained page built nightly by reports/internshala/build.py
 // into data/. Embedded same-origin, so the dashboard can size the frame to its content and
