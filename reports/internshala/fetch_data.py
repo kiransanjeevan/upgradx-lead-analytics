@@ -157,25 +157,45 @@ def fetch_event(event, pids, page_size, label):
 if __name__ == "__main__":
     print(f"window {WIN} .. {END - dt.timedelta(days=1)} (inclusive)")
 
-    print("1/3 Internshala leads (Leads.Get, all-time)")
+    print("1/4 Internshala leads (Leads.Get, all-time)")
     raw = fetch_leads()
     (DATA / "internshala_raw.json").write_text(json.dumps(raw))
     pids = {x["ProspectID"] for x in raw}
 
-    print("2/3 human calls (event 22)")
+    print("2/4 human calls (event 22)")
     hum, daily, callers, total = fetch_event(22, pids, 1000, "calls")
     (DATA / "act_sep.json").write_text(json.dumps({
         "calls": api_calls, "mb": round(api_bytes / 1048576, 1), "total": total,
         "daily": daily, "internshala": hum, "top_callers": callers.most_common(25)}))
 
-    print("3/3 bot (328) and Futwork (330)")
+    print("3/4 bot (328) and Futwork (330)")
     # PageSize 100: these custom activities carry ~30 mx_Custom_* fields each, so a
     # 1000-row page is large enough to time out.
     bot, _, _, botN = fetch_event(328, pids, 100, "bot")
     futw, _, _, futN = fetch_event(330, pids, 100, "futwork")
     (DATA / "act_sep_botfut.json").write_text(json.dumps({"bot": bot, "futwork": futw}))
 
+    # 4/4 — the non-call touchpoints. Event 22 only fires when a call goes through an
+    # integrated dialler, so a counsellor who rings from a personal mobile and then
+    # fills the Conversation Log Form leaves a 310 with no 22 behind it. Measured on a
+    # sample week: 310 added 20 leads the call events missed, WhatsApp 5. Small, but
+    # 203 (manual call logging) is included at zero usage on purpose -- it is the exact
+    # path that produced the gap, so it should never be a blind spot again.
+    print("4/4 other touchpoints (310 form, 210 WhatsApp, 200 SMS, 203 manual call, 21 inbound)")
+    other, otherN = {}, {}
+    for ev, label in ((310, "form"), (210, "whatsapp"), (200, "sms"),
+                      (203, "logcall"), (21, "inbound")):
+        d, _, _, n = fetch_event(ev, pids, 500, label)
+        other[label], otherN[label] = d, n
+    (DATA / "act_other.json").write_text(json.dumps(other))
+
+    touched = set(hum) | set(bot) | set(futw) | {p for d in other.values() for p in d}
+    extra = touched - (set(hum) | set(bot) | set(futw))
     print(f"DONE · api calls {api_calls:,} · {api_bytes / 1048576:.1f} MB")
     print(f"  leads {len(raw):,} | human-called {len(hum):,} | bot-called {len(bot):,} | futwork {len(futw):,}")
-    print(f"  activities scanned: 22={total:,} 328={botN:,} 330={futN:,}")
-    print(f"  wrote {DATA}/internshala_raw.json, act_sep.json, act_sep_botfut.json")
+    print(f"  other touchpoints: " + " ".join(f"{k}={len(v):,}" for k, v in other.items()))
+    print(f"  TOUCHED (any channel) {len(touched):,} — of which {len(extra):,} would have been "
+          f"missed by the three call events alone")
+    print(f"  activities scanned: 22={total:,} 328={botN:,} 330={futN:,} " +
+          " ".join(f"{k}={v:,}" for k, v in otherN.items()))
+    print(f"  wrote {DATA}/internshala_raw.json, act_sep.json, act_sep_botfut.json, act_other.json")

@@ -1,4 +1,4 @@
-<title>Internshala Funnel Since September</title>
+<title>__TITLE__</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root{
@@ -93,7 +93,7 @@
 
 <div class="wrap">
   <div class="eyebrow">upGrad X · Lead analytics</div>
-  <h1>Internshala leads since 1 September</h1>
+  <h1>Internshala leads since __WINSHORT__</h1>
   <p id="standfirst"></p>
   <div class="meta" id="meta"></div>
 
@@ -144,7 +144,7 @@
 
   <section id="s2b">
     <div class="shead"><span class="snum">CUT 2B</span><h2>Daily flow — where leads land</h2></div>
-    <p>Every Internshala lead created since 1 September, by the day it was created, split by whether it went to a bulk pool account or to a named owner. This is the live picture, not a cohort view.</p>
+    <p>Every Internshala lead created since __WINSHORT__, by the day it was created, split by whether it went to a bulk pool account or to a named owner. This is the live picture, not a cohort view.</p>
     <div class="card">
       <div class="ctrls" style="margin-bottom:10px">
         <span style="font-size:12.5px;color:var(--ink-2)"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--s2);margin-right:6px"></i>To a bulk pool (Avtar / Futworks)</span>
@@ -228,8 +228,9 @@ const POPS = [
   {id:'all', label:'All leads', test:() => true},
   {id:'unpool', label:'Not pooled', test:r => !r[X.pool]},
   {id:'pool', label:'Pooled', test:r => !!r[X.pool]},
-  {id:'worked', label:'Worked', test:r => !!r[X.worked]},
-  {id:'untouch', label:'Never touched', test:r => !r[X.worked]}
+  {id:'worked', label:'Human-worked', test:r => !!r[X.worked]},
+  {id:'touch', label:'Touched (any channel)', test:r => !!r[X.touch]},
+  {id:'untouch', label:'Never touched', test:r => !r[X.touch]}
 ];
 const popById = id => POPS.find(p => p.id === id);
 const sel = rows => ({ n: rows.length,
@@ -286,7 +287,7 @@ function drawMatrix(){
   $('#segfunnel').innerHTML = `<table><thead><tr><th>Segment</th><th>Leads</th><th>Called (lead field)</th><th>Connected — ever / in Sep</th><th>Counselled</th><th>Paid</th></tr></thead><tbody>
     ${m.map(x => `<tr><td>${x.k}</td><td>${nf(x.s.n)}</td><td>${nf(x.s.called)}</td>${row(x)}</tr>`).join('')}
     <tr class="tot"><td>All leads</td><td>${nf(T.n)}</td><td>${nf(T.called)}</td>${row({s:T})}</tr></tbody></table>`;
-  $('#c0').innerHTML = `<b>${nf(T.hum)} human calls and ${nf(T.bot)} bot calls</b> landed on this basis in September. ` +
+  $('#c0').innerHTML = `<b>${nf(T.hum)} human calls and ${nf(T.bot)} bot calls</b> landed on this basis in ${D.period}. ` +
     `${nf(win.filter(r=>r[X.pool]).length)} leads (${p1(win.filter(r=>r[X.pool]).length,T.n)}) sit in a bulk account; ` +
     `${nf(win.filter(r=>!r[X.worked]).length)} have nothing on the lead record.`;
 }
@@ -302,8 +303,8 @@ function drawFunnel(){
     ${i?`<div class="step">${p1(st.v,st.prev)} of ${steps[i-1].l.toLowerCase()}</div>`:''}</div>`; }).join('');
   bindTips($('#funnel'));
   $('#c1').innerHTML = BASIS === 'A'
-    ? `<b>This basis is effort, not arrival.</b> ${nf(s.hum)} human calls and ${nf(s.bot)} bot calls on ${nf(s.n)} leads — ${p1(rows.filter(r=>r[X.wkC]<0).length, s.n)} of them arrived before September.`
-    : `<b>Coverage is the constraint.</b> ${p1(s.called,s.n)} of this basis has a call on the lead record; ${p1(s.conn,s.n)} ever connected, ${p1(s.connW,s.n)} connected in September.`;
+    ? `<b>This basis is effort, not arrival.</b> ${nf(s.hum)} human calls and ${nf(s.bot)} bot calls on ${nf(s.n)} leads — ${p1(rows.filter(r=>r[X.wkC]<0).length, s.n)} of them arrived before ${D.winShort}.`
+    : `<b>Coverage is the constraint.</b> ${p1(s.called,s.n)} of this basis has a call on the lead record; ${p1(s.conn,s.n)} ever connected, ${p1(s.connW,s.n)} connected in ${D.period}.`;
 }
 function drawWeeks(){
   const pop = segW.get(), rows = filt(pop,'all');
@@ -336,7 +337,7 @@ function drawDaily(){
             {v:x.named,color:'var(--s1)',tip:`${x.d.label} · named owner ${nf(x.named)}`}]})), Math.max(1,...per.map(x=>x.total)));
   const T = per.reduce((a,x)=>({p:a.p+x.pooled,n:a.n+x.named,t:a.t+x.total}),{p:0,n:0,t:0});
   $('#daycap').textContent = BASIS === 'A'
-    ? `Each bar is the day a lead was first worked in September. ${nf(T.t)} leads worked, ${nf(T.p)} of them owned by a bulk account (${p1(T.p,T.t)}).`
+    ? `Each bar is the day a lead was first worked in ${D.period}. ${nf(T.t)} leads worked, ${nf(T.p)} of them owned by a bulk account (${p1(T.p,T.t)}).`
     : `Each bar is the day a lead entered the window on this basis. ${nf(T.t)} leads, ${nf(T.p)} to a bulk pool (${p1(T.p,T.t)}), ${nf(T.n)} to a named owner.`;
   $('#daytbl').innerHTML = `<table><thead><tr><th>Date</th><th>Day</th><th>Leads</th><th>Bulk pool</th><th>Named owner</th><th>% pooled</th></tr></thead><tbody>
     ${per.map(x => `<tr><td>${x.d.label}</td><td class="sub">${x.d.dow}</td><td>${nf(x.total)}</td><td>${nf(x.pooled)}</td><td>${nf(x.named)}</td>
@@ -382,7 +383,7 @@ function drawAtt(){
     ${B.map(b => { const bs = sel(b.rows); return `<tr><td>${b.lab}</td><td>${nf(bs.n)}</td><td>${p1(bs.n,s.n)}</td>
       <td>${nf(bs.conn)} <span class="sub">${p1(bs.conn,bs.n)}</span></td><td>${nf(bs.couns)}</td><td>${nf(bs.hum)}</td></tr>`; }).join('')}
     <tr class="tot"><td>Total</td><td>${nf(s.n)}</td><td>100.0%</td><td>${nf(s.conn)}</td><td>${nf(s.couns)}</td><td>${nf(s.hum)}</td></tr></tbody></table>`;
-  $('#c4').innerHTML = `<b>The attempts field is human-only.</b> ${nf(s.hum)} human calls and ${nf(s.bot)} bot calls were logged in September for this selection — the bot's never reach this field.`;
+  $('#c4').innerHTML = `<b>The attempts field is human-only.</b> ${nf(s.hum)} human calls and ${nf(s.bot)} bot calls were logged in ${D.period} for this selection — the bot's never reach this field.`;
 }
 function drawCentres(){
   const win = R.filter(inWin);
