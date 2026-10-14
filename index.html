@@ -76,11 +76,32 @@ tr.totrow td{background:var(--surface-2);font-weight:700;color:var(--ink);border
 .cov.r{background:var(--crit-soft);color:var(--crit);}
 .trunc{font-size:12px;color:var(--muted);margin:8px 2px 0;}
 .tt-lede{color:var(--ink-2);font-size:14.5px;max-width:82ch;margin:9px 0 0;}
-.tt-hours{display:grid;grid-template-columns:repeat(9,14px);gap:2px;justify-content:start;}
+.tt-hours{display:grid;grid-auto-flow:column;grid-auto-columns:14px;gap:2px;justify-content:start;}
 .tt-hours span{width:14px;height:14px;border-radius:3px;background:var(--surface-2);border:1px solid var(--line);}
 #tt-note div{margin-top:5px;}
 .isframe{display:block;width:100%;min-height:70vh;border:0;background:transparent;}
 #tt-tbl td{white-space:nowrap;}
+/* collapsible note: closed by default, opens in place */
+.xfold summary{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;list-style:none;cursor:pointer;font-weight:700;color:var(--ink-2);}
+.xfold summary::-webkit-details-marker{display:none;}
+.xfold summary::before{content:"";align-self:center;width:7px;height:7px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(-45deg);transition:transform .15s;}
+.xfold[open] summary::before{transform:rotate(45deg);}
+.xfold summary span{font-weight:400;font-size:12.5px;color:var(--muted);}
+.xfold summary:hover{color:var(--accent);}
+.xfold summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;}
+.xfold[open] summary{margin-bottom:8px;}
+/* the table scrolls inside its own box, so the header and the name column can stay pinned */
+#tt-wrap{max-height:calc(100vh - var(--topH,58px) - 24px);overflow:auto;}
+#tt-tbl thead{position:sticky;top:0;z-index:3;}
+#tt-tbl th{cursor:default;vertical-align:bottom;}
+#tt-tbl tr.tt-band th{text-align:center;vertical-align:middle;color:var(--ink-2);font-weight:700;letter-spacing:.1em;border-bottom:0;padding-bottom:4px;}
+#tt-tbl tr.tt-band th.tt-g{box-shadow:inset 0 -2px 0 var(--line-2);}
+#tt-tbl th.tt-gs,#tt-tbl td.tt-gs{border-left:1px solid var(--line);}
+#tt-tbl tr.tt-band th:first-child,#tt-tbl tbody td:first-child{position:sticky;left:0;z-index:1;text-align:left;vertical-align:bottom;box-shadow:inset -1px 0 0 var(--line);}
+#tt-tbl tr.tt-centre td span{position:sticky;left:12px;}
+#tt-tbl tbody td:first-child{background:var(--surface);}
+#tt-tbl tbody tr.tt-centre td:first-child{background:var(--surface-2);position:static;box-shadow:none;}
+#tt-tbl tbody tr.tt-sub td:first-child{background:var(--surface);}
 tr.tt-centre td{background:var(--surface-2);font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-2);text-align:left;}
 tr.tt-sub td{font-weight:700;color:var(--ink);border-top:1px solid var(--line-2);}
 td.tt-low{color:var(--crit);font-weight:600;}
@@ -312,6 +333,8 @@ input[type=checkbox]{width:20px;height:20px;}
 .tipbtn:hover,.tipbtn[aria-expanded="true"]{color:var(--accent);background:var(--accent-soft);}
 .tipbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
 .tipbtn svg{width:15px;height:15px;}
+.tipbtn.inl{position:static;display:inline-grid;width:16px;height:16px;margin-left:3px;vertical-align:-4px;}
+.tipbtn.inl svg{width:13px;height:13px;}
 .tipbox{position:fixed;z-index:70;max-width:min(300px,calc(100vw - 16px));padding:10px 12px;border-radius:9px;background:var(--ink);color:var(--bg);font-size:12.5px;line-height:1.5;box-shadow:0 10px 28px rgb(10 15 25/.28);pointer-events:none;}
 /* ---- Filter toolbar: label inside each control ---- */
 .fbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:20px 0 4px;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);}
@@ -335,6 +358,7 @@ input[type=checkbox]{width:20px;height:20px;}
 .freset:hover{background:var(--accent-soft);}
 @media(pointer:coarse){
 .tipbtn{top:4px;right:4px;width:32px;height:32px;}
+.tipbtn.inl{width:28px;height:28px;margin:-6px -6px -6px -3px;}
 .fnum button{width:40px;height:42px;}
 }
 </style>
@@ -928,8 +952,8 @@ input[type=checkbox]{width:20px;height:20px;}
   <div class="tiles" id="tt-tiles"></div>
   <div class="shrow"><div class="sh" id="tt-head">By centre and counsellor</div>
     <input type="text" id="tt-filter" class="txt rowfilter" placeholder="Filter counsellor…"></div>
-  <div class="tblwrap"><table id="tt-tbl" style="min-width:1420px"><thead><tr id="tt-thr"></tr></thead><tbody id="tt-tb"></tbody></table></div>
-  <div class="xnote" id="tt-note"></div>
+  <div class="tblwrap" id="tt-wrap"><table id="tt-tbl" style="min-width:1420px"><thead id="tt-thead"></thead><tbody id="tt-tb"></tbody></table></div>
+  <details class="xnote xfold" id="tt-note"></details>
 </template>
 
 <script>
@@ -2841,8 +2865,36 @@ function init_talk(){
     const mins=t=>{const[a,b]=t.split(":").map(Number);return a*60+b;}, clock=m=>{m=Math.round(m);return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");};
     const hm=s=>{s=Math.round(s/60);return s<60?s+"m":Math.floor(s/60)+"h "+String(s%60).padStart(2,"0")+"m";};
     const heat=m=>{const a=Math.min(1,m/60);return a<=0?"":"background:color-mix(in srgb,var(--accent) "+Math.round(15+75*a)+"%,var(--surface))";};
-    const COLS=["Counsellor","First call","Last call","Total time","Talk time","On calls","Active","Idle","Dialled","Answered","No LSQ log","Connected leads","Fresh: 1st call today","Fresh: created today","Old leads","Landed today","Not attempted","Active by hour"];
-    $("tt-thr").innerHTML=COLS.map(c=>"<th>"+c+"</th>").join("");
+    // one set of definitions, used by the column headers' info overlays and the legend below the table
+    const DEFS=[
+      ["Calls counted","Ameyo outbound (22) and inbound (21) call activities logged in LSQ by a counsellor. Bot, vendor and system calls are excluded."],
+      ["First call / Last call","the time the counsellor's first and last call of the day started. This is their working day; there are no fixed office hours."],
+      ["Total time","Last call minus First call. Active + Idle = Total time."],
+      ["Talk time","time in conversation on answered calls."],
+      ["On calls","time on the phone, ringing + talking, including calls that weren't answered. Always at least Talk time. When a counsellor doesn't submit the call outcome, Ameyo keeps the call open on its own wrap-up timer; that timer is removed and the call gets the typical ringing time instead."],
+      ["Active","On calls plus every gap of up to "+T.gap_min+" minutes before the next call (dialling, notes), between First call and Last call. Someone dialling back-to-back is active even when few calls connect."],
+      ["Idle","Total time minus Active: the gaps longer than "+T.gap_min+" minutes. Calls on personal phones, walk-in counselling and other work that leaves no call record show up as idle, so idle is an upper bound. Red when less than a quarter of the day was active."],
+      ["Dialled","outbound calls placed."],
+      ["Answered","calls that were picked up, outbound and inbound."],
+      ["No LSQ log","answered calls with no Conversation Log in LSQ, by the same counsellor on the same lead, from 5 minutes before the call to an hour after. The percentage is of Answered. Red at 15% or more. Ameyo's own outcome screen isn't counted: most people who skip it log in LSQ instead."],
+      ["Connected leads","unique leads with at least one answered call that day."],
+      ["Fresh: 1st call today","connected leads that had never had a human call before that day."],
+      ["Fresh: created today","connected leads whose record was created that day. It can overlap with both Fresh: 1st call and Old."],
+      ["Old leads","connected leads that had a human call before that day."],
+      ["Landed today","leads created or assigned to the counsellor that day (current owner only)."],
+      ["Not attempted","of the landed leads, those with no human call from anyone after they landed, by midnight. Calls made before a reassignment don't count. Leads that landed after the counsellor's last call are left out; for someone who made no calls, every landed lead counts."],
+      ["Active by hour","one square per hour, covering the hours anyone shown was active. Darker means more active minutes in that hour."],
+      ["Centre total","calls and leads are added up across the centre's counsellors. Time columns (Total, Talk, On calls, Active, Idle) and Active by hour are the average per counsellor."],
+      ["Daily average","each figure divided by the days that counsellor had activity. First call and Last call become average clock times."]
+    ];
+    const DEF=Object.fromEntries(DEFS), cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
+    // [header label, definition key]; groups give the header a band so 18 columns read as 3 questions
+    const GROUPS=[["Time",[["First call","First call / Last call"],["Last call","First call / Last call"],["Total","Total time"],["Talk","Talk time"],["On calls"],["Active"],["Idle"]]],
+      ["Calls",[["Dialled"],["Answered"],["No LSQ log"]]],
+      ["Leads",[["Connected","Connected leads"],["Fresh: 1st call","Fresh: 1st call today"],["Fresh: created","Fresh: created today"],["Old","Old leads"],["Landed","Landed today"],["Not attempted"]]]];
+    $("tt-thead").innerHTML='<tr class="tt-band"><th rowspan="2">Counsellor</th>'+GROUPS.map(([g,cs])=>'<th class="tt-g tt-gs" colspan="'+cs.length+'">'+g+'</th>').join("")
+      +'<th rowspan="2" class="tt-gs">Active by hour'+tipBtn(cap(DEF["Active by hour"]),1)+'</th></tr><tr>'
+      +GROUPS.map(([g,cs])=>cs.map(([l,k],i)=>'<th'+(i?'':' class="tt-gs"')+'>'+l+tipBtn(cap(DEF[k||l]),1)+'</th>').join("")).join("")+'</tr>';
     function agg(rows){ // sum rows of one counsellor (avg mode divides by days)
       const o={dials:0,inbound:0,answered:0,talk_s:0,on_call_s:0,active_s:0,connected:0,conn_fresh_first:0,conn_fresh_created:0,conn_old:0,landed:0,not_attempted:0,no_log:0,h:Array(24).fill(0),fm:0,lm:0,cd:0,span_s:null}; // fm/lm = first/last call as minutes of the day, summed over the cd days that had calls
       rows.forEach(r=>{["dials","inbound","answered","talk_s","on_call_s","active_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>o[k]+=r[H[k]]);
@@ -2885,21 +2937,21 @@ function init_talk(){
       // table grouped by centre
       const groups={}; list.forEach(o=>(groups[o.centre]=groups[o.centre]||[]).push(o));
       const row=(o,cls)=>{const share=o.span_s?o.active_s/o.span_s:1, idle=o.idle_s;
-        return '<tr class="'+(cls||"")+'"><td class="dim">'+o.name+(o.login&&!cls?'<div style="font-size:11px;color:var(--muted);font-weight:400">'+o.login+'</div>':"")+'</td>'
-        +'<td>'+(o.cd?clock(o.fm):"—")+'</td><td>'+(o.cd?clock(o.lm):"—")+'</td><td>'+(o.span_s==null?"—":hm(o.span_s))+'</td>'
+        return '<tr class="'+(cls||"")+'"><td class="dim">'+o.name+(o.tip?tipBtn(o.tip,1):"")+(o.login&&!cls?'<div style="font-size:11px;color:var(--muted);font-weight:400">'+o.login+'</div>':"")+'</td>'
+        +'<td class="tt-gs">'+(o.cd?clock(o.fm):"—")+'</td><td>'+(o.cd?clock(o.lm):"—")+'</td><td>'+(o.span_s==null?"—":hm(o.span_s))+'</td>'
         +'<td>'+hm(o.talk_s)+'</td><td>'+hm(o.on_call_s)+'</td><td>'+hm(o.active_s)+'</td>'
         +'<td class="'+(share<0.25&&!cls?"tt-low":"")+'">'+hm(idle)+'</td>'
-        +'<td>'+r1(o.dials)+'</td><td>'+r1(o.answered)+'</td>'
+        +'<td class="tt-gs">'+r1(o.dials)+'</td><td>'+r1(o.answered)+'</td>'
         +'<td class="'+(o.answered&&o.no_log/o.answered>=0.15&&!cls?"crit":"")+'">'+r1(o.no_log)+(o.answered?' <span class="tt-pct">'+Math.round(100*o.no_log/o.answered)+'%</span>':"")+'</td>'
-        +'<td>'+r1(o.connected)+'</td><td>'+r1(o.conn_fresh_first)+'</td><td>'+r1(o.conn_fresh_created)+'</td><td>'+r1(o.conn_old)+'</td><td>'+r1(o.landed)+'</td>'
+        +'<td class="tt-gs">'+r1(o.connected)+'</td><td>'+r1(o.conn_fresh_first)+'</td><td>'+r1(o.conn_fresh_created)+'</td><td>'+r1(o.conn_old)+'</td><td>'+r1(o.landed)+'</td>'
         +'<td class="'+(o.not_attempted>0&&!cls?"crit":"")+'">'+r1(o.not_attempted)+'</td>'
-        +'<td><div class="tt-hours" title="Active minutes per hour, '+h0+':00 to '+(h1+1)+':00">'+o.h.slice(h0,h1+1).map((m,i)=>'<span style="'+heat(m)+'" title="'+String(h0+i).padStart(2,"0")+':00 · '+Math.round(m)+' min"></span>').join("")+'</div></td></tr>';};
+        +'<td class="tt-gs"><div class="tt-hours" title="Active minutes per hour, '+h0+':00 to '+(h1+1)+':00">'+o.h.slice(h0,h1+1).map((m,i)=>'<span style="'+heat(m)+'" title="'+String(h0+i).padStart(2,"0")+':00 · '+Math.round(m)+' min"></span>').join("")+'</div></td></tr>';};
       let html="";
       Object.keys(groups).sort((a,b)=>a==="No centre group"?1:b==="No centre group"?-1:a==="Not in user list"?1:b==="Not in user list"?-1:a.localeCompare(b)).forEach(c=>{
         const g=groups[c].sort((a,b)=>b.talk_s-a.talk_s);
-        html+='<tr class="tt-centre"><td colspan="18">'+c+' · '+g.length+' counsellor'+(g.length>1?"s":"")+'</td></tr>'+g.map(o=>row(o)).join("");
-        if(g.length>1){const t=agg([]);["dials","answered","talk_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>t[k]=g.reduce((a,o)=>a+o[k],0));
-          t.on_call_s=g.reduce((a,o)=>a+o.on_call_s,0)/g.length; t.active_s=g.reduce((a,o)=>a+o.active_s,0)/g.length; t.idle_s=g.reduce((a,o)=>a+o.idle_s,0)/g.length; t.h=t.h.map((_,i)=>g.reduce((a,o)=>a+o.h[i],0)/g.length); const sp=g.filter(o=>o.span_s!=null); t.span_s=sp.length?sp.reduce((a,o)=>a+o.span_s,0)/sp.length:null; t.name=c+" total (total time, on calls, active, idle = per-counsellor average)";
+        html+='<tr class="tt-centre"><td colspan="18"><span>'+c+' · '+g.length+' counsellor'+(g.length>1?"s":"")+'</span></td></tr>'+g.map(o=>row(o)).join("");
+        if(g.length>1){const t=agg([]);["dials","answered","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>t[k]=g.reduce((a,o)=>a+o[k],0));
+          t.talk_s=g.reduce((a,o)=>a+o.talk_s,0)/g.length; t.on_call_s=g.reduce((a,o)=>a+o.on_call_s,0)/g.length; t.active_s=g.reduce((a,o)=>a+o.active_s,0)/g.length; t.idle_s=g.reduce((a,o)=>a+o.idle_s,0)/g.length; t.h=t.h.map((_,i)=>g.reduce((a,o)=>a+o.h[i],0)/g.length); const sp=g.filter(o=>o.span_s!=null); t.span_s=sp.length?sp.reduce((a,o)=>a+o.span_s,0)/sp.length:null; t.name=c+" total"; t.tip=cap(DEF["Centre total"]);
           html+=row(t,"tt-sub");}
       });
       $("tt-tb").innerHTML=html||'<tr><td colspan="18" style="text-align:left;color:var(--muted);padding:18px">No counsellors match these filters.</td></tr>';
@@ -2912,26 +2964,7 @@ function init_talk(){
       $("tt-min").value=1; $("tt-other").checked=false; $("tt-filter").value="";
       ["tt-centre"].forEach(id=>$(id).dispatchEvent(new Event("change")));   // re-labels the dropdowns, then renders
     };
-    $("tt-note").innerHTML="<b>How this is measured</b>"+[
-      ["Calls counted","Ameyo outbound (22) and inbound (21) call activities logged in LSQ by a counsellor. Bot, vendor and system calls are excluded."],
-      ["First call / Last call","the time the counsellor's first and last call of the day started. This is their working day; there are no fixed office hours."],
-      ["Total time","Last call minus First call. Active + Idle = Total time."],
-      ["Talk time","time in conversation on answered calls."],
-      ["On calls","time on the phone, ringing + talking, including calls that weren't answered. Always at least Talk time. When a counsellor doesn't submit the call outcome, Ameyo keeps the call open on its own wrap-up timer; that timer is removed and the call gets the typical ringing time instead."],
-      ["Active","On calls plus every gap of up to "+T.gap_min+" minutes before the next call (dialling, notes), between First call and Last call. Someone dialling back-to-back is active even when few calls connect."],
-      ["Idle","Total time minus Active: the gaps longer than "+T.gap_min+" minutes. Calls on personal phones, walk-in counselling and other work that leaves no call record show up as idle, so idle is an upper bound."],
-      ["Dialled","outbound calls placed."],
-      ["Answered","calls that were picked up, outbound and inbound."],
-      ["No LSQ log","answered calls with no Conversation Log in LSQ, by the same counsellor on the same lead, from 5 minutes before the call to an hour after. The percentage is of Answered. Red at 15% or more. Ameyo's own outcome screen isn't counted: most people who skip it log in LSQ instead."],
-      ["Connected leads","unique leads with at least one answered call that day."],
-      ["Fresh: 1st call today","connected leads that had never had a human call before that day."],
-      ["Fresh: created today","connected leads whose record was created that day. It can overlap with both Fresh: 1st call and Old."],
-      ["Old leads","connected leads that had a human call before that day."],
-      ["Landed today","leads created or assigned to the counsellor that day (current owner only)."],
-      ["Not attempted","of the landed leads, those with no human call from anyone after they landed, by midnight. Calls made before a reassignment don't count. Leads that landed after the counsellor's last call are left out; for someone who made no calls, every landed lead counts."],
-      ["Active by hour","one square per hour, covering the hours anyone shown was active. Darker means more active minutes in that hour."],
-      ["Daily average","each figure divided by the days that counsellor had activity. First call and Last call become average clock times."]
-    ].map(d=>"<div><b>"+d[0]+"</b> = "+d[1]+"</div>").join("")
+    $("tt-note").innerHTML="<summary>How this is measured<span>Definitions for every column · data "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1])+"</span></summary>"+DEFS.map(d=>"<div><b>"+d[0]+"</b> = "+d[1]+"</div>").join("")
       +"<div>Data covers "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1])+", refreshed "+T.generated_at+".</div>";
     render();
   }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="18" style="text-align:left;color:var(--crit);padding:18px">Could not load call data. If the dashboard was updated while this tab was open, reload the page (⌘⇧R / Ctrl+Shift+R).</td></tr>'; });
@@ -3016,7 +3049,7 @@ function markSide(key){
   if(window.__closeSide) window.__closeSide();
 }
 const INFO_SVG='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="4.9" r=".95" fill="currentColor"/></svg>';
-function tipBtn(text){ return text?'<button type="button" class="tipbtn" aria-label="What does this mean?" aria-expanded="false" data-tip="'+text.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'">'+INFO_SVG+'</button>':""; }
+function tipBtn(text,inl){ return text?'<button type="button" class="tipbtn'+(inl?' inl':'')+'" aria-label="What does this mean?" aria-expanded="false" data-tip="'+text.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'">'+INFO_SVG+'</button>':""; }
 const VIEWS={
   speed:{title:"Speed to Lead",init:init_speed},
   ageing:{title:"Lead Ageing",init:init_ageing},
