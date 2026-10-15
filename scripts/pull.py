@@ -15,10 +15,11 @@ Optional:
               data file so the dashboard can show "next refresh in ...". Keep it in
               sync with the cron in .github/workflows/refresh.yml.
 
-Read-only: only calls Leads.Get (a search). Never creates/updates/deletes.
+Read-only: only calls Leads.Get and User/AdvancedSearch (both searches). Never
+creates/updates/deletes.
 Stdlib only — no pip install needed.
 """
-import json, os, sys, urllib.request, urllib.parse
+import json, os, re, sys, urllib.request, urllib.parse
 from datetime import datetime, timezone, timedelta
 
 HOST   = os.environ.get("LSQ_HOST", "https://api-in21.leadsquared.com/v2").rstrip("/")
@@ -71,7 +72,9 @@ COLS = ("ProspectID,CreatedOn,mx_First_Call_Date_and_Time,mx_Date_of_Lead_Assign
         "mx_Is_Counselled_Lead,mx_Total_Amount_Paid,mx_Assignment_Date_Current_Owner,"
         # event dates — needed for the Operational view (what happened IN a window,
         # as opposed to how a created cohort eventually converted)
-        "mx_First_Counselling_Date,mx_First_Transaction_Date,mx_Interested_In_Date")
+        "mx_First_Counselling_Date,mx_First_Transaction_Date,mx_Interested_In_Date,"
+        # the campaign name carries the product (…_OFFLINE-data_analytics, LearningCentre_FSD_…)
+        "SourceCampaign")
 
 
 MAX_PAGES = 200          # 200k rows per anchor; the assignment anchor is already ~125
@@ -195,6 +198,74 @@ def grp(s):
     return "Other"
 
 
+# Program groups. The campaign name is the primary signal: Meta/Google LC campaigns end in the
+# product (…_Meta-Ads_OFFLINE-data_science, LearningCentre_FSD_Coimbatore_PMax), and it is set
+# by the system, whereas Program of Interest says "general-interest" for ~46% of leads. Program
+# of Interest is the fallback. Order matters: the domain wins over the AI wrapper, so
+# "Gen AI-powered Data Science" is DS and "AI-Powered Digital Marketing" is DM; AI only catches
+# AI-first programs. Anything unmatched (college outreach, seminars, MBA, generic "Product"
+# ads) is Other. Validated on Oct 2026 leads: campaign decides 71%, program 7%, Other 21%.
+PROG_GROUPS = ["DS", "DA", "DM", "Finance", "AI", "FSD", "Other"]
+PROG_RULES = [
+    ("DA", r"data ?anal|analytics|\bda\b|excel|power ?bi|tableau"),
+    ("DS", r"data ?scien|datascience|\bds\b"),
+    ("DM", r"digital ?market|\bdm\b|marketing"),
+    ("Finance", r"financ|account|acca|\bcfa\b|banking|invest|\bcma\b"),
+    ("FSD", r"full ?stack|\bfsd\b|software|ssoftw|cyber|develop|devops|cloud"),
+    ("AI", r"\bai\b|gen ?ai|agentic|artificial|machine learning|\bml\b|llm"),
+]
+GENERIC_PROGRAM = re.compile(r"^(general[- ]?interest|all course|—|)$", re.I)
+# campaigns that carry no product by design (multi-product ads, outreach, events, database
+# calling) — expected in Other, so they do not trigger the unmapped-campaign warning
+GENERIC_CAMPAIGN = re.compile(r"product|outreach|seminar|event|database|placement|masterclass|walk", re.I)
+
+
+def prog_group(campaign, program):
+    """Index into PROG_GROUPS: campaign first, Program of Interest second, else Other."""
+    for text in (campaign, "" if GENERIC_PROGRAM.match((program or "").strip()) else program):
+        t = re.sub(r"[_\-]+", " ", (text or "").lower())
+        for g, rx in PROG_RULES:
+            if re.search(rx, t):
+                return PROG_GROUPS.index(g)
+    return PROG_GROUPS.index("Other")
+
+
+def owner_centres(owns):
+    """Centre per owner, parallel to `owns`. A lead's own centre field is ~22% filled,
+    so the centre comes from the owner instead: their LSQ "Admission(s) <centre>_LC"
+    user group (the same rule Talk Time uses). AdvancedSearch only returns ACTIVE users,
+    so deactivated accounts fall back to their name ("Chandigarhlc Ac3" -> Chandigarh)."""
+    qs = urllib.parse.urlencode({"accessKey": ACCESS, "secretKey": SECRET})
+    by_name, p = {}, 1
+    while True:
+        req = urllib.request.Request(f"{HOST}/UserManagement.svc/User/AdvancedSearch?{qs}",
+                                     data=json.dumps({"Columns": "", "Paging": {"PageIndex": p, "PageSize": 100}}).encode(),
+                                     headers={"Content-Type": "application/json"})
+        users = json.loads(urllib.request.urlopen(req, timeout=120).read()).get("Users") or []
+        for u in users:
+            cs = {re.sub(r"^Admissions?[ .]*", "", g.strip()).replace("_LC", "").replace("Hyd_", "Hyderabad ")
+                  .replace("Blr_", "Bangalore ").replace("blr_", "Bangalore ").replace("Pune2", "Pune 2")
+                  .replace("Kolkata2", "Kolkata 2").replace("Bhubaneshwar", "Bhubaneswar")
+                  for g in (u.get("Groups") or "").split(",") if g.strip().lower().startswith("admission")}
+            name = re.sub(r"\s+", " ", f"{u.get('FirstName') or ''} {u.get('LastName') or ''}").strip().lower()
+            by_name.setdefault(name, set()).update(cs)      # two users can share a name
+        if len(users) < 100:
+            break
+        p += 1
+    out = []
+    for o in owns:
+        k = re.sub(r"\s+", " ", o).strip().lower()
+        cs = by_name.get(k)
+        if k in POOL_OWNERS:
+            out.append("Pool accounts")
+        elif cs:
+            out.append(" / ".join(sorted(cs)))
+        else:
+            m = re.match(r"([a-z]+?)(?:lc)?\s+ac\d+$", k)
+            out.append(m.group(1).title() if m else "No centre")
+    return out
+
+
 def main():
     if not (ACCESS and SECRET):
         raise SystemExit("LSQ_ACCESS and LSQ_SECRET must be set (GitHub Secrets in CI).")
@@ -215,6 +286,7 @@ def main():
     ctrs, ctidx = [], {}
     stgs, stidx = [], {}
     quals, qidx = [], {}
+    rsrcs, ridx = [], {}
 
     def idxof(v, arr, d):
         v = (v or "").strip() or "—"
@@ -223,7 +295,7 @@ def main():
             arr.append(v)
         return d[v]
 
-    leads, unmapped = [], {}
+    leads, unmapped, unprog = [], {}, {}
     for L in uni.values():
         owner = L.get("OwnerIdName") or "Unassigned"
         raw = (L.get("Source") or "").strip()
@@ -257,7 +329,12 @@ def main():
             mins(L.get("mx_First_Counselling_Date")),                     # 19 counselled ON
             mins(L.get("mx_First_Transaction_Date")),                     # 20 first payment ON
             mins(L.get("mx_Interested_In_Date")),                         # 21 interested-in ON
+            idxof(raw, rsrcs, ridx),                                      # 22 raw Source value
+            prog_group(L.get("SourceCampaign"), L.get("mx_Program")),     # 23 program group
         ])
+        camp = (L.get("SourceCampaign") or "").strip()
+        if leads[-1][23] == PROG_GROUPS.index("Other") and camp and not GENERIC_CAMPAIGN.search(camp):
+            unprog[camp] = unprog.get(camp, 0) + 1
 
     # Any raw Source landing in "Other" with real volume or real money should get its
     # own bucket — surface it here rather than letting it hide in the catch-all.
@@ -265,6 +342,13 @@ def main():
         if cnt >= 50 or rev >= 100000:
             print(f"  WARNING: source '{raw}' is unmapped -> 'Other' "
                   f"({cnt} leads, Rs {rev:,} collected) — add it to grp()")
+
+    # A new campaign that names its product in a way PROG_RULES misses lands in Other —
+    # surface it so the rule table keeps up with marketing's naming.
+    for camp, cnt in sorted(unprog.items(), key=lambda kv: -kv[1])[:10]:
+        if cnt >= 50:
+            print(f"  WARNING: campaign '{camp}' maps to program group 'Other' ({cnt} leads) "
+                  f"— add its product to PROG_RULES if it has one")
 
     # Flag any *other* account that looks like an unworked pool, so a new bot/bulk
     # owner surfaces in the CI log instead of silently re-entering the denominators.
@@ -310,6 +394,9 @@ def main():
     out = {"base": BASE_DATE, "tz": "IST", "generated_at": stamp,
            "sources": srcs, "owners": owns, "stages": stgs, "quals": quals,
            "programs": progs, "cities": citys, "centres": ctrs,
+           # raw LSQ Source values behind each bucket, and each owner's centre (parallel to owners)
+           "raw_sources": rsrcs, "owner_centre": owner_centres(owns),
+           "prog_groups": PROG_GROUPS,
            # lifecycle class per stage index — one shared definition of "still open"
            "stage_class": [stage_class(s) for s in stgs],
            "pools": sorted(o for o in owns if o.strip().lower() in POOL_OWNERS),
@@ -320,7 +407,7 @@ def main():
            "cols": ["src", "created", "firstcall", "assign", "owner", "lastactivity",
                     "followup", "attempts", "interacted", "stage", "qual", "pool",
                     "program", "city", "centre", "firstconnect", "counselled", "revenue",
-                    "assign_cur", "counselled_on", "paid_on", "interested_on"],
+                    "assign_cur", "counselled_on", "paid_on", "interested_on", "rawsrc", "proggroup"],
            "leads": leads}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:

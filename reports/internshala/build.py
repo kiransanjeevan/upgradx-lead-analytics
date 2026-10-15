@@ -162,12 +162,12 @@ hc = sum(r[20] for r in rows if r[4] >= 0)
 bc = sum(r[21] for r in rows if r[4] >= 0)
 
 # Every label in the copy is derived from WIN / TODAY, so nothing goes stale when
-# the window moves. (%-d is not portable, hence the explicit .day.)
-WINLBL = f"{WIN.day} {WIN:%B %Y}"       # 1 September 2026
-WINSHORT = f"{WIN.day} {WIN:%b}"        # 1 Sep
-ASOF = f"{TODAY.day} {TODAY:%b}"        # 19 Sep
+# the window moves. Days are zero-padded (%d) to match the dashboard's DD Mon YYYY.
+WINLBL = f"{WIN:%d %b %Y}"             # 01 Sep 2026 (dashboard-wide DD Mon YYYY)
+WINSHORT = f"{WIN:%d %b}"               # 01 Sep
+ASOF = f"{TODAY:%d %b}"                 # 19 Sep
 SAME = (WIN.year, WIN.month) == (TODAY.year, TODAY.month)
-RANGE = f"{WIN.day}–{ASOF}" if SAME else f"{WINSHORT}–{ASOF}"   # 1–19 Sep
+RANGE = f"{WIN:%d}–{ASOF}" if SAME else f"{WINSHORT}–{ASOF}"   # 01–19 Sep
 PERIOD = WIN.strftime('%B') if SAME else "the window"           # September
 OLDPCT = round(100 * sum(1 for r in rows if r[4] >= 0 and r[0] < 0) / max(nA, 1))
 
