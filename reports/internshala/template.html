@@ -1,212 +1,137 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>__TITLE__</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-  :root{
-    --plane:#f9f9f7; --surface:#fcfcfb; --surface-2:#f2f1ed;
-    --ink:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
-    --grid:#e1e0d9; --axis:#c3c2b7;
-    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
-    --crit:#d03b3b; --crit-soft:#fbeaea; --warn:#fab219; --warn-soft:#fdf3dd;
-    --f:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
-    --m:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-  }
-  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-    --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#242422;
-    --ink:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
-    --grid:#2c2c2a; --axis:#383835;
-    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
-    --crit:#e66767; --crit-soft:#2a1a1a; --warn:#fab219; --warn-soft:#2a2418;
-  }}
-  :root[data-theme="dark"]{
-    --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#242422;
-    --ink:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
-    --grid:#2c2c2a; --axis:#383835;
-    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
-    --crit:#e66767; --crit-soft:#2a1a1a; --warn:#fab219; --warn-soft:#2a2418;
-  }
+  /* The dashboard's own tokens and components, so the page reads as one more report. Embedded,
+     the dashboard injects its live token values (and theme) over these defaults. */
+  :root{--bg:#f7f8fa;--surface:#fff;--surface-2:#eef1f5;--ink:#1a2230;--ink-2:#3c4859;--muted:#586472;--line:#e3e7ec;--line-2:#ccd3dc;
+    --accent:#2560ad;--accent-2:#1c4a88;--accent-soft:#e9f0fa;--good:#15683e;--good-soft:#eaf4ee;--warn:#875008;--warn-soft:#fbf0da;--warn-line:#e4bd80;
+    --crit:#9c302b;--crit-soft:#f9ebe9;--crit-line:#e3aca7;--shadow:0 1px 2px rgb(20 30 45/.05),0 2px 8px rgb(20 30 45/.05);
+    --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;--mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f141b;--surface:#171f29;--surface-2:#1d2732;--ink:#e9edf2;--ink-2:#b0bbc8;--muted:#8794a3;--line:#28323f;--line-2:#3a4653;
+    --accent:#79a4e6;--accent-2:#9abbf0;--accent-soft:#17273e;--good:#5cc089;--good-soft:#12241c;--warn:#e3a852;--warn-soft:#2a2012;--warn-line:#5f4a22;--crit:#e0746d;--crit-soft:#2a1615;--crit-line:#5a2c29;}}
+  :root[data-theme="dark"]{--bg:#0f141b;--surface:#171f29;--surface-2:#1d2732;--ink:#e9edf2;--ink-2:#b0bbc8;--muted:#8794a3;--line:#28323f;--line-2:#3a4653;
+    --accent:#79a4e6;--accent-2:#9abbf0;--accent-soft:#17273e;--good:#5cc089;--good-soft:#12241c;--warn:#e3a852;--warn-soft:#2a2012;--warn-line:#5f4a22;--crit:#e0746d;--crit-soft:#2a1615;--crit-line:#5a2c29;}
   *{box-sizing:border-box}
-  body{background:var(--plane);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1020px;margin:0 auto;padding-inline:16px;padding-block:36px 72px}
-  h1{font-size:clamp(26px,4.4vw,36px);line-height:1.12;letter-spacing:-.02em;margin:10px 0 0;text-wrap:balance}
-  h2{font-size:20px;letter-spacing:-.01em;margin:0;text-wrap:balance}
-  h3{font-size:13px;font-weight:600;color:var(--ink-2);margin:0 0 10px}
-  p{margin:10px 0 0;max-width:68ch;color:var(--ink-2)}
-  .eyebrow{font-family:var(--m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--s1)}
-  .meta{margin-top:14px;font-family:var(--m);font-size:11.5px;color:var(--ink-3);display:flex;gap:8px;flex-wrap:wrap}
-  .meta b{color:var(--ink-2);font-weight:500}
-  section{margin-top:44px;scroll-margin-top:20px}
-  .shead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
-  .snum{font-family:var(--m);font-size:11px;color:var(--ink-3);letter-spacing:.08em}
-  .card{margin-top:14px;background:var(--surface);border:1px solid var(--grid);border-radius:8px;padding:18px}
-  .ctrls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--grid);border-radius:7px;padding:2px;gap:2px;flex-wrap:wrap}
-  .seg button{font:inherit;font-size:12.5px;font-weight:500;border:0;background:transparent;color:var(--ink-2);padding:5px 11px;border-radius:5px;cursor:pointer}
-  .seg button[aria-pressed="true"]{background:var(--s1);color:#fff}
-  .seg button:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
-  select{font:inherit;font-size:12.5px;padding:6px 9px;border-radius:7px;border:1px solid var(--grid);background:var(--surface-2);color:var(--ink)}
-  .ctrl-lab{font-family:var(--m);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
-  .scope{font-family:var(--m);font-size:11.5px;color:var(--ink-3);margin-bottom:12px}
-  .scope b{color:var(--ink-2);font-weight:500}
-  /* funnel */
-  .fun{display:grid;gap:14px}
-  .frow .fl{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;margin-bottom:6px;flex-wrap:wrap}
-  .frow .fl b{font-weight:600;color:var(--ink)}
-  .frow .fl .n{font-family:var(--m);color:var(--ink-2);font-variant-numeric:tabular-nums}
-  .track{background:var(--surface-2);border-radius:5px;height:26px;position:relative;overflow:hidden}
-  .fill{height:100%;border-radius:5px;min-width:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px}
-  .fill span{font-family:var(--m);font-size:11.5px;color:#fff;font-variant-numeric:tabular-nums}
-  .fill.out span{color:var(--ink-2);position:absolute;left:calc(var(--w) + 8px)}
-  .step{font-family:var(--m);font-size:11px;color:var(--ink-3);margin-top:4px}
-  /* columns */
-  .cols{display:flex;align-items:flex-end;gap:6px;height:180px;border-bottom:1px solid var(--axis)}
-  .colwrap{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%}
-  .colgrp{display:flex;align-items:flex-end;gap:3px;width:100%;height:100%;justify-content:center}
-  .col{width:100%;max-width:26px;border-radius:4px 4px 0 0;min-height:2px;cursor:default}
-  .toplab{font-family:var(--m);font-size:10px;color:var(--ink-2);font-variant-numeric:tabular-nums;text-align:center;line-height:1.25}
-  .toplab i{display:block;font-style:normal;color:var(--ink-3);font-size:9.5px}
-  .xlab{margin-top:8px;display:flex;gap:6px}
-  .xlab div{flex:1;text-align:center;font-family:var(--m);font-size:10px;color:var(--ink-3);line-height:1.3}
-  figcaption{margin-top:12px;font-size:12.5px;color:var(--ink-3)}
-  /* tables */
-  .tw{margin-top:14px;overflow-x:auto}
-  table{border-collapse:collapse;width:100%;min-width:600px;font-size:13.5px}
-  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
-  th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
-  thead th{font-family:var(--m);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:500;background:var(--surface-2)}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
+  .wrap{max-width:1040px;margin:0 auto;padding:30px 20px 64px}
+  .eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:clamp(22px,3.2vw,28px);margin:8px 0 0;letter-spacing:-.02em;font-weight:700}
+  .lede{color:var(--ink-2);font-size:14.5px;max-width:82ch;margin:9px 0 0}
+  /* filter toolbar */
+  .fbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:20px 0 4px;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+  .fsel{position:relative;display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);padding:0 32px 0 11px;cursor:pointer}
+  .fsel:hover{border-color:var(--muted)}
+  .fsel:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .fsel .k{font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  .fsel select{appearance:none;-webkit-appearance:none;border:0;background:transparent;font:inherit;font-size:14px;color:var(--ink);padding:8px 0;cursor:pointer;outline:none}
+  .fsel::after{content:"";position:absolute;right:13px;top:50%;width:6px;height:6px;margin-top:-5px;border-right:1.6px solid var(--muted);border-bottom:1.6px solid var(--muted);transform:rotate(45deg);pointer-events:none}
+  .xctx{margin:10px 2px 0;font-size:13px;color:var(--ink-2)}
+  .xctx summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+  .xctx summary::-webkit-details-marker{display:none}
+  .xctx .q{color:var(--accent-2);font-style:italic}
+  .xctx .more{font-size:12px;font-weight:600;color:var(--accent)}
+  .xctx .more::after{content:" ▾"}
+  .xctx[open] .more::after{content:" ▴"}
+  .xctx .body{margin-top:8px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;font-size:12.5px;color:var(--ink-2)}
+  .xctx .body p{margin:0 0 6px}
+  .xctx .body p:last-child{margin:0}
+  /* tiles */
+  .tiles{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(136px,1fr);gap:12px;margin:14px -4px 2px;padding:2px 4px 10px;overflow-x:auto;scrollbar-width:thin}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:14px 16px;box-shadow:var(--shadow)}
+  .tile .n{font-size:22px;font-weight:750;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+  .tile .l{font-size:12px;color:var(--muted);margin-top:6px}
+  .tile .l span{opacity:.8}
+  .tile.hi .n{color:var(--accent-2)} .tile.good .n{color:var(--good)} .tile.warn .n{color:var(--warn)} .tile.warn{border-color:var(--warn-line)}
+  .tile.unc .n{color:var(--crit)} .tile.unc{border-color:var(--crit-line)}
+  /* sections */
+  .shrow{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:26px 2px 10px}
+  .sh{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
+  .trunc{font-size:12px;color:var(--muted);margin:8px 2px 0}
+  /* tables, as on the dashboard */
+  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+  table{width:100%;min-width:640px;border-collapse:collapse;font-size:13px;background:var(--surface)}
+  th{text-align:right;font-family:var(--mono);font-size:9.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--surface-2);padding:9px 8px;border-bottom:1px solid var(--line);font-weight:600}
+  td{padding:8px;border-bottom:1px solid var(--line);color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  td.dim{color:var(--ink);font-weight:600}
+  tr.band th{text-align:center;color:var(--ink-2);font-weight:700;letter-spacing:.1em;border-bottom:0;padding-bottom:4px}
+  tr.band th.g{box-shadow:inset 0 -2px 0 var(--line-2)}
+  th.s,td.s{border-left:1px solid var(--line)}
+  tr.tot td{background:var(--surface-2);font-weight:700;color:var(--ink);border-bottom:2px solid var(--line-2)}
   tbody tr:last-child td{border-bottom:0}
-  tr.tot td{font-weight:600;background:var(--surface-2)}
-  td.flag{color:var(--crit);font-weight:600}
-  .sub{color:var(--ink-3);font-size:11.5px;font-family:var(--m)}
-  .callout{margin-top:14px;border-left:3px solid var(--crit);background:var(--crit-soft);border-radius:0 6px 6px 0;padding:12px 14px;font-size:13.5px}
-  .callout b{color:var(--crit)}
-  .caveat{border-left-color:var(--warn);background:var(--warn-soft)}
-  .caveat b{color:var(--ink)}
-  .defs{margin-top:14px;display:grid;gap:1px;background:var(--grid);border:1px solid var(--grid);border-radius:8px;overflow:hidden}
-  .def{background:var(--surface);padding:12px 15px;display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;font-size:13.5px}
-  .def b{color:var(--ink)}
-  .def code{font-family:var(--m);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:3px}
-  @media (max-width:560px){.def{grid-template-columns:minmax(0,1fr);gap:3px}}
-  footer{margin-top:52px;padding-top:18px;border-top:1px solid var(--grid);font-family:var(--m);font-size:11px;color:var(--ink-3);line-height:1.9}
-  #tt{position:fixed;pointer-events:none;opacity:0;transition:opacity .12s;background:var(--ink);color:var(--plane);font-size:12px;padding:6px 9px;border-radius:5px;z-index:50;font-family:var(--m);white-space:nowrap}
-  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  .fpct{color:var(--muted);font-size:11.5px;margin-left:5px;font-weight:400}
+  .cov{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;border-radius:5px;padding:1px 7px}
+  .cov.g{background:var(--good-soft);color:var(--good)} .cov.a{background:var(--warn-soft);color:var(--warn)} .cov.r{background:var(--crit-soft);color:var(--crit)}
+  .part{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:6px;font-weight:400}
+  tr.grp{cursor:pointer} tr.grp:hover td{background:var(--surface-2)}
+  tr.grp td.dim::before{content:"";display:inline-block;width:6px;height:6px;margin:0 10px 2px 2px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+  tr.grp.open td.dim::before{transform:rotate(45deg)}
+  tr.kid td{font-size:12.5px} tr.kid td.dim{padding-left:30px;font-weight:400;color:var(--ink-2)}
+  /* funnel bars, as on the Funnel report */
+  .funnel{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px 16px}
+  .fstep{display:grid;grid-template-columns:170px 1fr 230px;gap:14px;align-items:center;padding:8px 0}
+  .fstep+.fstep{border-top:1px dashed var(--line)}
+  .flabel{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);line-height:1.3}
+  .ftrack{background:var(--surface-2);border-radius:5px;overflow:hidden;height:22px}
+  .ftrack span{display:block;height:100%;background:var(--accent);border-radius:5px;min-width:2px}
+  .fval{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+  .fval b{color:var(--ink);font-size:16px;margin-right:6px}
+  @media(max-width:640px){.fstep{grid-template-columns:1fr}.fval{text-align:left}}
+  /* one fold-out for every definition, as on the other reports */
+  .xfold{font-size:12.5px;color:var(--muted);margin-top:22px;line-height:1.6;border-left:3px solid var(--line-2);padding-left:12px}
+  .xfold b{color:var(--ink-2)}
+  .xfold summary{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;list-style:none;cursor:pointer;font-weight:700;color:var(--ink-2)}
+  .xfold summary::-webkit-details-marker{display:none}
+  .xfold summary::before{content:"";align-self:center;width:7px;height:7px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+  .xfold[open] summary::before{transform:rotate(45deg)}
+  .xfold summary span{font-weight:400;font-size:12.5px;color:var(--muted)}
+  .xfold[open] summary{margin-bottom:8px}
+  .xfold h4{margin:12px 0 4px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+  .xfold code{font-family:var(--mono);font-size:11.5px;background:var(--surface-2);padding:0 4px;border-radius:3px}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
 <div class="wrap">
-  <div class="eyebrow">upGrad X · Lead analytics</div>
-  <h1>Internshala leads since __WINSHORT__</h1>
-  <p id="standfirst"></p>
-  <div class="meta" id="meta"></div>
+  <div class="eyebrow">LSQ · Internshala</div>
+  <h1>Internshala</h1>
+  <p class="lede" id="lede"></p>
 
-  <div class="card" style="margin-top:18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-    <span class="ctrl-lab">Date basis</span>
-    <div class="seg" id="segBasis"></div>
-    <span class="scope" id="basisNote" style="margin:0;flex:1 1 320px"></span>
+  <div class="fbar">
+    <label class="fsel"><span class="k">Leads</span><select id="basis" aria-label="Which leads"></select></label>
+    <label class="fsel"><span class="k">Population</span><select id="pop" aria-label="Population"></select></label>
   </div>
+  <details class="xctx" id="ctx"><summary><span id="ctxq"></span><span class="more">What these mean</span></summary><div class="body" id="ctxb"></div></details>
 
-  <section id="s0">
-    <div class="shead"><span class="snum">CUT 0</span><h2>How many leads, and what happened to them</h2></div>
-    <p>Two independent things decide a lead's fate: <b>who owns it</b> (a counsellor, or the bulk pool account) and <b>whether anyone touched it</b>. They are not the same, so here is the full cross-tab.</p>
-    <div class="defs" id="defs"></div>
-    <div class="tw" id="matrix"></div>
-    <div class="tw" id="segfunnel"></div>
-    <div class="callout caveat" id="outcomeNote"></div>
-    <div class="callout" id="c0"></div>
-  </section>
+  <div class="tiles" id="tiles"></div>
 
-  <section id="s1">
-    <div class="shead"><span class="snum">CUT 1</span><h2>The funnel</h2></div>
-    <p>One population at a time. Each bar is a share of that population's created leads; the step-to-step conversion is shown underneath.</p>
-    <div class="card">
-      <div class="ctrls"><span class="ctrl-lab">Population</span><div class="seg" id="segF"></div></div>
-      <div class="scope" id="scopeF"></div>
-      <div class="fun" id="funnel"></div>
-    </div>
-    <div class="callout" id="c1"></div>
-  </section>
+  <div class="shrow"><span class="sh">A · Who owns it, and was it touched</span></div>
+  <div class="tblwrap"><table><thead id="segh"></thead><tbody id="segb"></tbody></table></div>
+  <div class="trunc">Segments split every lead on this basis; the Population filter doesn't apply here.</div>
 
-  <section id="s2">
-    <div class="shead"><span class="snum">CUT 2</span><h2>Weekly cohorts</h2></div>
-    <p>Grouped by the week the lead was created. Faded bars are cohorts under three weeks old, which have had less time to move.</p>
-    <div class="card">
-      <div class="ctrls"><span class="ctrl-lab">Population</span><div class="seg" id="segW"></div></div>
-      <div class="scope" id="scopeW"></div>
-      <h3>Leads created per week</h3>
-      <div class="cols" id="wkvol"></div><div class="xlab" id="wkvolx"></div>
-      <h3 style="margin-top:22px">Called and connected — count and % of that week</h3>
-      <div class="ctrls" style="margin-bottom:8px"><span style="font-size:12.5px;color:var(--ink-2)"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--s2);margin-right:6px"></i>Called</span><span style="font-size:12.5px;color:var(--ink-2)"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--s1);margin-right:6px"></i>Connected</span></div>
-      <div class="cols" id="wkrate"></div><div class="xlab" id="wkratex"></div>
-      <figcaption id="wkcap"></figcaption>
-    </div>
-    <div class="tw" id="wktbl"></div>
-    <div class="callout" id="c2"></div>
-  </section>
+  <div class="shrow"><span class="sh">B · Funnel</span></div>
+  <div class="funnel" id="funnel"></div>
 
+  <div class="shrow"><span class="sh">C · By week and day</span></div>
+  <div class="tblwrap"><table><thead id="wkh"></thead><tbody id="wkb"></tbody></table></div>
+  <div class="trunc" id="wkt"></div>
 
-  <section id="s2b">
-    <div class="shead"><span class="snum">CUT 2B</span><h2>Daily flow — where leads land</h2></div>
-    <p>Every Internshala lead created since __WINSHORT__, by the day it was created, split by whether it went to a bulk pool account or to a named owner. This is the live picture, not a cohort view.</p>
-    <div class="card">
-      <div class="ctrls" style="margin-bottom:10px">
-        <span style="font-size:12.5px;color:var(--ink-2)"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--s2);margin-right:6px"></i>To a bulk pool (Avtar / Futworks)</span>
-        <span style="font-size:12.5px;color:var(--ink-2)"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--s1);margin-right:6px"></i>To a named owner</span>
-      </div>
-      <div class="cols" id="dayflow"></div><div class="xlab" id="dayflowx"></div>
-      <figcaption id="daycap"></figcaption>
-    </div>
-    <div class="tw" id="daytbl"></div>
-    <div class="callout" id="c6"></div>
-  </section>
+  <div class="shrow"><span class="sh">D · Speed to lead</span><label class="fsel"><span class="k">Created week</span><select id="wkSel" aria-label="Created week"></select></label></div>
+  <div class="tblwrap" id="spw"><table><thead id="sph"></thead><tbody id="spb"></tbody></table></div>
+  <div class="trunc" id="spt"></div>
 
-  <section id="s3">
-    <div class="shead"><span class="snum">CUT 3</span><h2>Speed to lead</h2></div>
-    <p>Hours from lead creation to the first logged call. Filter by population and by the week the leads were created.</p>
-    <div class="card">
-      <div class="ctrls">
-        <span class="ctrl-lab">Population</span><div class="seg" id="segS"></div>
-        <span class="ctrl-lab">Created week</span><select id="wkSel"></select>
-      </div>
-      <div class="scope" id="scopeS"></div>
-      <div class="ctrls" style="margin-bottom:8px"><span style="font-size:12.5px;color:var(--ink-2)"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--s1);margin-right:6px"></i>Connected %</span><span style="font-size:12.5px;color:var(--ink-2)"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--s3);margin-right:6px"></i>Counselled %</span></div>
-      <div id="speedHidden" class="callout caveat" hidden></div>
-      <div id="speedWrap">
-        <div class="cols" id="speed"></div><div class="xlab" id="speedx"></div>
-        <figcaption>Each bar's rate is within its own bucket. Leads never called have no speed, so they sit in the table only.</figcaption>
-      </div>
-    </div>
-    <div class="tw" id="speedtbl"></div>
-    <div class="callout" id="c3"></div>
-  </section>
+  <div class="shrow"><span class="sh">E · Attempts vs outcome</span></div>
+  <div class="tblwrap"><table><thead id="ath"></thead><tbody id="atb"></tbody></table></div>
 
-  <section id="s4">
-    <div class="shead"><span class="snum">CUT 4</span><h2>Attempts vs. outcome</h2></div>
-    <p>Logged call attempts per lead, against what happened next. Counts are shown on every bar.</p>
-    <div class="card">
-      <div class="ctrls"><span class="ctrl-lab">Population</span><div class="seg" id="segA"></div></div>
-      <div class="scope" id="scopeA"></div>
-      <div class="ctrls" style="margin-bottom:8px"><span style="font-size:12.5px;color:var(--ink-2)"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--s1);margin-right:6px"></i>Connected</span><span style="font-size:12.5px;color:var(--ink-2)"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--s3);margin-right:6px"></i>Counselled</span></div>
-      <div class="cols" id="att"></div><div class="xlab" id="attx"></div>
-      <figcaption>Bar height is the count of leads reaching that outcome; the label shows count and rate within the bucket.</figcaption>
-    </div>
-    <div class="tw" id="atttbl"></div>
-    <div class="callout" id="c4"></div>
-  </section>
+  <div class="shrow"><span class="sh">F · Centre</span></div>
+  <div class="tblwrap"><table><thead id="ceh"></thead><tbody id="ceb"></tbody></table></div>
+  <div class="shrow"><span class="sh">G · Programme</span></div>
+  <div class="tblwrap"><table><thead id="prh"></thead><tbody id="prb"></tbody></table></div>
 
-  <section id="s5">
-    <div class="shead"><span class="snum">CUT 5</span><h2>Centre and programme</h2></div>
-    <p>Centre names are normalised for capitalisation, which otherwise splits one centre across several rows.</p>
-    <div class="tw" id="centbl"></div>
-    <div class="tw" id="progtbl"></div>
-    <div class="callout" id="c5"></div>
-  </section>
-
-  <section id="s6">
-    <div class="shead"><span class="snum">NOTES</span><h2>Definitions and caveats</h2></div>
-    <div class="callout caveat" id="caveats"></div>
-  </section>
-
-  <footer id="foot"></footer>
+  <details class="xfold" id="foot"></details>
 </div>
-<div id="tt"></div>
 
 <script>
 const D = __DATA__, X = D.IDX, R = D.rows;
@@ -214,15 +139,16 @@ const $ = s => document.querySelector(s);
 const nf = n => n.toLocaleString('en-IN');
 const pf = (a,b) => b ? a/b*100 : 0;
 const p1 = (a,b) => pf(a,b).toFixed(1) + '%';
+const cc = v => v>=50?'g':v>=25?'a':'r';
 let BASIS = 'C';
 const WKk = () => ({C:X.wkC, I:X.wkI, A:X.wkA})[BASIS];
 const DYk = () => ({C:X.dyC, I:X.dyI, A:X.dyA})[BASIS];
 const SPk = () => BASIS === 'I' ? X.spI : X.spC;
 const weeks = () => ({C:D.weeksC, I:D.weeksI, A:D.weeksA})[BASIS];
 const days  = () => ({C:D.daysC,  I:D.daysI,  A:D.daysA})[BASIS];
-const basisLabel = () => D.bases.find(b => b.id === BASIS).label;
+const basis = () => D.bases.find(b => b.id === BASIS);
 const inWin = r => r[WKk()] >= 0;
-const TOTAL = () => D.totals[BASIS];
+const OPEN = new Set();
 
 const POPS = [
   {id:'all', label:'All leads', test:() => true},
@@ -232,183 +158,117 @@ const POPS = [
   {id:'touch', label:'Touched (any channel)', test:r => !!r[X.touch]},
   {id:'untouch', label:'Never touched', test:r => !r[X.touch]}
 ];
-const popById = id => POPS.find(p => p.id === id);
+const pop = () => POPS.find(p => p.id === $('#pop').value);
 const sel = rows => ({ n: rows.length,
+  pool: rows.filter(r => r[X.pool]).length, touch: rows.filter(r => r[X.touch]).length,
   called: rows.filter(r => r[X.called]).length, conn: rows.filter(r => r[X.conn]).length,
   couns: rows.filter(r => r[X.couns]).length, paid: rows.filter(r => r[X.paid]).length,
   connW: rows.filter(r => r[X.connW]).length, counsW: rows.filter(r => r[X.counsW]).length, paidW: rows.filter(r => r[X.paidW]).length,
   hum: rows.reduce((a,r) => a + r[X.hcalls], 0), bot: rows.reduce((a,r) => a + r[X.bcalls], 0) });
-const filt = (pop, wk) => R.filter(r => inWin(r) && popById(pop).test(r) && (wk === 'all' || r[WKk()] === +wk));
+const scoped = () => R.filter(r => inWin(r) && pop().test(r));
+const pctCell = (v,b) => `${nf(v)}<span class="fpct">${p1(v,b)}</span>`;
 
-const tt = $('#tt');
-function bindTips(root){ root.querySelectorAll('[data-tip]').forEach(el => {
-  el.onmouseenter = () => { tt.innerHTML = el.dataset.tip; tt.style.opacity = 1; };
-  el.onmousemove = e => { tt.style.left = (e.clientX+14)+'px'; tt.style.top = (e.clientY-34)+'px'; };
-  el.onmouseleave = () => { tt.style.opacity = 0; }; }); }
-function segment(mount, onPick, initial){
-  const el = $(mount); el.innerHTML = POPS.map(p => `<button type="button" data-p="${p.id}" aria-pressed="${p.id===initial}">${p.label}</button>`).join('');
-  el.onclick = e => { const b = e.target.closest('button'); if(!b) return;
-    el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x===b)); onPick(); };
-  el.get = () => el.querySelector('[aria-pressed="true"]').dataset.p; return el;
+$('#basis').innerHTML = D.bases.map(b => `<option value="${b.id}">${b.label}</option>`).join('');
+$('#pop').innerHTML = POPS.map(p => `<option value="${p.id}">${p.label}</option>`).join('');
+$('#lede').innerHTML = D.lede;
+
+function drawContext(){
+  $('#ctxq').innerHTML = `<b>${basis().label}:</b> <span class="q">${basis().q}</span>${pop().id==='all'?'':` · <b>${pop().label}</b>`}`;
+  $('#ctxb').innerHTML = D.bases.map(b => `<p><b>${b.label}</b> — ${b.note}</p>`).join('')
+    + `<p style="margin-top:10px"><b>Population: ${pop().label}</b> — ${D.popNotes[pop().id]}</p>`;
 }
-function scopeLine(id, pop, rows, extra){
-  $(id).innerHTML = `Showing <b>${popById(pop).label}</b> on the <b>${basisLabel()}</b> basis — ${nf(rows.length)} leads (${p1(rows.length, TOTAL())} of ${nf(TOTAL())})${extra||''}. ${D.popNotes[pop]}`;
+function drawTiles(){
+  const s = sel(scoped());
+  const t = (n,l,cls) => `<div class="tile ${cls||''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  $('#tiles').innerHTML = t(nf(s.n), `Leads<br><span>${basis().label.toLowerCase()} · ${pop().label.toLowerCase()}</span>`, 'hi')
+    + t(p1(s.pool,s.n), `In a bulk pool<br><span>${nf(s.pool)} leads</span>`, s.n && s.pool/s.n>.5 ? 'unc' : 'warn')
+    + t(p1(s.touch,s.n), `Touched, any channel<br><span>${nf(s.touch)} leads</span>`)
+    + t(p1(s.called,s.n), `Called by a counsellor<br><span>${nf(s.called)} · lead field</span>`)
+    + t(nf(s.conn), `Connected<br><span>${nf(s.connW)} since ${D.winShort}</span>`)
+    + t(nf(s.couns), `Counselled<br><span>${nf(s.paid)} paid · ${nf(s.paidW)} since ${D.winShort}</span>`, 'good');
 }
-function columns(mount, xmount, items, maxv){
-  $(mount).innerHTML = items.map(it => `<div class="colwrap"><div class="toplab">${it.top}${it.sub?`<i>${it.sub}</i>`:''}</div>
-    <div class="colgrp">${it.series.map(s => `<div class="col" style="height:${Math.max(pf(s.v,maxv),0.6)}%;background:${s.color};${it.faded?'opacity:.45;':''}" data-tip="${s.tip}"></div>`).join('')}</div></div>`).join('');
-  $(xmount).innerHTML = items.map(it => `<div>${it.label}</div>`).join('');
-  bindTips($(mount));
-}
-
-$('#standfirst').innerHTML = D.standfirst;
-$('#meta').innerHTML = D.meta.map(m => `<span><b>${m[0]}</b> ${m[1]}</span>`).join('<span>·</span>');
-$('#defs').innerHTML = D.defs.map(d => `<div class="def"><b>${d[0]}</b><div>${d[1]}</div></div>`).join('');
-$('#outcomeNote').innerHTML = D.outcomeNote;
-$('#speedHidden').innerHTML = D.speedNote;
-$('#caveats').innerHTML = D.caveats.map(c => `<div style="margin-bottom:8px"><b>${c[0]}</b> — ${c[1]}</div>`).join('');
-$('#foot').innerHTML = D.footer;
-$('#segBasis').innerHTML = D.bases.map(b => `<button type="button" data-b="${b.id}" aria-pressed="${b.id==='C'}">${b.label}</button>`).join('');
-
-const segF = segment('#segF', () => drawFunnel(), 'all');
-const segW = segment('#segW', () => drawWeeks(), 'all');
-const segS = segment('#segS', () => drawSpeed(), 'all');
-const segA = segment('#segA', () => drawAtt(), 'all');
-
-function drawMatrix(){
+function drawSegments(){
   const win = R.filter(inWin), T = sel(win);
-  const segs = [{k:'Not pooled · worked',f:r=>!r[X.pool]&&r[X.worked]},{k:'Not pooled · untouched',f:r=>!r[X.pool]&&!r[X.worked]},
-                {k:'Pooled · worked',f:r=>r[X.pool]&&r[X.worked]},{k:'Pooled · untouched',f:r=>r[X.pool]&&!r[X.worked]}];
-  const m = segs.map(s => ({k:s.k, s:sel(win.filter(s.f))}));
-  $('#matrix').innerHTML = `<table><thead><tr><th>Segment</th><th>Leads</th><th>% of basis</th><th>Human calls</th><th>Bot calls</th></tr></thead><tbody>
-    ${m.map(x => `<tr><td>${x.k}</td><td>${nf(x.s.n)}</td><td>${p1(x.s.n,T.n)}</td><td>${nf(x.s.hum)}</td><td>${nf(x.s.bot)}</td></tr>`).join('')}
-    <tr class="tot"><td>Total</td><td>${nf(T.n)}</td><td>100.0%</td><td>${nf(T.hum)}</td><td>${nf(T.bot)}</td></tr></tbody></table>`;
-  const row = x => `<td>${nf(x.s.conn)} <span class="sub">${nf(x.s.connW)} in&nbsp;Sep</span></td><td>${nf(x.s.couns)} <span class="sub">${nf(x.s.counsW)} in&nbsp;Sep</span></td><td>${nf(x.s.paid)} <span class="sub">${nf(x.s.paidW)} in&nbsp;Sep</span></td>`;
-  $('#segfunnel').innerHTML = `<table><thead><tr><th>Segment</th><th>Leads</th><th>Called (lead field)</th><th>Connected — ever / in Sep</th><th>Counselled</th><th>Paid</th></tr></thead><tbody>
-    ${m.map(x => `<tr><td>${x.k}</td><td>${nf(x.s.n)}</td><td>${nf(x.s.called)}</td>${row(x)}</tr>`).join('')}
-    <tr class="tot"><td>All leads</td><td>${nf(T.n)}</td><td>${nf(T.called)}</td>${row({s:T})}</tr></tbody></table>`;
-  $('#c0').innerHTML = `<b>${nf(T.hum)} human calls and ${nf(T.bot)} bot calls</b> landed on this basis in ${D.period}. ` +
-    `${nf(win.filter(r=>r[X.pool]).length)} leads (${p1(win.filter(r=>r[X.pool]).length,T.n)}) sit in a bulk account; ` +
-    `${nf(win.filter(r=>!r[X.worked]).length)} have nothing on the lead record.`;
+  const segs = [['Not pooled · worked',r=>!r[X.pool]&&r[X.worked]],['Not pooled · not worked',r=>!r[X.pool]&&!r[X.worked]],
+                ['Pooled · worked',r=>r[X.pool]&&r[X.worked]],['Pooled · not worked',r=>r[X.pool]&&!r[X.worked]]];
+  $('#segh').innerHTML = `<tr class="band"><th></th><th colspan="2"></th><th colspan="2" class="g s">Calls logged</th><th colspan="5" class="g s">Outcomes (ever · since ${D.winShort})</th></tr>`
+    + `<tr><th>Segment</th><th>Leads</th><th>% of leads</th><th class="s">Human</th><th>Bot</th><th class="s">Called</th><th>Connected</th><th>Counselled</th><th>Paid</th></tr>`;
+  const row = (k,s,cls) => `<tr class="${cls||''}"><td class="dim">${k}</td><td>${nf(s.n)}</td><td>${p1(s.n,T.n)}</td><td class="s">${nf(s.hum)}</td><td>${nf(s.bot)}</td>`
+    + `<td class="s">${nf(s.called)}</td><td>${nf(s.conn)}<span class="fpct">· ${nf(s.connW)}</span></td><td>${nf(s.couns)}<span class="fpct">· ${nf(s.counsW)}</span></td><td>${nf(s.paid)}<span class="fpct">· ${nf(s.paidW)}</span></td></tr>`;
+  $('#segb').innerHTML = row('Total', T, 'tot') + segs.map(([k,f]) => row(k, sel(win.filter(f)))).join('');
 }
 function drawFunnel(){
-  const pop = segF.get(), rows = filt(pop,'all'), s = sel(rows);
-  scopeLine('#scopeF', pop, rows);
-  const steps = [{l:'In basis', v:s.n, prev:null},{l:'Called (lead field)', v:s.called, prev:s.n},
-                 {l:'Connected — ever', v:s.conn, prev:s.called},{l:'Connected — in Sep', v:s.connW, prev:s.conn},
-                 {l:'Counselled — ever', v:s.couns, prev:s.conn},{l:'Paid — ever', v:s.paid, prev:s.couns}];
-  $('#funnel').innerHTML = steps.map((st,i) => { const w = pf(st.v,s.n), out = w<18;
-    return `<div class="frow"><div class="fl"><b>${st.l}</b><span class="n">${nf(st.v)} · ${p1(st.v,s.n)} of basis</span></div>
-    <div class="track"><div class="fill${out?' out':''}" style="--w:${w}%;width:${Math.max(w,0.5)}%;background:var(--s1)" data-tip="${st.l}: ${nf(st.v)} of ${nf(s.n)}"><span>${nf(st.v)}</span></div></div>
-    ${i?`<div class="step">${p1(st.v,st.prev)} of ${steps[i-1].l.toLowerCase()}</div>`:''}</div>`; }).join('');
-  bindTips($('#funnel'));
-  $('#c1').innerHTML = BASIS === 'A'
-    ? `<b>This basis is effort, not arrival.</b> ${nf(s.hum)} human calls and ${nf(s.bot)} bot calls on ${nf(s.n)} leads — ${p1(rows.filter(r=>r[X.wkC]<0).length, s.n)} of them arrived before ${D.winShort}.`
-    : `<b>Coverage is the constraint.</b> ${p1(s.called,s.n)} of this basis has a call on the lead record; ${p1(s.conn,s.n)} ever connected, ${p1(s.connW,s.n)} connected in ${D.period}.`;
+  const s = sel(scoped());
+  // each step names the step it converts from (the since-window connect is a subset of connected-ever, not a funnel step)
+  const steps = [['Leads',s.n,-1],['Called (lead field)',s.called,-1],['Connected — ever',s.conn,1],[`Connected — since ${D.winShort}`,s.connW,2],['Counselled — ever',s.couns,2],['Paid — ever',s.paid,4]];
+  $('#funnel').innerHTML = steps.map(([l,v,p]) => `<div class="fstep"><div class="flabel">${l}</div><div class="ftrack"><span style="width:${Math.max(pf(v,s.n),.4)}%"></span></div>`
+    + `<div class="fval"><b>${nf(v)}</b>${p1(v,s.n)} of leads${p>=0?`<br>${p1(v,steps[p][1])} of ${steps[p][0].toLowerCase()}`:''}</div></div>`).join('');
 }
 function drawWeeks(){
-  const pop = segW.get(), rows = filt(pop,'all');
-  scopeLine('#scopeW', pop, rows);
-  const W = weeks(), per = W.map((w,i) => ({w, s: sel(rows.filter(r => r[WKk()] === i))}));
-  columns('#wkvol','#wkvolx', per.map(p => ({label:p.w.label, faded:p.w.partial, top:nf(p.s.n),
-    series:[{v:p.s.n,color:'var(--s1)',tip:`${p.w.label} · ${nf(p.s.n)} leads`}]})), Math.max(1,...per.map(p=>p.s.n)));
-  columns('#wkrate','#wkratex', per.map(p => ({label:p.w.label, faded:p.w.partial, top:nf(p.s.called), sub:p1(p.s.called,p.s.n),
-    series:[{v:p.s.called,color:'var(--s2)',tip:`${p.w.label} · called ${nf(p.s.called)} of ${nf(p.s.n)}`},
-            {v:p.s.conn,color:'var(--s1)',tip:`${p.w.label} · connected ${nf(p.s.conn)} of ${nf(p.s.n)}`}]})), Math.max(1,...per.map(p=>p.s.called)));
-  $('#wkcap').textContent = BASIS === 'A'
-    ? 'Weeks are bucketed by the date of the first contact attempt in the window — “leads first worked that week”.'
-    : 'Weeks are bucketed by the lead’s date on the selected basis. Faded bars are cohorts under two weeks old.';
-  const T = sel(rows);
-  $('#wktbl').innerHTML = `<table><thead><tr><th>Week</th><th>Leads</th><th>Called</th><th>Connected ever</th><th>Connected in Sep</th><th>Human calls</th><th>Bot calls</th></tr></thead><tbody>
-    ${per.map(p => `<tr><td>${p.w.label}${p.w.partial?' <span class="sub">part</span>':''}</td><td>${nf(p.s.n)}</td>
-      <td>${nf(p.s.called)} <span class="sub">${p1(p.s.called,p.s.n)}</span></td><td>${nf(p.s.conn)}</td><td>${nf(p.s.connW)}</td>
-      <td>${nf(p.s.hum)}</td><td>${nf(p.s.bot)}</td></tr>`).join('')}
-    <tr class="tot"><td>Total</td><td>${nf(T.n)}</td><td>${nf(T.called)}</td><td>${nf(T.conn)}</td><td>${nf(T.connW)}</td><td>${nf(T.hum)}</td><td>${nf(T.bot)}</td></tr></tbody></table>`;
-  $('#c2').innerHTML = BASIS === 'A'
-    ? `<b>Effort is flat, not rising.</b> ${nf(T.hum)} human calls across ${nf(T.n)} leads worked this month.`
-    : `<b>Arrivals keep coming.</b> ${nf(T.n)} leads on this basis, ${p1(T.called,T.n)} with any call logged.`;
-}
-function drawDaily(){
-  const DA = days(), win = R.filter(r => inWin(r) && r[DYk()] >= 0);
-  const per = DA.map((d,i) => { const rs = win.filter(r => r[DYk()] === i), pl = rs.filter(r => r[X.pool]).length;
-    return {d, total: rs.length, pooled: pl, named: rs.length - pl}; });
-  columns('#dayflow','#dayflowx', per.map(x => ({label:x.d.label.replace(' ',' '), top:nf(x.total), sub:x.d.dow,
-    series:[{v:x.pooled,color:'var(--s2)',tip:`${x.d.label} · pool ${nf(x.pooled)} of ${nf(x.total)}`},
-            {v:x.named,color:'var(--s1)',tip:`${x.d.label} · named owner ${nf(x.named)}`}]})), Math.max(1,...per.map(x=>x.total)));
-  const T = per.reduce((a,x)=>({p:a.p+x.pooled,n:a.n+x.named,t:a.t+x.total}),{p:0,n:0,t:0});
-  $('#daycap').textContent = BASIS === 'A'
-    ? `Each bar is the day a lead was first worked in ${D.period}. ${nf(T.t)} leads worked, ${nf(T.p)} of them owned by a bulk account (${p1(T.p,T.t)}).`
-    : `Each bar is the day a lead entered the window on this basis. ${nf(T.t)} leads, ${nf(T.p)} to a bulk pool (${p1(T.p,T.t)}), ${nf(T.n)} to a named owner.`;
-  $('#daytbl').innerHTML = `<table><thead><tr><th>Date</th><th>Day</th><th>Leads</th><th>Bulk pool</th><th>Named owner</th><th>% pooled</th></tr></thead><tbody>
-    ${per.map(x => `<tr><td>${x.d.label}</td><td class="sub">${x.d.dow}</td><td>${nf(x.total)}</td><td>${nf(x.pooled)}</td><td>${nf(x.named)}</td>
-      <td class="${x.total&&x.pooled/x.total>0.8?'flag':''}">${p1(x.pooled,x.total)}</td></tr>`).join('')}
-    <tr class="tot"><td>Total</td><td>—</td><td>${nf(T.t)}</td><td>${nf(T.p)}</td><td>${nf(T.n)}</td><td>${p1(T.p,T.t)}</td></tr></tbody></table>`;
-  $('#c6').innerHTML = BASIS === 'A'
-    ? `<b>Only ${nf(T.t)} leads were worked this month</b>, and just ${nf(T.p)} of them were owned by a bulk account — counsellors work their own book, not the pool.`
-    : `<b>${p1(T.p,T.t)} of arrivals go straight to a bulk pool</b>, where the Aavataar bot has been running at a trickle since 19 Aug and Futwork has been silent since 30 Aug.`;
+  // each week (cohort) expands to its days; the same columns at both levels
+  const rows = scoped(), W = weeks(), DA = days();
+  $('#wkh').innerHTML = `<tr class="band"><th></th><th></th><th colspan="3" class="g s">Where it landed</th><th colspan="3" class="g s">Worked</th><th colspan="2" class="g s">Calls logged</th></tr>`
+    + `<tr><th>Week · day</th><th>Leads</th><th class="s">Bulk pool</th><th>Named owner</th><th>% pooled</th><th class="s">Called</th><th>Connected</th><th>Since ${D.winShort}</th><th class="s">Human</th><th>Bot</th></tr>`;
+  const line = (label,s,cls,extra) => `<tr class="${cls||''}" ${extra||''}><td class="dim">${label}</td><td>${nf(s.n)}</td>`
+    + `<td class="s">${nf(s.pool)}</td><td>${nf(s.n-s.pool)}</td><td>${s.n?`<span class="cov ${s.pool/s.n>.8?'r':s.pool/s.n>.5?'a':'g'}">${p1(s.pool,s.n)}</span>`:'—'}</td>`
+    + `<td class="s">${pctCell(s.called,s.n)}</td><td>${nf(s.conn)}</td><td>${nf(s.connW)}</td><td class="s">${nf(s.hum)}</td><td>${nf(s.bot)}</td></tr>`;
+  let html = line('Total', sel(rows), 'tot');
+  W.forEach((w,i) => {
+    const wr = rows.filter(r => r[WKk()] === i); if(!wr.length) return;
+    const open = OPEN.has(i);
+    html += line(`Week of ${w.label}${w.partial?'<span class="part">under 2 weeks old</span>':''}`, sel(wr), 'grp'+(open?' open':''), `data-w="${i}" tabindex="0" aria-expanded="${open}"`);
+    if(open) DA.forEach((d,j) => { if(Math.floor(j/7)!==i) return; const dr = wr.filter(r => r[DYk()] === j); if(dr.length) html += line(`${d.label} · ${d.dow}`, sel(dr), 'kid'); });
+  });
+  $('#wkb').innerHTML = html;
+  $('#wkb').querySelectorAll('tr.grp').forEach(tr => { const tg = () => { const i=+tr.dataset.w; OPEN.has(i)?OPEN.delete(i):OPEN.add(i); drawWeeks(); };
+    tr.onclick = tg; tr.onkeydown = e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); tg(); } }; });
+  $('#wkt').textContent = BASIS === 'A' ? 'Weeks and days are when each lead was first touched in the window. Click a week to see its days.'
+                                        : `Weeks and days are each lead's ${BASIS==='C'?'creation':'interested-in'} date. Click a week to see its days.`;
 }
 function drawSpeed(){
   const hide = BASIS === 'A';
-  $('#speedHidden').hidden = !hide; $('#speedWrap').hidden = hide;
-  $('#speedtbl').hidden = hide; $('#c3').hidden = hide;
-  $('#wkSel').closest('.ctrls').querySelectorAll('.ctrl-lab, #wkSel, #segS').forEach(el => el.style.opacity = hide ? .4 : 1);
-  if (hide){ $('#scopeS').innerHTML = `Hidden on the <b>${basisLabel()}</b> basis — see the note below.`; return; }
-  const pop = segS.get(), wk = $('#wkSel').value, rows = filt(pop, wk), s = sel(rows);
-  scopeLine('#scopeS', pop, rows, wk === 'all' ? '' : `, week of <b>${weeks()[+wk].label}</b>`);
-  const B = D.speedLabels.map((lab,i) => ({lab, rows: rows.filter(r => r[SPk()] === i)}));
-  const never = rows.filter(r => r[SPk()] === -1);
-  columns('#speed','#speedx', B.map(b => { const bs = sel(b.rows);
-    return {label:b.lab, top: b.rows.length ? p1(bs.conn,bs.n) : '—', sub:`n=${nf(bs.n)}`,
-      series:[{v:pf(bs.conn,bs.n||1),color:'var(--s1)',tip:`${b.lab} · ${nf(bs.conn)} of ${nf(bs.n)} connected`},
-              {v:pf(bs.couns,bs.n||1),color:'var(--s3)',tip:`${b.lab} · ${nf(bs.couns)} counselled`}]}; }),
-    Math.max(1, ...B.map(b => pf(sel(b.rows).conn, b.rows.length||1))));
-  $('#speedtbl').innerHTML = `<table><thead><tr><th>Time to first call</th><th>Leads</th><th>% of selection</th><th>Connected</th><th>Counselled</th><th>Paid</th></tr></thead><tbody>
-    ${B.map(b => { const bs = sel(b.rows); return `<tr><td>${b.lab}</td><td>${nf(bs.n)}</td><td>${p1(bs.n,s.n)}</td>
-      <td>${nf(bs.conn)} <span class="sub">${p1(bs.conn,bs.n)}</span></td><td>${nf(bs.couns)}</td><td>${bs.paid}</td></tr>`; }).join('')}
-    <tr><td><b>Never called (or called before the basis date)</b></td><td>${nf(never.length)}</td><td class="flag">${p1(never.length,s.n)}</td><td>—</td><td>—</td><td>${sel(never).paid}</td></tr>
-    <tr class="tot"><td>Total</td><td>${nf(s.n)}</td><td>100.0%</td><td>${nf(s.conn)}</td><td>${nf(s.couns)}</td><td>${s.paid}</td></tr></tbody></table>`;
-  const fast = B[0].rows.length + B[1].rows.length, fastc = sel(B[0].rows).conn + sel(B[1].rows).conn, slow = sel(B[4].rows);
-  $('#c3').innerHTML = `<b>Speed still works.</b> Called within four hours: ${nf(fastc)} of ${nf(fast)} connect (${p1(fastc,fast)}), against ${p1(slow.conn,slow.n)} after three days.`;
+  $('#spw').hidden = hide; $('#wkSel').closest('.fsel').style.display = hide ? 'none' : '';
+  if(hide){ $('#spt').innerHTML = D.speedNote; return; }
+  const wk = $('#wkSel').value, rows = scoped().filter(r => wk==='all' || r[WKk()] === +wk), s = sel(rows);
+  $('#sph').innerHTML = `<tr><th>Time to first call</th><th>Leads</th><th>% of leads</th><th class="s">Connected</th><th>Counselled</th><th>Paid</th></tr>`;
+  const B = D.speedLabels.map((lab,i) => ({lab, s: sel(rows.filter(r => r[SPk()] === i))})), nv = sel(rows.filter(r => r[SPk()] === -1));
+  $('#spb').innerHTML = `<tr class="tot"><td>Total</td><td>${nf(s.n)}</td><td>100%</td><td class="s">${pctCell(s.conn,s.n)}</td><td>${nf(s.couns)}</td><td>${nf(s.paid)}</td></tr>`
+    + B.map(b => `<tr><td class="dim">${b.lab}</td><td>${nf(b.s.n)}</td><td>${p1(b.s.n,s.n)}</td><td class="s">${b.s.n?`${nf(b.s.conn)} <span class="cov ${cc(pf(b.s.conn,b.s.n))}">${p1(b.s.conn,b.s.n)}</span>`:'—'}</td><td>${nf(b.s.couns)}</td><td>${nf(b.s.paid)}</td></tr>`).join('')
+    + `<tr><td class="dim">Never called, or called before the ${BASIS==='C'?'creation':'interested-in'} date</td><td>${nf(nv.n)}</td><td><span class="cov r">${p1(nv.n,s.n)}</span></td><td class="s">—</td><td>—</td><td>${nf(nv.paid)}</td></tr>`;
+  $('#spt').textContent = `Hours from the ${BASIS==='C'?'creation':'interested-in'} date to the first logged counsellor call; connect rate is within each bucket.`;
 }
-function drawAtt(){
-  const pop = segA.get(), rows = filt(pop,'all'), s = sel(rows);
-  scopeLine('#scopeA', pop, rows);
-  const B = D.attLabels.map((lab,i) => ({lab, rows: rows.filter(r => r[X.att] === i)}));
-  columns('#att','#attx', B.map(b => { const bs = sel(b.rows);
-    return {label:b.lab, top:nf(bs.conn), sub:`${p1(bs.conn,bs.n)} of ${nf(bs.n)}`,
-      series:[{v:bs.conn,color:'var(--s1)',tip:`${b.lab} attempts · connected ${nf(bs.conn)} of ${nf(bs.n)}`},
-              {v:bs.couns,color:'var(--s3)',tip:`${b.lab} attempts · counselled ${nf(bs.couns)}`}]}; }),
-    Math.max(1,...B.map(b => sel(b.rows).conn)));
-  $('#atttbl').innerHTML = `<table><thead><tr><th>Logged attempts (human)</th><th>Leads</th><th>% of selection</th><th>Connected</th><th>Counselled</th><th>Human calls in Sep</th></tr></thead><tbody>
-    ${B.map(b => { const bs = sel(b.rows); return `<tr><td>${b.lab}</td><td>${nf(bs.n)}</td><td>${p1(bs.n,s.n)}</td>
-      <td>${nf(bs.conn)} <span class="sub">${p1(bs.conn,bs.n)}</span></td><td>${nf(bs.couns)}</td><td>${nf(bs.hum)}</td></tr>`; }).join('')}
-    <tr class="tot"><td>Total</td><td>${nf(s.n)}</td><td>100.0%</td><td>${nf(s.conn)}</td><td>${nf(s.couns)}</td><td>${nf(s.hum)}</td></tr></tbody></table>`;
-  $('#c4').innerHTML = `<b>The attempts field is human-only.</b> ${nf(s.hum)} human calls and ${nf(s.bot)} bot calls were logged in ${D.period} for this selection — the bot's never reach this field.`;
+function drawAttempts(){
+  const rows = scoped(), s = sel(rows);
+  $('#ath').innerHTML = `<tr><th>Logged attempts (human)</th><th>Leads</th><th>% of leads</th><th class="s">Connected</th><th>Counselled</th><th class="s">Human calls</th><th>Bot calls</th></tr>`;
+  $('#atb').innerHTML = `<tr class="tot"><td>Total</td><td>${nf(s.n)}</td><td>100%</td><td class="s">${pctCell(s.conn,s.n)}</td><td>${nf(s.couns)}</td><td class="s">${nf(s.hum)}</td><td>${nf(s.bot)}</td></tr>`
+    + D.attLabels.map((lab,i) => { const b = sel(rows.filter(r => r[X.att] === i));
+      return `<tr><td class="dim">${lab}</td><td>${nf(b.n)}</td><td>${p1(b.n,s.n)}</td><td class="s">${b.n?`${nf(b.conn)} <span class="cov ${cc(pf(b.conn,b.n))}">${p1(b.conn,b.n)}</span>`:'—'}</td><td>${nf(b.couns)}</td><td class="s">${nf(b.hum)}</td><td>${nf(b.bot)}</td></tr>`; }).join('');
 }
-function drawCentres(){
-  const win = R.filter(inWin);
-  const by = (key, labels) => { const m = new Map();
-    win.forEach(r => { if(!m.has(r[key])) m.set(r[key],[]); m.get(r[key]).push(r); });
-    return [...m.entries()].map(([k,rs]) => ({name:labels[k], n:rs.length, pooled:rs.filter(r=>r[X.pool]).length,
-      worked:rs.filter(r=>r[X.worked]).length, called:rs.filter(r=>r[X.called]).length, conn:rs.filter(r=>r[X.conn]).length,
-      couns:rs.filter(r=>r[X.couns]).length, paid:rs.filter(r=>r[X.paid]).length,
-      hum:rs.reduce((a,r)=>a+r[X.hcalls],0), bot:rs.reduce((a,r)=>a+r[X.bcalls],0)})).sort((a,b)=>b.n-a.n); };
-  const cen = by(X.cen, D.cenLabels).slice(0,10), pro = by(X.prog, D.progLabels).slice(0,6);
-  $('#centbl').innerHTML = `<table><thead><tr><th>Centre</th><th>Leads</th><th>Pooled</th><th>Called</th><th>Connected</th><th>Human calls</th><th>Bot calls</th><th>Paid</th></tr></thead><tbody>
-    ${cen.map(c => `<tr><td>${c.name}</td><td>${nf(c.n)}</td><td class="${pf(c.pooled,c.n)>50?'flag':''}">${nf(c.pooled)} <span class="sub">${pf(c.pooled,c.n).toFixed(0)}%</span></td>
-      <td>${nf(c.called)}</td><td>${nf(c.conn)}</td><td>${nf(c.hum)}</td><td>${nf(c.bot)}</td><td>${c.paid}</td></tr>`).join('')}</tbody></table>`;
-  $('#progtbl').innerHTML = `<details open><summary>Top programmes</summary><table><thead><tr><th>Programme</th><th>Leads</th><th>Pooled</th><th>Called</th><th>Connected</th><th>Paid</th></tr></thead><tbody>
-    ${pro.map(p => `<tr><td>${p.name}</td><td>${nf(p.n)}</td><td>${pf(p.pooled,p.n).toFixed(0)}%</td><td>${nf(p.called)}</td><td>${nf(p.conn)}</td><td>${p.paid}</td></tr>`).join('')}</tbody></table></details>`;
-  $('#c5').innerHTML = `<b>The centre tag decides whether a lead gets worked.</b> Leads with no centre set are ${pf(cen[0].pooled,cen[0].n).toFixed(0)}% pooled.`;
+function drawBy(key, labels, head, bodyId, headId, cap){
+  const rows = scoped(), m = new Map();
+  rows.forEach(r => { if(!m.has(r[key])) m.set(r[key],[]); m.get(r[key]).push(r); });
+  const list = [...m.entries()].map(([k,rs]) => ({name:labels[k], s:sel(rs)})).sort((a,b) => b.s.n-a.s.n);
+  const T = sel(rows), shown = list.slice(0,cap);
+  $(headId).innerHTML = `<tr><th>${head}</th><th>Leads</th><th class="s">Pooled</th><th class="s">Called</th><th>Connected</th><th class="s">Human calls</th><th>Bot calls</th><th class="s">Paid</th></tr>`;
+  const line = (n,s,cls) => `<tr class="${cls||''}"><td class="dim">${n}</td><td>${nf(s.n)}</td><td class="s">${s.n?`${nf(s.pool)} <span class="cov ${s.pool/s.n>.5?'r':s.pool/s.n>.2?'a':'g'}">${p1(s.pool,s.n)}</span>`:'—'}</td>`
+    + `<td class="s">${pctCell(s.called,s.n)}</td><td>${nf(s.conn)}</td><td class="s">${nf(s.hum)}</td><td>${nf(s.bot)}</td><td class="s">${nf(s.paid)}</td></tr>`;
+  $(bodyId).innerHTML = line(list.length>cap?`Total (all ${list.length})`:'Total', T, 'tot') + shown.map(x => line(x.name, x.s)).join('');
+}
+function drawFoot(){
+  const sec = (h, items) => `<h4>${h}</h4>` + items.map(d => `<div><b>${d[0]}</b> = ${d[1]}</div>`).join('');
+  $('#foot').innerHTML = `<summary>How this is measured<span>Definitions, caveats and data sources · ${D.asOfLbl}</span></summary>`
+    + sec('Definitions', D.defs) + sec('Caveats', D.caveats) + sec('Data', D.provenance);
 }
 function renderAll(){
-  $('#basisNote').innerHTML = D.bases.find(b => b.id === BASIS).note;
-  $('#wkSel').innerHTML = `<option value="all">All weeks</option>` + weeks().map((w,i)=>`<option value="${i}">${w.label}${w.partial?' (part)':''}</option>`).join('');
-  drawMatrix(); drawFunnel(); drawWeeks(); drawDaily(); drawSpeed(); drawAtt(); drawCentres();
+  BASIS = $('#basis').value;
+  const keep = $('#wkSel').value;
+  $('#wkSel').innerHTML = `<option value="all">All weeks</option>` + weeks().map((w,i) => `<option value="${i}">Week of ${w.label}${w.partial?' (part)':''}</option>`).join('');
+  if([...$('#wkSel').options].some(o => o.value === keep)) $('#wkSel').value = keep;
+  drawContext(); drawTiles(); drawSegments(); drawFunnel(); drawWeeks(); drawSpeed(); drawAttempts();
+  drawBy(X.cen, D.cenLabels, 'Centre (lead field)', '#ceb', '#ceh', 12); drawBy(X.prog, D.progLabels, 'Programme', '#prb', '#prh', 8);
 }
-$('#segBasis').onclick = e => { const b = e.target.closest('button'); if(!b) return;
-  $('#segBasis').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x===b));
-  BASIS = b.dataset.b; renderAll(); };
+$('#basis').onchange = () => { OPEN.clear(); renderAll(); };
+$('#pop').onchange = renderAll;
 $('#wkSel').onchange = drawSpeed;
-renderAll();
+drawFoot(); renderAll();
 </script>

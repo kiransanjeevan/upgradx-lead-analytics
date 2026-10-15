@@ -175,51 +175,49 @@ D = dict(
     rows=rows, IDX=IDX, cenLabels=cenL, progLabels=prgL, speedLabels=SPEED, attLabels=ATT,
     weeksC=mk(0, 7), weeksI=mk(2, 7), weeksA=mk(4, 7), daysC=mk(1, 1), daysI=mk(3, 1), daysA=mk(5, 1),
     totals=dict(C=nC, I=nI, A=nA), calls=dict(human=hc, bot=bc),
-    standfirst=f"Internshala leads, window from {WINLBL}. Three ways to decide which leads belong in the window: "
-               f"<b>created</b> ({nC:,}), <b>interested-in</b> ({nI:,}) and <b>touched</b> ({nA:,} leads with an outreach on record since {WINSHORT}). "
-               f"Pick a basis below — every cut follows it.",
-    meta=[["Source", "Internshala only"], ["Window", f"from {WINSHORT} {WIN.year} (IST)"],
-          ["Bases", "Created / Interested-in / Touched"],
-          ["Lead data", f"Leads.Get, read-only, {ASOF}"],
-          ["Activity data", f"Activity log {RANGE} (human call 22, bot 328, Futwork 330)"]],
-    bases=[dict(id='C', label=f'Created ≥ {WINSHORT}', note=f"Leads whose <code>CreatedOn</code> falls in the window — the acquisition cohort. {nC:,} leads."),
-           dict(id='I', label=f'Interested-in ≥ {WINSHORT}', note=f"Leads whose <code>mx_Interested_In_Date</code> falls in the window — new arrivals plus older leads that re-expressed interest. {nI:,} leads."),
-           dict(id='A', label=f'Touched ≥ {WINSHORT}', note=f"At least one outreach is on record in the window — whenever the lead arrived. "
-                f"Sources: human call (22), bot (328), Futwork (330), Conversation Log Form (310), WhatsApp (210), SMS (200), manual call log (203), inbound (21). "
-                f"<b>Absence means no record, not no attempt.</b> {nA:,} leads, {hc:,} human calls and {bc:,} bot calls.")],
+    lede=f"Every Internshala lead since {WINLBL}: how many arrived, how many went to a bulk pool, who called them "
+         f"(counsellors or the bot), and what came of it.",
+    bases=[dict(id='C', label='Created in window', q="how did the leads we acquired perform?",
+                note=f"<code>CreatedOn</code> on or after {WINSHORT} — the acquisition cohort ({nC:,} leads)."),
+           dict(id='I', label='Interested in window', q="new arrivals plus older leads that came back",
+                note=f"<code>mx_Interested_In_Date</code> on or after {WINSHORT} — still an arrival basis, but it also counts older leads that re-signalled interest ({nI:,} leads)."),
+           dict(id='A', label='Touched in window', q="who did we actually work, whenever they arrived?",
+                note=f"At least one outreach on record since {WINSHORT}, on any channel — the only basis that measures effort rather than arrival; "
+                     f"{OLDPCT}% of these leads arrived before {WINSHORT} ({nA:,} leads).")],
+    popNotes=dict(all="every lead on the selected basis.",
+                  unpool="owned by a named counsellor or centre mailbox.",
+                  pool="parked in the Avtar LCoffline (bot queue) or Futworks Lc (vendor) accounts. LSQ can't show how often these were attempted: Aavtaar only writes back completed calls, so dials that rang out never reach LSQ.",
+                  worked="the lead's own call fields say a human worked it — a first-call date, an attempt or an interaction. Neither bot writes these fields, so this is human effort only.",
+                  touch="at least one activity of any kind on the lead — human call, bot, Futwork, Conversation Log, WhatsApp, SMS or inbound.",
+                  untouch="no activity of any kind on any channel. For pooled leads it's an upper bound (see Pooled). Empty by definition on the Touched basis."),
     defs=[
-        [f"Created ≥ {WINSHORT}", "<code>CreatedOn</code> in the window. Answers “how did the leads we acquired this month perform?”"],
-        [f"Interested-in ≥ {WINSHORT}", "<code>mx_Interested_In_Date</code> in the window. Still an arrival basis — it just also counts older leads that re-signalled interest."],
-        [f"Touched ≥ {WINSHORT}", f"At least one contact attempt in the window, from the activity log. This is the only basis that measures effort rather than arrival, and {OLDPCT}% of its leads arrived before {PERIOD}."],
-        ["Human vs bot call", "<b>Human</b> = <code>Outbound Phone Call Activity</code> (event 22), logged by a named counsellor. <b>Bot</b> = <code>Aavataar ai LC Calling Activity</code> (event 328), created by System. Neither writes the lead call fields, which is why the bot is invisible in the funnel."],
-        ["Pooled", "Owner is <code>Avtar LCoffline</code> (bot queue) or <code>Futworks Lc</code> (vendor) — not a counsellor."],
-        ["Human-worked (lead fields)", "A first-call date, \u22651 logged attempt, or \u22651 interaction on the lead record. Human effort only \u2014 neither bot writes these fields."],
+        ["Called (lead field)", "a first-call date on the lead — counsellor calls only, since neither bot writes it."],
+        ["Connected · Counselled · Paid", f"shown as <b>ever</b> (the lead has reached that state at any time), with <b>since {WINSHORT}</b> beside it (the first connect, counselling or payment happened in the window). Ever keeps bases comparable; since-{WINSHORT} is what the window produced."],
+        ["Human vs bot calls", "<b>Human</b> = Outbound Phone Call Activity (event 22) by a named counsellor. <b>Bot</b> = Aavataar ai LC Calling Activity (event 328), created by System."],
+        ["Pooled", "owner is Avtar LCoffline (bot queue) or Futworks Lc (vendor) — not a counsellor."],
+        ["Human-worked", "a first-call date, at least one logged attempt, or at least one interaction on the lead record."],
+        ["Touched", "any outreach on record: human call (22), bot (328), Futwork (330), Conversation Log (310), WhatsApp (210), SMS (200), manual call log (203), inbound (21). No record doesn't prove no attempt."],
+        ["Speed to lead", "hours from the basis date to the first counsellor call. Hidden on the Touched basis, where most leads arrived long before."],
+        ["Centre", "the lead's own centre field (mx_Offline_Centre_Name), normalised for capitalisation — not the owner's centre used on the other reports."],
     ],
-    outcomeNote=f"<b>Outcome counting:</b> Connected, Counselled and Paid are shown as <b>ever</b> (the lead has reached that state at any time) with an <b>in-window</b> figure beside it (the first connect / counselling / payment happened on or after {WINSHORT}). "
-                f"“Ever” keeps the funnel comparable across bases; “in window” is the honest measure of what {PERIOD} produced. They differ most on the interested-in and worked bases, which both contain older leads carrying outcomes earned earlier.",
-    speedNote=f"Speed to lead is hidden on the <b>Touched</b> basis on purpose. It measures the gap between a lead arriving and the first call — but {OLDPCT}% of leads on this basis arrived before {PERIOD}, so the gap would be months and would say nothing about responsiveness. It is shown on the two arrival bases, where it is meaningful.",
-    popNotes=dict(all="Everything in the window on the selected basis.",
-                  unpool="Owned by a named counsellor or centre mailbox.",
-                  pool="Parked in the Avtar LCoffline or Futworks Lc bulk accounts. <b>LSQ cannot show how often these were attempted.</b> Aavtaar only writes back calls that completed, so dials that rang out never reach LSQ at all — attempt and not-picked data exists only in Aavtaar\u2019s own export. On the Touched basis this is nearly empty — pooled leads get almost no human calling.",
-                  worked="The lead\u2019s own call fields say a human worked it — a first-call date, \u22651 attempt, or \u22651 interaction. <b>Neither bot writes these</b>, so this is human effort only.",
-                  touch="At least one activity of any kind is logged against the lead \u2014 human call, bot conversation, Futwork, Conversation Log Form, WhatsApp, SMS or inbound.",
-                  untouch="No activity of any kind logged, on any channel. For pooled leads this is an upper bound, not a count \u2014 see the pooled note. Empty by definition on the Touched basis."),
+    speedNote=f"Speed to lead is hidden on the Touched basis: {OLDPCT}% of these leads arrived before {WINSHORT}, so the gap from arrival to first call would be months and say nothing about responsiveness.",
     caveats=[
-        ["Three bases, three questions", "Created = acquisition. Interested-in = acquisition + reactivation. Touched = effort. They are not interchangeable and the totals differ by design."],
-        ["Activity data is a snapshot", f"The Touched basis is built from an activity-log pull covering {RANGE}. Nothing refreshes it automatically, unlike the lead fields — rerun fetch_data.py to update it."],
-        ["Bot calls are invisible in the funnel", "Neither the Aavataar bot nor Futwork writes <code>mx_First_Call_Date_and_Time</code> or the attempt counter, so a bot-called lead still shows as never called in the lead-field cuts."],
-        ["Attempts under-logged", "The attempts field reflects human dialling only, and even then is incomplete."],
-        ["Cohort maturity", "Cohorts under two weeks old are faded and will still improve."],
+        ["Three bases, three questions", "created = acquisition; interested = acquisition + reactivation; touched = effort. Their totals differ by design."],
+        ["Bot calls are invisible in lead fields", "neither the Aavataar bot nor Futwork writes the first-call date or the attempt counter, so a bot-called lead still reads as never called in Called, Human-worked and Attempts."],
+        ["Attempts under-logged", "the attempts field is human dialling only, and even that is incomplete."],
+        ["Cohort maturity", "weeks under two weeks old are flagged; their outcomes will still rise."],
     ],
-    winShort=WINSHORT, winLbl=WINLBL, period=PERIOD,
-    footer=f"upGrad X product analytics · Internshala · window from {WINSHORT} {WIN.year} · leads: LeadSquared Leads.Get ({ASOF}) · "
-           f"activity: events 22/328/330/310/210/200/203/21, {RANGE} · {nC:,} created · {nI:,} interested-in · {nA:,} touched")
+    provenance=[
+        ["Leads", f"every Internshala lead from LeadSquared (Leads.Get, read-only), refreshed nightly; this build is as of {ASOF}."],
+        ["Activity", f"the activity log {RANGE} (events 22, 328, 330, 310, 210, 200, 203, 21), refreshed nightly with the leads."],
+        ["Totals", f"{nC:,} created · {nI:,} interested · {nA:,} touched · {hc:,} human and {bc:,} bot calls on touched leads."],
+    ],
+    asOfLbl=f"as of {ASOF}", winShort=WINSHORT, winLbl=WINLBL, period=PERIOD)
 
 tpl = open(BASE / "template.html", encoding='utf-8').read()
 dest = OUT / "internshala-funnel.html"
 html = (tpl.replace("__DATA__", json.dumps(D, ensure_ascii=False, separators=(',', ':')))
-           .replace("__TITLE__", f"Internshala Funnel Since {WIN:%B}")
-           .replace("__WINSHORT__", WINSHORT))
+           .replace("__TITLE__", "Internshala"))
 if "__" in re.sub(r"__[A-Z]+__", "", html):  # nothing else should look like a placeholder
     pass
 for left in re.findall(r"__[A-Z]+__", html):

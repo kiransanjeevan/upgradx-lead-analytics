@@ -191,6 +191,8 @@ def grp(s):
         return "LinkedIn"
     if "seminar" in t:
         return "Seminar"
+    if "outreach" in t:                                # College-Outreach / College-outreach:
+        return "College Outreach"                      # ~1,100 leads/month, was hiding in Other
     if "referral" in t:
         return "Referral"
     if "website" in t or "organic" in t or "web" in t:

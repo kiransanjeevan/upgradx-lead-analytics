@@ -97,6 +97,30 @@ tr.totrow td{background:var(--surface-2);font-weight:700;color:var(--ink);border
 #tt-wrap{max-height:calc(100vh - var(--topH,58px) - 24px);overflow:auto;}
 #tt-tbl thead{position:sticky;top:0;z-index:3;}
 #tt-tbl th{cursor:default;vertical-align:bottom;}
+/* Effort: parent column bands, same shape as Talk Time */
+table.banded tr.ef-band th{text-align:center;vertical-align:middle;color:var(--ink-2);font-weight:700;letter-spacing:.1em;border-bottom:0;padding-bottom:4px;}
+table.banded tr.ef-band th.ef-g{box-shadow:inset 0 -2px 0 var(--line-2);}
+table.banded th.ef-s,table.banded td.ef-s{border-left:1px solid var(--line);}
+table.banded th{white-space:normal;padding-left:7px;padding-right:7px;}
+table.banded td{padding-left:7px;padding-right:7px;}
+table.banded tbody td:not(.dim){white-space:nowrap;}
+table.banded tr.stl-g .stl-sub{display:block;margin:1px 0 0 18px;font-weight:400;}
+table.banded tr.stl-c td.dim{padding-left:32px;}
+/* the centre × stage matrix carries a column per stage */
+#fn-d th,#fn-d td{padding-left:5px;padding-right:5px;}
+#fn-d tbody td{font-size:12px;}
+#fn-d tr.stl-c td.dim{padding-left:28px;}
+#ef-tbl tr.ef-band th,#ag-tbl tr.ef-band th{text-align:center;vertical-align:middle;color:var(--ink-2);font-weight:700;letter-spacing:.1em;border-bottom:0;padding-bottom:4px;}
+#ef-tbl tr.ef-band th.ef-g,#ag-tbl tr.ef-band th.ef-g{box-shadow:inset 0 -2px 0 var(--line-2);}
+#ef-tbl th.ef-s,#ef-tbl td.ef-s,#ag-tbl th.ef-s,#ag-tbl td.ef-s{border-left:1px solid var(--line);}
+#ef-rows td:not(.dim),#ag-tbl tbody td:not(.dim){white-space:nowrap;}
+/* 15 columns: tighter cells so the table fits a laptop width without sideways scroll */
+#ef-tbl th,#ef-tbl td{padding-left:7px;padding-right:7px;}
+#ef-tbl tbody td{font-size:12.5px;}
+#ef-tbl th{white-space:normal;}
+#ef-tbl tr.stl-g .stl-sub,#ag-tbl tr.stl-g .stl-sub{display:block;margin:1px 0 0 18px;font-weight:400;}
+#ef-tbl tr.stl-c td.dim{padding-left:32px;}
+#ag-tbl th{white-space:normal;}
 #tt-tbl tr.tt-band th{text-align:center;vertical-align:middle;color:var(--ink-2);font-weight:700;letter-spacing:.1em;border-bottom:0;padding-bottom:4px;}
 #tt-tbl tr.tt-band th.tt-g{box-shadow:inset 0 -2px 0 var(--line-2);}
 #tt-tbl th.tt-gs,#tt-tbl td.tt-gs{border-left:1px solid var(--line);}
@@ -203,11 +227,11 @@ td.owncol{white-space:nowrap;}
 .lown .nsm{font-family:var(--mono);font-size:9.5px;margin-left:4px;opacity:.9;}
 .dwrap{display:inline-flex;align-items:stretch;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);overflow:hidden;}
 .dwrap:focus-within{border-color:var(--accent);}
-.dwrap .dtext{border:none;border-radius:0;background:transparent;width:112px;padding:8px 0 8px 11px;font-variant-numeric:tabular-nums;}
+.dwrap .dtext{border:none;border-radius:0;background:transparent;width:120px;padding:8px 0 8px 11px;font-variant-numeric:tabular-nums;}
 .dwrap .dtext:focus{outline:none;}
 .dwrap .dtext.bad{color:var(--crit);}
 .dwrap .dk{align-self:center;padding-left:11px;}
-.dwrap .dk+.dtext{width:92px;padding-left:8px;}
+.dwrap .dk+.dtext{width:100px;padding-left:8px;}
 .dwrap.off{opacity:.45;pointer-events:none;}
 .dcal{position:relative;display:grid;place-items:center;width:32px;cursor:pointer;color:var(--muted);border-left:1px solid var(--line);}
 .dcal:hover{color:var(--accent);background:var(--surface-2);}
@@ -296,7 +320,7 @@ input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;margin:0;
 input:not([type=checkbox]):not([type=radio]):not([type=date]),.xsel-btn,.xsel-opt{font-size:16px;}
 .xsel-btn{min-height:44px;}
 .xsel-opt{padding-top:11px;padding-bottom:11px;}
-.dwrap .dtext{width:122px;}
+.dwrap .dtext{width:128px;}
 input[type=checkbox]{width:20px;height:20px;}
 }
 /* ---- App shell: sticky top bar + sticky report rail ---- */
@@ -502,282 +526,136 @@ nav.side.open{transform:none;}
   <details class="xnote xfold" id="foot"></details>
 </template>
 <template id="tpl-ageing">
-  
   <div class="eyebrow">LSQ · Lead Ageing</div>
   <h1>Lead Ageing</h1>
-  <p class="lede">How long leads have sat since creation, how many are still <b>pending first attempt</b>, plus <b>no-activity</b> and <b>overdue-follow-up</b> flags — matching the Master Dashboard <span style="font-family:var(--mono);font-size:12px">Lead_Ageing</span> spec. Rows are your breakdown; the age-bucket cells show the selected metric.</p>
+  <p class="lede">How long leads have sat since creation, how many are still <b>pending a first attempt</b>, and which have gone quiet (<b>no activity</b>) or have an <b>overdue follow-up</b> — by source, or by centre and counsellor.</p>
 
-  <div class="panel">
-    <div class="lvl">
-      <div class="num">1</div>
-      <div>
-        <div class="lname">Created between <span class="side" id="cohortl"></span></div>
-        <div class="dates">
-          <div class="fld"><div class="fl">From</div><input type="date" id="a-c0"></div>
-          <div class="fld"><div class="fl">To</div><input type="date" id="a-c1"></div>
-        </div>
-        <div class="datehint">Which <b>creation cohort</b> to age. Defaults to everything pulled, so you can narrow to e.g. August leads and watch that cohort alone.</div>
-        <div class="lname" style="margin-top:16px">As-of date <span class="side" id="asofl"></span></div>
-        <div><input type="date" id="asof"></div>
-        <div class="mature" id="asofwarn" hidden></div>
-        <div class="datehint">Age = <b>as-of − creation date</b> (whole days, IST). Covers the <b>pulled cohort</b> — leads created from the window start onwards, pulled complete. Earlier dates are disabled; the exact range is in the footer.</div>
-      </div>
-    </div>
-    <div class="lvl">
-      <div class="num">2</div>
-      <div>
-        <div class="lname">Sources <span class="side"><a id="s-all">All</a> · <a id="s-exint">Exclude Internshala</a></span></div>
-        <div class="srcs" id="srcs"></div>
-      </div>
-    </div>
-    <div class="lvl">
-      <div class="num">3</div>
-      <div>
-        <div class="lname">View</div>
-        <div class="segwrap">
-          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Break down by</div><div class="seg" id="segdim"><button data-dim="source" class="on">Source</button><button data-dim="owner">Lead owner</button></div></div>
-          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Age-bucket cells show</div><div class="seg" id="segmetric"><button data-m="all" class="on">All leads</button><button data-m="pend">Pending 1st</button><button data-m="noact">No activity &gt;10d</button><button data-m="over">Overdue follow-up</button></div></div>
-          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Lifecycle</div><div class="seg" id="seglife"><button data-l="open" class="on">Open only</button><button data-l="all">All stages</button></div></div>
-        </div>
-        <div class="lname" style="margin-top:16px">Stages <span class="side"><a id="st-all">All</a> · <a id="st-none">None</a></span></div>
-        <div class="srcs" id="stgchips"></div>
-        <div class="datehint">Narrow to specific ProspectStage values — e.g. <b>New Lead</b> alone shows leads never worked, <b>Follow Up</b> shows those in progress. Overrides Lifecycle when anything is deselected.
-        </div>
-      </div>
-    </div>
+  <div class="fbar" id="ag-fbar">
+    <input type="date" id="a-c0" data-label="Created from" aria-label="Created from">
+    <input type="date" id="a-c1" data-label="To" aria-label="Created to">
+    <input type="date" id="asof" data-label="As of" aria-label="As-of date">
+    <select id="ag-src" multiple data-label="Sources" data-all="All sources" data-noun="sources" aria-label="Sources"></select>
+    <select id="ag-ctr" multiple data-label="Centres" data-all="All centres" data-noun="centres" aria-label="Centres"></select>
+    <select id="ag-stg" multiple data-label="Stages" data-all="All stages" data-noun="stages" aria-label="Stages"></select>
+    <select id="ag-metric" data-label="Cells show" aria-label="What the age cells count">
+      <option value="all" data-desc="Every lead in the cohort, by age">All leads</option>
+      <option value="pend" data-desc="No sign of any attempt yet">Pending first attempt</option>
+      <option value="noact" data-desc="Last activity 8 or more days before the as-of date">No activity 8+ days</option>
+      <option value="over" data-desc="Follow-up date passed, nothing logged since">Overdue follow-up</option>
+    </select>
+    <button type="button" class="freset" id="ag-reset" hidden>Reset</button>
   </div>
+  <details class="xctx" id="ag-ctx"><summary><span id="ag-ctx-q"></span><span class="xctx-more">What counts as open</span></summary><div id="ag-ctx-body"></div></details>
+  <div class="mature" id="asofwarn" hidden></div>
 
-  <div class="tiles">
-    <div class="tile hi"><div class="n" id="t-tot">—</div><div class="l">Leads in cohort (selected)</div></div>
-    <div class="tile unc"><div class="n" id="t-pend">—</div><div class="l">Pending first attempt</div></div>
-    <div class="tile warn"><div class="n" id="t-noact">—</div><div class="l">No activity &gt;10 days</div></div>
-    <div class="tile warn"><div class="n" id="t-over">—</div><div class="l">Overdue follow-up</div></div>
-    <div class="tile"><div class="n" id="t-avgatt">—</div><div class="l">Avg attempts / lead</div></div>
-  </div>
+  <div class="tiles" id="ag-tiles"></div>
 
   <div class="shrow">
-    <span class="sh" id="mtitle">Ageing matrix</span>
-    <input id="ownfilter" placeholder="Filter owner name…">
+    <span class="sh">Break down by</span>
+    <div class="seg" id="ag-seg"><button data-v="source" class="on">Source</button><button data-v="owner">Centre / counsellor</button></div>
+    <input id="ownfilter" class="rowfilter" placeholder="Filter counsellor…" style="display:none">
   </div>
-  <div class="tblwrap"><table><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
+  <div class="tblwrap"><table id="ag-tbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
   <div class="trunc" id="trunc"></div>
 
-  <p class="xnote" id="xnote"></p>
-  <footer id="foot"></footer>
+  <details class="xnote xfold" id="ag-foot"></details>
 </template>
 <template id="tpl-owner">
-  
-  <div class="eyebrow">LSQ · OWNER / COUNSELLOR SCORECARD</div>
-  <h1>Owner / Counsellor Scorecard</h1>
-  <p class="lede">One row per lead owner (counsellor) for leads <b>created in the selected window</b> from the <b>selected sources</b>. The accountability view: who is covering their new leads, how fast they call, and how many convert. Every count reconciles to LSQ Manage Leads filtered by Owner + Created On.</p>
+  <div class="eyebrow">LSQ · Owner Scorecard</div>
+  <h1>Counsellor Scorecard</h1>
+  <p class="lede">The accountability view, centre by centre: for leads <b>created</b> in the window, who is covering their leads, how fast they call once a lead is assigned, and how many convert.</p>
 
-  <div class="panel" id="controls">
-    <div class="lvl">
-      <div class="num">1</div>
-      <div>
-        <div class="lname">Created-date window</div>
-        <label style="font-size:13px;color:var(--muted)">Start
-          <input type="date" id="dStart"></label>
-        <label style="font-size:13px;color:var(--muted);margin-left:14px">End
-          <input type="date" id="dEnd"></label>
-        <div class="datehint">Rows count leads whose <b>Created On</b> falls in this window (pulled cohort only — created on/after the window start).</div>
-      </div>
-    </div>
-    <div class="lvl">
-      <div class="num">2</div>
-      <div>
-        <div class="lname">Sources <span class="side"><a id="srcAll">All</a> · <a id="srcNoIntern">Exclude Internshala</a></span></div>
-        <div class="srcs" id="srcChips"></div>
-      </div>
-    </div>
-    <div class="lvl">
-      <div class="num">3</div>
-      <div>
-        <div class="lname">SLA target (first-call speed)</div>
-        <label style="font-size:13px;color:var(--muted)">Call within
-          <input type="number" id="slaMin" min="1" step="15" value="120" style="width:90px"> minutes</label>
-        <div class="datehint">SLA % = share of <b>all leads in the cohort</b> whose first call landed within this many minutes (uncalled leads count as misses). The tile also shows the share of <b>contacted</b> leads, which is the flattering version — always quote the denominator.</div>
-      </div>
-    </div>
-    <div class="lvl">
-      <div class="num">4</div>
-      <div>
-        <div class="lname">Minimum volume</div>
-        <label style="font-size:13px;color:var(--muted)">Hide owners with fewer than
-          <input type="number" id="minVol" min="0" step="1" value="5" style="width:80px"> leads</label>
-        <div class="datehint">Suppresses noisy tiny-N rates. The Total row and tiles still include every owner.</div>
-      </div>
-    </div>
+  <div class="fbar" id="os-fbar">
+    <input type="date" id="dStart" data-label="Created from" aria-label="Created from">
+    <input type="date" id="dEnd" data-label="To" aria-label="Created to">
+    <select id="os-src" multiple data-label="Sources" data-all="All sources" data-noun="sources" aria-label="Sources"></select>
+    <select id="os-ctr" multiple data-label="Centres" data-all="All centres" data-noun="centres" aria-label="Centres"></select>
+    <div class="fnum" role="group" aria-label="SLA target in minutes"><span class="fk">SLA</span><button type="button" data-d="-10" aria-label="Lower SLA">−</button><input type="number" id="slaMin" value="120" min="1" step="10" inputmode="numeric" aria-label="SLA minutes"><button type="button" data-d="10" aria-label="Higher SLA">+</button><span class="fu">min</span></div>
+    <button type="button" class="freset" id="os-reset" hidden>Reset</button>
   </div>
 
   <div class="tiles" id="tiles"></div>
 
   <div class="shrow">
-    <h2 class="sh">Per-owner scorecard</h2>
-    <input type="text" class="rowfilter txt" id="rowfilter" placeholder="Filter owner name…">
+    <span class="sh">By centre and counsellor</span>
+    <input type="text" class="rowfilter" id="rowfilter" placeholder="Filter counsellor…">
   </div>
-  <div class="tblwrap">
-    <table id="tbl">
-      <thead><tr id="head"></tr></thead>
-      <tbody id="body"></tbody>
-      <tfoot id="foot"></tfoot>
-    </table>
-  </div>
+  <div class="tblwrap"><table id="os-tbl" class="banded"><thead id="head"></thead><tbody id="body"></tbody></table></div>
   <div class="trunc" id="trunc"></div>
 
-  <div class="xnote" id="xnote"></div>
-
-  <footer id="footer"></footer>
+  <details class="xnote xfold" id="os-foot"></details>
 </template>
 <template id="tpl-attempts">
   <div class="eyebrow">LSQ · EFFORT</div>
   <h1>Effort &amp; Connects</h1>
-  <p class="lede">How much calling effort each lead gets, and how many of the attempted leads we actually connected with. Logged reach-out attempts (mx_Reached_Out_Attempts) per lead, broken down by source, centre or lead owner, with how attempts are spread across 0 / 1–2 / 3–5 / 6+.</p>
+  <p class="lede">How much calling effort leads get, and how many of the attempted leads we actually connected with — by source, or by centre and counsellor.</p>
 
-  <div class="panel">
-    <div class="lvl">
-      <div class="num">1</div>
-      <div>
-        <div class="lname">Date range <span class="side">created window · pulled cohort</span></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <label style="font-size:12px;color:var(--muted);">Start <input type="date" id="d0"></label>
-          <label style="font-size:12px;color:var(--muted);">End <input type="date" id="d1"></label>
-        </div>
-        <div class="datehint" id="datehint"></div>
-      </div>
-    </div>
-    <div class="lvl">
-      <div class="num">2</div>
-      <div>
-        <div class="lname">Sources <span class="side"><a id="srcAll">All</a> · <a id="srcNoIsh">Exclude Internshala</a></span></div>
-        <div class="srcs" id="srcChips"></div>
-      </div>
-    </div>
-    <div class="lvl">
-      <div class="num">3</div>
-      <div>
-        <div class="lname">Break down by <span class="side">Centre = the lead owner's centre</span></div>
-        <div class="segwrap">
-          <div class="seg" id="segBy">
-            <button data-v="src" class="on">Source</button>
-            <button data-v="centre">Centre</button>
-            <button data-v="owner">Lead owner</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="lvl">
-      <div class="num">4</div>
-      <div>
-        <div class="lname">Min volume <span class="side">hide rows below this lead count</span></div>
-        <label style="font-size:12px;color:var(--muted);">Min leads <input type="number" id="minVol" value="5" min="0" step="1" style="width:90px;"></label>
-      </div>
-    </div>
+  <div class="fbar" id="ef-fbar">
+    <select id="ef-basis" data-label="Leads" aria-label="Which leads">
+      <option value="created" data-desc="Leads created in the date range">Created in range</option>
+      <option value="interested" data-desc="Leads that showed interest in the range, new or returning">Interested in range</option>
+      <option value="calls" data-desc="Every call made in the range, on new and older leads (call log, last 14 days)">Calling activity in range</option>
+    </select>
+    <input type="date" id="ef-d0" data-label="From" aria-label="Start date">
+    <input type="date" id="ef-d1" data-label="To" aria-label="End date">
+    <select id="ef-src" multiple data-label="Sources" data-all="All sources" data-noun="sources" aria-label="Sources"></select>
+    <select id="ef-ctr" multiple data-label="Centres" data-all="All centres" data-noun="centres" aria-label="Centres"></select>
+    <button type="button" class="freset" id="ef-reset" hidden>Reset</button>
   </div>
 
-  <div class="tiles" id="tiles"></div>
+  <div class="tiles" id="ef-tiles"></div>
 
   <div class="shrow">
-    <h2 class="sh" id="tblHead">By source</h2>
-    <input type="text" id="rowFilter" class="rowfilter txt" placeholder="Filter owner name…" style="display:none;">
+    <span class="sh">Break down by</span>
+    <div class="seg" id="ef-seg"><button data-v="source" class="on">Source</button><button data-v="owner">Centre / counsellor</button></div>
+    <input id="ef-filter" class="rowfilter" placeholder="Filter counsellor…" style="display:none">
   </div>
-  <div class="tblwrap">
-    <table id="tbl">
-      <thead id="thead"></thead>
-      <tbody id="tbody"></tbody>
-    </table>
-  </div>
-  <div class="trunc" id="trunc"></div>
+  <div class="tblwrap"><table id="ef-tbl"><thead id="ef-thead"></thead><tbody id="ef-rows"></tbody></table></div>
+  <div class="trunc" id="ef-trunc"></div>
 
-  <div class="xnote">
-    <b>Read with care.</b> Attempts here are <b>logged</b> reach-outs (mx_Reached_Out_Attempts) and are <b>under-logged</b> — treat every count as a floor, not a true dial count. <b>"Connected"</b> is a proxy (interacted count &gt; 0 or a first-connect time, the dashboard-wide rule), not a verified conversation. A low "Avg attempts on connected" can mean efficient outreach <i>or</i> that attempts simply weren't logged. <b>Location</b> is the lead's <b>city</b> field: it is populated on every lead, but the majority of leads fall into the catch-all <b>"Rest Of India"</b> bucket (flagged in the table), so it is a coarse geographic cut — not a centre-level one. The true <b>centre</b> field is finer but sits on only about a fifth of leads, which is why it isn't offered as a breakdown here. Cross-check any owner, source or location that looks off directly in LSQ before acting on it.
-  </div>
-
-  <footer id="footer"></footer>
+  <details class="xnote xfold" id="ef-foot"></details>
 </template>
 <template id="tpl-funnel">
-  <div class="eyebrow">LSQ · Funnel / Stage Distribution</div>
-  <h1>Funnel &amp; Stage Distribution</h1>
-  <p class="lede">The spec funnel — <b>Lead created → Attempted → Connected → Counselled → Enrolled</b>, with <b>L2C / C2P / L2P</b> — broken out by source, lead owner and programme, plus the full <b>ProspectStage</b> distribution. These five steps come from five independent LSQ fields and <b>do not nest cleanly</b>; section B shows exactly where they don't. Pulled cohort, IST.</p>
+  <div class="eyebrow">LSQ · Funnel / Lead stage</div>
+  <h1>Funnel &amp; Lead Stage</h1>
+  <p class="lede">The funnel — <b>Lead created → Attempted → Connected → Counselled → Enrolled</b>, with <b>L2C / C2P / L2P</b> — by source, centre and counsellor, or programme, plus where every lead's <b>stage</b> stands today.</p>
 
-  <div class="panel">
-    <div class="lvl">
-      <div class="num">1</div>
-      <div>
-        <div class="lname">Created date range <span class="side" id="rangel"></span></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <label style="font-size:12px;color:var(--muted)">Start <input type="date" id="dstart"></label>
-          <label style="font-size:12px;color:var(--muted)">End <input type="date" id="dend"></label>
-        </div>
-        <div class="datehint">Window on <b>creation date</b> (whole days, IST). Covers the <b>pulled cohort</b> — leads created from the window start onwards, pulled complete. Earlier dates are disabled; the exact range is in the footer.</div>
-      </div>
-    </div>
-    <div class="lvl">
-      <div class="num">2</div>
-      <div>
-        <div class="lname">Sources <span class="side"><a id="s-all">All</a> · <a id="s-exint">Exclude Internshala</a></span></div>
-        <div class="srcs" id="srcs"></div>
-      </div>
-    </div>
-    <div class="lvl">
-      <div class="num">3</div>
-      <div>
-        <div class="lname">Breakdowns</div>
-        <div class="segwrap">
-          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Funnel &amp; ratios by (section C)</div><div class="seg" id="segdim"><button data-d="source" class="on">Source</button><button data-d="owner">Lead owner</button><button data-d="program">Programme</button></div></div>
-          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Stage table as (section D)</div><div class="seg" id="segbreak"><button data-b="overall" class="on">Overall</button><button data-b="source">By source</button><button data-b="owner">By lead owner</button><button data-b="program">By programme</button></div></div>
-        </div>
-        <div class="datehint"><b>Section C</b> gives one row per source / owner / programme with the full funnel and the L2C, C2P, L2P ratios. <b>Section D</b> is the raw ProspectStage distribution — overall, or as a stage × source / owner × stage / stage × programme heat matrix. Everything on this page obeys the date + source filters above.</div>
-      </div>
-    </div>
+  <div class="fbar" id="fn-fbar">
+    <input type="date" id="dstart" data-label="Created from" aria-label="Created from">
+    <input type="date" id="dend" data-label="To" aria-label="Created to">
+    <select id="fn-src" multiple data-label="Sources" data-all="All sources" data-noun="sources" aria-label="Sources"></select>
+    <select id="fn-ctr" multiple data-label="Centres" data-all="All centres" data-noun="centres" aria-label="Centres"></select>
+    <button type="button" class="freset" id="fn-reset" hidden>Reset</button>
   </div>
 
-  <div class="tiles">
-    <div class="tile hi"><div class="n" id="t-tot">—</div><div class="l">Leads created (selected)</div></div>
-    <div class="tile"><div class="n" id="t-att">—</div><div class="l">Attempted</div></div>
-    <div class="tile"><div class="n" id="t-con">—</div><div class="l">Connected</div></div>
-    <div class="tile"><div class="n" id="t-cns">—</div><div class="l">Counselled</div></div>
-    <div class="tile good"><div class="n" id="t-enr">—</div><div class="l">Enrolled / paid</div></div>
-  </div>
+  <div class="tiles" id="fn-tiles"></div>
 
-  <div class="tiles">
-    <div class="tile"><div class="n" id="t-l2c">—</div><div class="l">L2C · lead → counselled</div></div>
-    <div class="tile"><div class="n" id="t-c2p">—</div><div class="l">C2P · counselled → paid</div></div>
-    <div class="tile warn"><div class="n" id="t-rate">—</div><div class="l">L2P · lead → paid</div></div>
-  </div>
-
-  <div class="shrow">
-    <span class="sh">A · Spec funnel</span>
-    <span style="font-size:11.5px;color:var(--muted)">bar length = as-reported count · <b>solid</b> = cleared every step above it · <b>faded</b> = skipped an earlier step · badge = step conversion</span>
-  </div>
+  <div class="shrow"><span class="sh">A · Funnel</span></div>
   <div class="funnel" id="funnel"></div>
 
-  <div class="shrow">
-    <span class="sh">B · Path integrity — where the funnel does not nest</span>
-    <span style="font-size:11.5px;color:var(--muted)">five independent LSQ fields, not one sequence</span>
-  </div>
+  <div class="shrow"><span class="sh">B · Path integrity — where the funnel doesn't nest</span></div>
   <div class="tblwrap"><table><thead id="leakhead"></thead><tbody id="leakrows"></tbody></table></div>
-  <div class="trunc" id="leaknote"></div>
 
   <div class="shrow">
-    <span class="sh" id="ctitle">C · Funnel by source</span>
+    <span class="sh">C · Funnel by</span>
+    <div class="seg" id="segdim"><button data-d="source" class="on">Source</button><button data-d="owner">Centre / counsellor</button><button data-d="program">Programme</button></div>
     <input class="rowfilter" id="rowfilter2" placeholder="Filter name…">
   </div>
-  <div class="tblwrap"><table><thead id="dhead"></thead><tbody id="drows"></tbody></table></div>
+  <div class="tblwrap"><table id="fn-c" class="banded"><thead id="dhead"></thead><tbody id="drows"></tbody></table></div>
   <div class="trunc" id="trunc2"></div>
 
   <div class="shrow">
-    <span class="sh" id="btitle">D · ProspectStage distribution</span>
-    <input class="rowfilter" id="rowfilter" placeholder="Filter owner name…">
+    <span class="sh">D · Lead stage</span>
+    <div class="seg" id="segbreak"><button data-b="overall" class="on">Overall</button><button data-b="source">By source</button><button data-b="owner">By centre / counsellor</button><button data-b="program">By programme</button></div>
+    <input class="rowfilter" id="rowfilter" placeholder="Filter counsellor…" style="display:none">
   </div>
-  <div class="tblwrap"><table><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
+  <div class="tblwrap"><table id="fn-d" class="banded"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
   <div class="trunc" id="trunc"></div>
 
-  <p class="xnote" id="xnote"></p>
-  <footer id="foot"></footer>
+  <details class="xnote xfold" id="fn-foot"></details>
 </template>
 <template id="tpl-internshala">
-  <iframe id="is-frame" class="isframe" src="data/internshala-funnel.html" title="Internshala funnel"></iframe>
+  <iframe id="is-frame" class="isframe" src="data/internshala-funnel.html" title="Internshala" scrolling="no"></iframe>
   <p class="xnote" id="is-err" hidden>Could not load the Internshala report (data/internshala-funnel.html). It is rebuilt by the daily refresh.</p>
 </template>
 <template id="tpl-talk">
@@ -841,6 +719,13 @@ function stageCls(i){ const a=window.__DATA.stage_class; return (a && a[i]) || "
 // on its own, so ANY evidence counts, and a connect implies an attempt (keeps Connect % <= 100%).
 //  L[2] first call · L[5] last activity · L[6] follow-up · L[7] attempts · L[8] interacted
 //  L[9] stage · L[15] first connect
+// ---- shared breakdowns (Speed to Lead, Effort) ----
+// Meta, Google and Internshala get their own source group; every other bucket sits under Others.
+const SRC_GROUPS=["Meta","Google","Internshala","Others"];
+function srcGroupOf(si){ const n=window.__DATA.sources[si]; return SRC_GROUPS.includes(n)?n:"Others"; }
+// Centre = the owner's LSQ admission group (pull.py), because the lead's own centre field is ~22% filled
+const CTR_LAST=new Set(["No centre","Pool accounts"]);
+function centreOf(L){ const oc=window.__DATA.owner_centre; return (oc&&oc[L[4]])||"No centre"; }
 function isConnected(L){ return (L[8]||0)>0 || L[15]!=null; }
 function isAttempted(L){ return (L[7]||0)>0 || L[2]!=null || isConnected(L); }
 function isEnrolled(L){ return stageCls(L[9])==="won"; }
@@ -877,11 +762,7 @@ const anchorField={created:1,firstcall:2,assign:3};
 const clockStart ={created:1,firstcall:1,assign:3};
 // The three paid/partner channels that carry most volume get their own group; every other
 // bucket sits under Others. Expanding a group shows the raw LSQ Source values behind it.
-const GROUPS=["Meta","Google","Internshala","Others"];
-const grpOf=si=>GROUPS.includes(DATA.sources[si])?DATA.sources[si]:"Others";
-// Centre = the owner's LSQ admission group (pull.py), because the lead's own centre field is ~22% filled
-const LAST=new Set(["No centre","Pool accounts"]);
-const ctrOf=L=>OC[L[4]]||"No centre";
+const GROUPS=SRC_GROUPS, grpOf=srcGroupOf, LAST=CTR_LAST, ctrOf=centreOf;
 const ctrSort=(a,b)=>(LAST.has(a)-LAST.has(b))||a.localeCompare(b);
 // q = the question the analysis answers (always visible under the filters); the long text sits behind "How it's measured"
 const QUESTION={created:"how fast does a brand-new lead hear from us?",firstcall:"of everything we dialled, how long had those leads been waiting?",assign:"once a lead lands on a counsellor's desk, how fast do they call?"};
@@ -1089,1015 +970,739 @@ resetSel(); chips(); render();
 function init_ageing(){
 
 const DATA = window.__DATA;
-// leads: [src, created, firstcall, assign, owner, lastactivity, followup] — minutes since base (IST); null=missing
-const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
-let DIM="source", METRIC="all", LIFE="open"; const SEL=new Set(); const STG=new Set();
+// lead columns used: 0 src · 1 created · 4 owner · 5 last activity · 6 follow-up · 7 attempts · 9 stage · 22 raw Source
+const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000, RAW=DATA.raw_sources||[], OC=DATA.owner_centre||[];
+const $=id=>document.getElementById(id);
+let DIM="source"; const SEL=new Set(), CSEL=new Set(), STG=new Set(), OPEN=new Set();
 const BUCKETS=[["0 days",0,0],["1 day",1,1],["2 days",2,2],["3–7 days",3,7],["8+ days",8,9999]];
-const METLABEL={all:"all leads",pend:"pending first attempt",noact:"no activity >10 days",over:"overdue follow-up"};
+const NOACT=8;   // "no activity" uses the same 8-day line as the oldest age bucket
+const METLABEL={all:"all leads",pend:"pending first attempt",noact:`no activity ${NOACT}+ days`,over:"overdue follow-up"};
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
 function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "—"; }   // display only; inputs stay ISO
 function bkt(age){ for(let i=0;i<BUCKETS.length;i++){ if(age>=BUCKETS[i][1]&&age<=BUCKETS[i][2]) return i; } return BUCKETS.length-1; }
-const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>m)m=d; } return m; })();
-function mk(){ return {b:BUCKETS.map(()=>({all:0,pend:0,noact:0,over:0})), tAll:0,tPend:0,tNoact:0,tOver:0,tAtt:0}; }
-function compute(){
-  const asOf=dateToIdx(document.getElementById("asof").value);
-  const c0=Math.max(0,dateToIdx(document.getElementById("a-c0").value));
-  const c1=Math.min(asOf,dateToIdx(document.getElementById("a-c1").value));
-  const rows={};
-  let excl=0, cohort=0;
-  for(const L of DATA.leads){
-    if(poolSkip(L)) continue;
-    const d=dayIdx(L[1]); if(d==null||d<0||d>asOf) continue;
-    if(d<c0||d>c1) continue;                       // creation-cohort window
-    if(!SEL.has(L[0])) continue;
-    cohort++;
-    if(!STG.has(L[9])){ excl++; continue; }        // explicit stage selection
-    // Ageing measures the OPEN pipeline. A lead already Not Interested / DNP / Junk /
-    // Cold / Disqualified is not ageing — it is finished. Test rows never count.
-    const key=DIM==="source"?L[0]:L[4];
-    const r=rows[key]||(rows[key]=mk());
-    const age=asOf-d, bi=bkt(age);
-    const pend=isAttempted(L)?0:1;
-    const la=dayIdx(L[5]); const noact=(la!=null && (asOf-la)>10)?1:0;
-    // same rule as the dashboard: due date passed AND no activity since it passed
-    const over=isOverdue(L,asOf)?1:0;
-    const c=r.b[bi]; c.all++; c.pend+=pend; c.noact+=noact; c.over+=over;
-    r.tAll++; r.tPend+=pend; r.tNoact+=noact; r.tOver+=over; r.tAtt+=(L[7]||0);
-  }
-  return {rows, asOf, excl, c0, c1, cohort};
-}
 function heat(v,max){ if(!v||!max) return ""; const pct=Math.min(52,Math.round(52*v/max)); return `background:color-mix(in srgb, var(--accent) ${pct}%, transparent)`; }
-function render(){
-  const {rows,asOf,excl,c0,c1,cohort}=compute();
-  document.getElementById("asofl").textContent="as of "+dmy(asOf);
-  document.getElementById("cohortl").textContent=`${dmy(c0)} \u2192 ${dmy(c1)} \u00b7 ${cohort.toLocaleString('en-IN')} leads`;
-  const nameOf = DIM==="source"?(k=>DATA.sources[k]):(k=>DATA.owners[k]);
-  const nStg=STG.size, allStg=(DATA.stages||[]).filter((x,i)=>stageCls(i)!=="test").length;
-  const LIFELABEL={open:"open stages only",all:"all stages incl. closed"};
-  const stgLabel = nStg===allStg ? "all stages incl. closed"
-                 : nStg===0 ? "no stages selected"
-                 : LIFE==="open" && document.querySelector('#seglife button.on') ? "open stages only"
-                 : `${nStg} of ${allStg} stages selected`;
-  // Age is recomputed from the creation date, which is immutable. Everything else —
-  // stage, last activity, follow-up date — exists only as its CURRENT value, so an
-  // as-of in the past mixes historical ages with today's flags. Say so rather than
-  // let someone read it as a snapshot of how things looked that day.
-  const backdated = asOf < LASTFULL;
-  const warnEl=document.getElementById("asofwarn");
-  if(warnEl){
-    warnEl.hidden=!backdated;
-    if(backdated) warnEl.innerHTML=`<b>Back-dated as-of.</b> Ages are recomputed to ${dmy(asOf)}, but stage, `
-      +`last activity and follow-up dates are only stored as their <b>current</b> values \u2014 so Pending, `
-      +`No-activity, Overdue and the stage filter still reflect today, not ${dmy(asOf)}. `
-      +`This is not a historical snapshot; use it to re-age a cohort, not to reconstruct a past view.`;
-  }
-  document.getElementById("mtitle").textContent = `Ageing matrix — cells: ${METLABEL[METRIC]} · by ${DIM==="source"?"source":"lead owner"} · ${stgLabel}`;
-  document.getElementById("ownfilter").style.display = DIM==="owner"?"":"none";
-  const thead=document.getElementById("thead");
-  thead.innerHTML="<tr><th>"+(DIM==="source"?"Source":"Lead owner")+"</th>"+BUCKETS.map(b=>`<th>${b[0]}</th>`).join("")
-    +'<th class="grp">Leads</th><th>Pending</th><th>No act &gt;10d</th><th>Overdue FU</th><th>Avg att</th><th>% pend</th></tr>';
-  let keys=Object.keys(rows).map(Number);
-  const q=document.getElementById("ownfilter").value.trim().toLowerCase();
-  if(DIM==="owner"&&q) keys=keys.filter(k=>nameOf(k).toLowerCase().includes(q));
-  keys.sort((a,b)=>rows[b].tAll-rows[a].tAll);
-  let cmax=0; keys.forEach(k=>rows[k].b.forEach(c=>{ if(c[METRIC]>cmax)cmax=c[METRIC]; }));
-  const body=document.getElementById("rows"); body.innerHTML="";
-  keys.forEach(k=>{
-    const r=rows[k];
-    const cells=r.b.map(c=>{ const v=c[METRIC]; return `<td><span class="cell" style="${heat(v,cmax)}">${v||""}</span></td>`; }).join("");
-    const pp=r.tAll?Math.round(100*r.tPend/r.tAll):0;
-    body.insertAdjacentHTML("beforeend",`<tr><td class="dim">${nameOf(k)}</td>${cells}<td class="tot">${r.tAll}</td><td class="pend">${r.tPend}</td><td class="warncol">${r.tNoact}</td><td class="warncol">${r.tOver}</td><td>${r.tAll?(r.tAtt/r.tAll).toFixed(1):"0"}</td><td>${pp}%</td></tr>`);
-  });
-  const T=mk();
-  keys.forEach(k=>{ const r=rows[k]; r.b.forEach((c,i)=>{["all","pend","noact","over"].forEach(m=>T.b[i][m]+=c[m]);}); T.tAll+=r.tAll;T.tPend+=r.tPend;T.tNoact+=r.tNoact;T.tOver+=r.tOver;T.tAtt+=r.tAtt; });
-  const tcells=T.b.map(c=>`<td>${c[METRIC]||""}</td>`).join("");
-  body.insertAdjacentHTML("beforeend",`<tr class="totrow"><td>Total</td>${tcells}<td>${T.tAll}</td><td>${T.tPend}</td><td>${T.tNoact}</td><td>${T.tOver}</td><td>${T.tAll?(T.tAtt/T.tAll).toFixed(1):"0"}</td><td>${T.tAll?Math.round(100*T.tPend/T.tAll):0}%</td></tr>`);
-  if(!keys.length) body.innerHTML=`<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:16px">No rows match.</td></tr>`;
-  document.getElementById("t-tot").textContent=T.tAll;
-  document.getElementById("t-pend").textContent=T.tPend;
-  document.getElementById("t-noact").textContent=T.tNoact;
-  document.getElementById("t-over").textContent=T.tOver;
-  document.getElementById("t-avgatt").textContent=T.tAll?(T.tAtt/T.tAll).toFixed(1):"0";
-  document.getElementById("trunc").textContent = DIM==="owner" ? (q?`Owners matching “${q}”.`:`All ${keys.length} owners with leads in scope, ranked by volume.`) : "";
-  document.getElementById("xnote").innerHTML=`<b>Cross-check in LSQ:</b> a bucket cell = Source (row) × Created On in the bucket's date range. <b>Pending</b> = First Call empty, within the selected lifecycle · <b>No act &gt;10d</b> = last activity &gt;10 days before as-of · <b>Overdue FU</b> = follow-up date already past. Every count reduces to a created-date range, so it reconciles with the LSQ dashboard (IST). <b>Avg att</b> = mean of logged reach-out attempts (mx_Reached_Out_Attempts; empty = 0 attempts) — a floor, since attempts are under-logged.`;
-  document.getElementById("foot").innerHTML=`As of ${dmy(asOf)} (IST). Ageing the cohort <b>created ${dmy(c0)} \u2192 ${dmy(c1)}</b> (${cohort.toLocaleString("en-IN")} leads); the pull itself starts ${isoToDMY(DATA.base)}, and anything created earlier is excluded because its older buckets would be incomplete. <b>Stages: ${stgLabel}</b>${excl?` — ${excl.toLocaleString("en-IN")} lead(s) in the cohort excluded by the stage filter`:""}. Closed = ProspectStage is Not Interested / Did Not Pick / Junk / Cold / Disqualified; a closed lead is finished, not ageing. Fields: created, first-call, last-activity (ProspectActivityDate_Max), follow-up (mx_Follow_Up_Date), attempts (mx_Reached_Out_Attempts).`;
-}
-function sync(){document.querySelectorAll("#srcs .chk").forEach(c=>c.classList.toggle("on",SEL.has(+c.dataset.k)));}
-function srcOrder(){ const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++; return Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]); }
-function chips(){ const box=document.getElementById("srcs"); box.innerHTML=""; srcOrder().forEach(k=>{ const c=document.createElement("span"); c.className="chk on"; c.dataset.k=k; c.innerHTML=`<span class="dot"></span>${DATA.sources[k]}`; c.onclick=()=>{SEL.has(k)?SEL.delete(k):SEL.add(k); sync(); render();}; box.appendChild(c); }); }
-function resetSel(){ SEL.clear(); DATA.sources.forEach((s,i)=>SEL.add(i)); }
-document.querySelectorAll("#segdim button").forEach(b=>b.onclick=()=>{ DIM=b.dataset.dim; document.querySelectorAll("#segdim button").forEach(x=>x.classList.toggle("on",x===b)); render(); });
-document.querySelectorAll("#segmetric button").forEach(b=>b.onclick=()=>{ METRIC=b.dataset.m; document.querySelectorAll("#segmetric button").forEach(x=>x.classList.toggle("on",x===b)); render(); });
-// Lifecycle is now a PRESET over the stage chips rather than a separate filter, so
-// there is one place that decides which stages count and it is always visible.
-function applyLife(){
-  STG.clear();
-  (DATA.stages||[]).forEach((lbl,i)=>{
-    const c=stageCls(i);
-    if(c==="test") return;                       // test rows never count
-    if(LIFE==="open" && c!=="open") return;
-    STG.add(i);
-  });
-  drawStages();
-}
-function drawStages(){
-  const box=document.getElementById("stgchips"); if(!box) return;
-  box.innerHTML="";
-  const cnt=new Array((DATA.stages||[]).length).fill(0);
-  for(const L of DATA.leads){ if(!poolSkip(L) && dayIdx(L[1])>=0) cnt[L[9]]++; }
-  (DATA.stages||[]).map((s,i)=>i).filter(i=>stageCls(i)!=="test")
-    .sort((a,b)=>cnt[b]-cnt[a]).forEach(i=>{
-      const c=document.createElement("span");
-      c.className="chk"+(STG.has(i)?" on":""); c.dataset.i=i;
-      const cls=stageCls(i);
-      c.title=`${DATA.stages[i]} — ${cls} · ${cnt[i].toLocaleString('en-IN')} leads in the pulled cohort`;
-      c.innerHTML=`<span class="dot"></span>${DATA.stages[i]}`;
-      c.onclick=()=>{ STG.has(i)?STG.delete(i):STG.add(i);
-        document.querySelectorAll("#seglife button").forEach(x=>x.classList.remove("on"));
-        drawStages(); render(); };
-      box.appendChild(c);
-    });
-}
-document.querySelectorAll("#seglife button").forEach(b=>b.onclick=()=>{ LIFE=b.dataset.l; document.querySelectorAll("#seglife button").forEach(x=>x.classList.toggle("on",x===b)); applyLife(); render(); });
-document.getElementById("st-all").onclick=()=>{ STG.clear(); (DATA.stages||[]).forEach((s,i)=>{ if(stageCls(i)!=="test") STG.add(i); }); document.querySelectorAll("#seglife button").forEach(x=>x.classList.toggle("on",x.dataset.l==="all")); LIFE="all"; drawStages(); render(); };
-document.getElementById("st-none").onclick=()=>{ STG.clear(); document.querySelectorAll("#seglife button").forEach(x=>x.classList.remove("on")); drawStages(); render(); };
-document.getElementById("ownfilter").oninput=render;
-document.getElementById("s-all").onclick=()=>{ resetSel(); sync(); render(); };
-document.getElementById("s-exint").onclick=()=>{ SEL.clear(); DATA.sources.forEach((s,i)=>{ if(s!=="Internshala") SEL.add(i); }); sync(); render(); };
+const nf=n=>n.toLocaleString("en-IN");
+const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>m)m=d; } return m; })();
 const LASTFULL=lastFullDay(maxDay);
-const AS=document.getElementById("asof"); AS.min=DATA.base; AS.max=idxToStr(maxDay);
-AS.value=idxToStr(LASTFULL); AS.onchange=render;
-const C0=document.getElementById("a-c0"), C1=document.getElementById("a-c1");
-[C0,C1].forEach(e=>{ e.min=DATA.base; e.max=idxToStr(maxDay); e.onchange=render; });
-C0.value=DATA.base; C1.value=idxToStr(LASTFULL);
-resetSel(); applyLife(); chips(); render();
+// lifecycle classes come from the data file (stage_class): open = still being worked, lost = closed, won = enrolled
+const STAGES=(DATA.stages||[]).map((s,i)=>i).filter(i=>stageCls(i)!=="test");
+const OPEN_STG=STAGES.filter(i=>stageCls(i)==="open");
+const CLS_NAME={open:"Open",lost:"Closed",won:"Enrolled"};
+
+function mk(){ return {b:BUCKETS.map(()=>({all:0,pend:0,noact:0,over:0})), all:0,pend:0,noact:0,over:0,att:0}; }
+function add(r,L,asOf){
+  const age=asOf-dayIdx(L[1]), c=r.b[bkt(age)];
+  const pend=isAttempted(L)?0:1;
+  const la=dayIdx(L[5]), noact=(la!=null && asOf-la>=NOACT)?1:0;
+  const over=isOverdue(L,asOf)?1:0;
+  c.all++; c.pend+=pend; c.noact+=noact; c.over+=over;
+  r.all++; r.pend+=pend; r.noact+=noact; r.over+=over; r.att+=(L[7]||0);
+}
+const bump=(o,k,L,asOf)=>add(o[k]=o[k]||mk(),L,asOf);
+function compute(){
+  const asOf=dateToIdx($("asof").value);
+  const c0=Math.max(0,dateToIdx($("a-c0").value)), c1=Math.min(asOf,dateToIdx($("a-c1").value));
+  const top={}, sub={}, agg=mk(); let cohort=0, excl=0;
+  for(const L of DATA.leads){
+    if(poolSkip(L) || !SEL.has(L[0])) continue;
+    const d=dayIdx(L[1]); if(d==null || d<0 || d>asOf || d<c0 || d>c1) continue;
+    const c=centreOf(L); if(CSEL.size && !CSEL.has(c)) continue;
+    cohort++;
+    if(STG.size && !STG.has(L[9])){ excl++; continue; }      // nothing ticked = all stages
+    add(agg,L,asOf);
+    if(DIM==="source"){ const g=srcGroupOf(L[0]); bump(top,g,L,asOf); bump(sub[g]=sub[g]||{},L[0]+":"+(L[22]??""),L,asOf); }
+    else { bump(top,c,L,asOf); bump(sub[c]=sub[c]||{},L[4],L,asOf); }
+  }
+  return {top,sub,agg,asOf,c0,c1,cohort,excl};
+}
+const sameSet=(a,b)=>a.size===b.length && b.every(x=>a.has(x));
+function stageScope(){ return !STG.size||STG.size===STAGES.length ? "all stages" : sameSet(STG,OPEN_STG) ? "open stages only" : `${STG.size} of ${STAGES.length} stages`; }
+
+function render(){
+  const {top,sub,agg,asOf,c0,c1,cohort,excl}=compute();
+  const METRIC=$("ag-metric").value, scope=stageScope();
+  $("ag-reset").hidden = $("a-c0").value===DATA.base && $("a-c1").value===idxToStr(LASTFULL) && $("asof").value===idxToStr(LASTFULL)
+    && SEL.size===DATA.sources.length && !CSEL.size && sameSet(STG,OPEN_STG) && METRIC==="all" && !$("ownfilter").value;
+  // lifecycle, said out loud: which stages are in, which are out, and why
+  const list=c=>STAGES.filter(i=>stageCls(i)===c).map(i=>DATA.stages[i]).join(", ")||"—";
+  $("ag-ctx-q").innerHTML = scope==="open stages only"
+    ? `<span><b>Open pipeline only:</b> <span class="q">closed and enrolled leads are left out (${nf(excl)} in this cohort), because a finished lead isn't ageing.</span></span>`
+    : `<span><b>Stages: ${scope}.</b> <span class="q">${excl?nf(excl)+" leads in this cohort are outside the selected stages.":"Every stage is included, closed and enrolled too."}</span></span>`;
+  $("ag-ctx-body").innerHTML=`<p>Each lead stage belongs to a lifecycle class. Ageing is meant for the <b>open</b> pipeline: a lead that is Not Interested, a Did Not Pick, Junk or already Enrolled is finished, so counting its age would make the backlog look older than it is. The default is <b>open stages only</b>; change it in <b>Stages</b> (pick “All stages”, or tick individual stages).</p>`
+    +`<p><b>Open</b> (ageing): ${list("open")}</p><p><b>Closed</b> (finished): ${list("lost")}</p><p><b>Enrolled</b>: ${list("won")}</p>`;
+  // Age is recomputed from the creation date, which is immutable; stage, last activity and follow-up exist only
+  // as their CURRENT value, so a back-dated as-of mixes historical ages with today's flags
+  const warn=$("asofwarn"); warn.hidden=asOf>=LASTFULL;
+  if(!warn.hidden) warn.innerHTML=`<b>Back-dated as-of.</b> Ages are recomputed to ${dmy(asOf)}, but stage, last activity and follow-up dates are only stored as their <b>current</b> values — so Pending, No activity, Overdue and the stage filter still reflect today. Use it to re-age a cohort, not to reconstruct a past view.`;
+  // tiles
+  const T=agg, tile=(n,l,cls)=>`<div class="tile ${cls||""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  const pc=v=>T.all?` <span style="opacity:.75">· ${Math.round(100*v/T.all)}%</span>`:"";
+  $("ag-tiles").innerHTML=tile(nf(T.all),`Leads in cohort<br><span style="opacity:.75">${scope}</span>`,"hi")
+    +tile(nf(T.pend),"Pending first attempt"+pc(T.pend),"unc")
+    +tile(nf(T.noact),`No activity ${NOACT}+ days`+pc(T.noact),"warn")
+    +tile(nf(T.over),"Overdue follow-up"+pc(T.over),"warn")
+    +tile(T.all?(T.att/T.all).toFixed(1):"—","Avg attempts / lead");
+  // table: parent bands like Talk Time / Effort
+  const own=DIM==="owner";
+  $("thead").innerHTML=`<tr class="ef-band"><th></th><th colspan="${BUCKETS.length}" class="ef-g ef-s">Age since creation · cells: ${METLABEL[METRIC]}</th><th colspan="6" class="ef-g ef-s">Pipeline flags</th></tr>`
+    +`<tr><th>${own?"Centre / counsellor":"Source"}</th>`+BUCKETS.map((b,i)=>`<th${i?"":' class="ef-s"'}>${b[0]}</th>`).join("")
+    +`<th class="ef-s">Leads</th><th>Pending</th><th>No act. ${NOACT}+d</th><th>Overdue FU</th><th>Avg att.</th><th>% pending</th></tr>`;
+  let cmax=1; Object.values(top).forEach(r=>r.b.forEach(c=>{ if(c[METRIC]>cmax) cmax=c[METRIC]; }));
+  const row=(name,r,cls,extra)=>{
+    const tot=(cls||"").includes("totrow");
+    const cells=r.b.map((c,i)=>{ const v=c[METRIC]; return `<td${i?"":' class="ef-s"'}>${tot?(v?nf(v):""):`<span class="cell" style="${heat(v,cmax)}">${v?nf(v):""}</span>`}</td>`; }).join("");
+    return `<tr class="${cls||""}" ${extra||""}><td class="dim">${name}</td>${cells}`
+      +`<td class="ef-s tot">${nf(r.all)}</td><td class="pend">${nf(r.pend)}</td><td class="warncol">${nf(r.noact)}</td><td class="warncol">${nf(r.over)}</td>`
+      +`<td>${r.all?(r.att/r.all).toFixed(1):"—"}</td><td>${r.all?Math.round(100*r.pend/r.all)+"%":"—"}</td></tr>`;
+  };
+  const muted=x=>` <span class="stl-sub">${x}</span>`;
+  const q=own?$("ownfilter").value.trim().toLowerCase():"";
+  let html=row("Total",agg,"totrow stl-top"), shown=0, ng=0;
+  const groups=own ? Object.keys(top).sort((a,b)=>(CTR_LAST.has(a)-CTR_LAST.has(b))||top[b].all-top[a].all) : SRC_GROUPS.filter(g=>top[g]);
+  groups.forEach(g=>{
+    let ks=Object.keys(sub[g]).sort((x,y)=>sub[g][y].all-sub[g][x].all);
+    if(own) ks=ks.filter(k=>String(DATA.owners[k]??"").toLowerCase().includes(q));
+    if(!ks.length) return; shown+=ks.length; ng++;
+    const open=!!q||OPEN.has(g), n=Object.keys(sub[g]).length;
+    html+=row(g+(own?muted(n+" counsellor"+(n>1?"s":"")):""),top[g],"stl-g"+(open?" open":""),`data-g="${g}" tabindex="0" aria-expanded="${open}"`);
+    if(open) ks.forEach(k=>{
+      if(own) return html+=row(DATA.owners[k]??"—",sub[g][k],"stl-c");
+      const [bi,ri]=k.split(":"), bn=DATA.sources[+bi], raw=ri===""?bn:RAW[+ri]==="—"?"(blank)":RAW[+ri];
+      html+=row(raw+(g==="Others"&&raw!==bn?muted(bn):""),sub[g][k],"stl-c");
+    });
+  });
+  if(!shown) html+=`<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:16px">No ${own?"counsellors":"rows"} match.</td></tr>`;
+  const rows=$("rows"); rows.innerHTML=html;
+  rows.querySelectorAll("tr.stl-g").forEach(tr=>{ const tg=()=>{ if(q) return; const g=tr.dataset.g; OPEN.has(g)?OPEN.delete(g):OPEN.add(g); render(); };
+    tr.onclick=tg; tr.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tg(); } }; });
+  $("trunc").textContent = own ? (q?`${shown} counsellor${shown!==1?"s":""} matching “${q}”, in ${ng} centre${ng!==1?"s":""}.`:`${ng} centres, ranked by leads. Click a centre to see its counsellors.`)
+                               : "Click a group to see the raw LSQ Source values behind it.";
+  $("ownfilter").style.display=own?"":"none";
+  // definitions fold-out
+  const DEFS=[
+    ["Cohort",`leads created ${dmy(c0)} → ${dmy(c1)} (IST), ${nf(cohort)} leads before the stage filter, for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}. Anything created before ${isoToDMY(DATA.base)} is outside the pull, so its older buckets would be incomplete.`],
+    ["Age",`as-of date (${dmy(asOf)}) − creation date, in whole IST days.`],
+    ["Pending","no sign of an attempt: no attempt count, first-call time or connect. Same rule as every report."],
+    [`No act. ${NOACT}+d`,`last activity (ProspectActivityDate_Max) ${NOACT} or more days before the as-of date — the same line as the 8+ days age bucket. Leads with no activity at all are counted as Pending, not here.`],
+    ["Overdue FU","open lead whose follow-up date (mx_Follow_Up_Date) is before the as-of date, with no activity since it fell due. Same rule as the Owner Scorecard and Overview."],
+    ["Avg att.","mean of logged reach-out attempts (mx_Reached_Out_Attempts; empty = 0). A floor, since attempts are under-logged."],
+    ["Stages",`${scope}. Lifecycle classes: open = still being worked, closed = finished without enrolling, enrolled. See “What counts as open” above.`],
+    ["Source groups","Meta, Google and Internshala have their own rows; every other source is under <b>Others</b>, expanding to the raw LSQ Source values."],
+    ["Centre","the counsellor's centre, from their LSQ <b>Admission(s) &lt;centre&gt;</b> user group."],
+  ];
+  $("ag-foot").innerHTML=`<summary>How this is measured<span>Definitions for every column · as of ${dmy(asOf)}</span></summary>`
+    +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("")
+    +`<div><b>Cross-check in LSQ:</b> a bucket cell = the row's source or owner × Created On in that bucket's date range, within the selected stages.</div>`;
+}
+
+// ---- controls ----
+const srcSel=$("ag-src"), ctrSel=$("ag-ctr"), stgSel=$("ag-stg");
+const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++;
+srcSel.innerHTML=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]).map(k=>`<option value="${k}">${DATA.sources[k]}</option>`).join("");
+srcSel._presets=[{label:"All except Internshala",pick:()=>[...srcSel.options].forEach(o=>o.selected=o.textContent!=="Internshala")}];
+ctrSel.innerHTML=[...new Set(OC)].sort((a,b)=>(CTR_LAST.has(a)-CTR_LAST.has(b))||a.localeCompare(b)).map(c=>`<option>${c}</option>`).join("");
+if(!OC.length) ctrSel.style.display="none";
+// stages: each option says its lifecycle class and size; presets cover the two common scopes
+const scnt=new Array((DATA.stages||[]).length).fill(0);
+for(const L of DATA.leads){ if(!poolSkip(L) && dayIdx(L[1])>=0) scnt[L[9]]++; }
+stgSel.innerHTML=STAGES.slice().sort((a,b)=>scnt[b]-scnt[a]).map(i=>`<option value="${i}" data-desc="${CLS_NAME[stageCls(i)]||stageCls(i)} · ${nf(scnt[i])} leads">${DATA.stages[i]}</option>`).join("");
+stgSel._presets=[{label:"Open stages only",pick:()=>[...stgSel.options].forEach(o=>o.selected=stageCls(+o.value)==="open")}];
+stgSel._label=sel=>sel.length===STAGES.length?"All stages":sel.length&&sameSet(new Set(sel.map(o=>+o.value)),OPEN_STG)?"Open stages only":null;
+const setOpenStages=()=>{ [...stgSel.options].forEach(o=>o.selected=stageCls(+o.value)==="open"); STG.clear(); OPEN_STG.forEach(i=>STG.add(i)); };
+srcSel.onchange=()=>{ const p=[...srcSel.selectedOptions].map(o=>+o.value); SEL.clear(); (p.length?p:DATA.sources.map((_,i)=>i)).forEach(k=>SEL.add(k)); render(); };
+ctrSel.onchange=()=>{ CSEL.clear(); [...ctrSel.selectedOptions].forEach(o=>CSEL.add(o.value)); render(); };
+stgSel.onchange=()=>{ STG.clear(); [...stgSel.selectedOptions].forEach(o=>STG.add(+o.value)); render(); };
+$("ag-metric").onchange=render;
+$("ownfilter").oninput=render;
+document.querySelectorAll("#ag-seg button").forEach(bt=>bt.onclick=()=>{ DIM=bt.dataset.v; document.querySelectorAll("#ag-seg button").forEach(x=>x.classList.toggle("on",x===bt)); render(); });
+const AS=$("asof"), C0=$("a-c0"), C1=$("a-c1");
+[AS,C0,C1].forEach(e=>{ e.min=DATA.base; e.max=idxToStr(maxDay); e.onchange=render; });
+const defaults=()=>{ C0.value=DATA.base; C1.value=idxToStr(LASTFULL); AS.value=idxToStr(LASTFULL); };
+$("ag-reset").onclick=()=>{ defaults(); syncDateText(); $("ownfilter").value="";
+  $("ag-metric").value="all"; $("ag-metric").dispatchEvent(new Event("change"));
+  [...srcSel.options].forEach(o=>o.selected=false); [...ctrSel.options].forEach(o=>o.selected=false); setOpenStages();
+  [srcSel,ctrSel,stgSel].forEach(el=>el.dispatchEvent(new Event("change"))); };
+defaults(); DATA.sources.forEach((s,i)=>SEL.add(i)); setOpenStages(); render();
 
 }
 function init_owner(){
 
 const DATA = window.__DATA;
-const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
-// ---- shared helpers (keep) ----
+// lead columns used: 0 src · 1 created · 3 assignment · 4 owner · 7 attempts · 9 stage
+// (attempted / SLA / overdue / enrolled come from the shared definitions)
+const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000, OC=DATA.owner_centre||[];
+const $=id=>document.getElementById(id);
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
 function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "—"; }   // display only; inputs stay ISO
 function fm(m){ if(m==null)return "—"; if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
-function cc(c){return c>=50?"g":(c>=25?"a":"r");}
 function med(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
-function p90(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length*.9)]; }
-function heat(v,max){ if(!v||!max) return ""; const pct=Math.min(52,Math.round(52*v/max)); return `background:color-mix(in srgb, var(--accent) ${pct}%, transparent)`; }
+const nf=n=>n.toLocaleString("en-IN"), cc=c=>c>=50?"g":(c>=25?"a":"r");
 const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>m)m=d; } return m; })();
-// ---- REPORT-SPECIFIC CODE: implement compute()/render(), wire controls, call render() ----
+const ASOF=lastFullDay(maxDay);   // overdue is judged against the last COMPLETE day, as everywhere
+const SEL=new Set(), CSEL=new Set(), OPEN=new Set();
 
-// as-of day for "overdue follow-up" = latest created day in the dataset (proxy for "today" in IST)
-const ASOF = lastFullDay(maxDay);   // overdue is judged against the last COMPLETE day, as everywhere
-
-// Enrolled = the stage's shared "won" class (isEnrolled); listed in the footer for traceability
-const ENROLLED_LABELS = (DATA.stages||[]).filter((s,i)=>stageCls(i)==="won");
-
-// source order by volume (created cohort)
-const srcOrder=(()=>{
-  const cnt=new Array((DATA.sources||[]).length).fill(0);
-  for(const L of DATA.leads){ if(dayIdx(L[1])>=0) cnt[L[0]]++; }
-  return (DATA.sources||[]).map((_,i)=>i).sort((a,b)=>cnt[b]-cnt[a]);
-})();
-
-// ---- control state ----
-const srcOn = new Set(srcOrder);            // included source indices
-let sortCol = 1;                            // default: Leads
-let sortDir = -1;                           // desc
-
-// column definitions: key drives the sorter; render supplies cell HTML
-const COLS = [
-  {k:"owner",   label:"Owner",        grp:false},
-  {k:"leads",   label:"Leads",        grp:false},
-  {k:"contacted",label:"Attempted",   grp:false},
-  {k:"uncalled",label:"Uncalled",     grp:false},
-  {k:"cov",     label:"Coverage %",   grp:true},
-  {k:"avgatt",  label:"Avg attempts", grp:false},
-  {k:"medspeed",label:"Median speed (from assignment)", grp:false},
-  {k:"sla",     label:"SLA % (all)",  grp:false},
-  {k:"overdue", label:"Overdue FU",   grp:true},
-  {k:"enrolled",label:"Enrolled",     grp:false},
-];
-
-// ---- DOM refs ----
-const dStart=document.getElementById("dStart"), dEnd=document.getElementById("dEnd");
-const slaMinEl=document.getElementById("slaMin"), minVolEl=document.getElementById("minVol");
-const rowfilter=document.getElementById("rowfilter"), srcChips=document.getElementById("srcChips");
-
-// init date range
-dStart.value=DATA.base; dStart.min=DATA.base; dStart.max=idxToStr(maxDay);
-dEnd.value=idxToStr(maxDay); dEnd.min=DATA.base; dEnd.max=idxToStr(maxDay);
-
-// build source chips
-function drawChips(){
-  srcChips.innerHTML="";
-  for(const si of srcOrder){
-    const c=document.createElement("span");
-    c.className="chk"+(srcOn.has(si)?" on":"");
-    c.innerHTML=`<span class="dot"></span>${DATA.sources[si]}`;
-    c.onclick=()=>{ srcOn.has(si)?srcOn.delete(si):srcOn.add(si); drawChips(); render(); };
-    srcChips.appendChild(c);
-  }
+const blank=()=>({leads:0,att:0,attSum:0,speeds:[],hit:0,unmeas:0,over:0,enr:0});
+function add(r,L,sla){
+  r.leads++; r.attSum+=(L[7]||0);
+  if(isAttempted(L)) r.att++;
+  // Clock from ASSIGNMENT, not creation: the owner is only answerable for the time after the lead
+  // landed on their desk. Reassignment is ~fully automated, so a creation clock would mostly
+  // measure how old an inherited lead was.
+  const [v,m]=slaOf(L,L[3],sla);
+  if(v==="unmeas") r.unmeas++; else { if(m!=null) r.speeds.push(m); if(v==="hit") r.hit++; }
+  if(isOverdue(L,ASOF)) r.over++;
+  if(isEnrolled(L)) r.enr++;
 }
-
-// ---- compute per-owner rows for the current window/sources ----
 function compute(){
-  const sIdx=Math.max(0,dateToIdx(dStart.value));
-  const eIdx=dateToIdx(dEnd.value);
-  const sla=Math.max(1,+slaMinEl.value||120);
-  const inWin=d=>d!=null&&d>=0&&d>=sIdx&&d<=eIdx;
-
-  // accumulator per owner
-  const M=new Map();
-  function row(o){ let r=M.get(o); if(!r){ r={owner:o,leads:0,contacted:0,uncalled:0,attSum:0,speeds:[],slaHit:0,overdue:0,enrolled:0,unmeasurable:0}; M.set(o,r);} return r; }
-
+  const a=dateToIdx($("dStart").value), b=dateToIdx($("dEnd").value), lo=Math.max(0,Math.min(a,b)), hi=Math.max(a,b);
+  const sla=Math.max(1,+$("slaMin").value||120);
+  const top={}, sub={}, agg=blank();
   for(const L of DATA.leads){
-    if(poolSkip(L)) continue;
-    const d=dayIdx(L[1]);
-    if(!inWin(d)) continue;
-    if(!srcOn.has(L[0])) continue;
-    const r=row(L[4]);
-    r.leads++;
-    r.attSum+=(L[7]||0);
-    // Clock from ASSIGNMENT, not creation: this owner is only answerable for the
-    // time after the lead landed on their desk. Reassignment is ~fully automated,
-    // so creation-clocked speed mostly measures how old an inherited lead was.
-    const [v,sp]=slaOf(L,L[3],sla);
-    if(isAttempted(L)) r.contacted++; else r.uncalled++;
-    if(v==="unmeas") r.unmeasurable++;
-    else { if(sp!=null) r.speeds.push(sp); if(v==="hit") r.slaHit++; }
-    if(isOverdue(L,ASOF)) r.overdue++;
-    if(isEnrolled(L)) r.enrolled++;
+    if(poolSkip(L) || !SEL.has(L[0])) continue;
+    const d=dayIdx(L[1]); if(d==null||d<lo||d>hi) continue;
+    const c=centreOf(L); if(CSEL.size && !CSEL.has(c)) continue;
+    add(agg,L,sla); add(top[c]=top[c]||blank(),L,sla); const s=sub[c]=sub[c]||{}; add(s[L[4]]=s[L[4]]||blank(),L,sla);
   }
-
-  // derive metrics
-  const rows=[];
-  for(const r of M.values()){
-    r.name=DATA.owners[r.owner];
-    r.cov = r.leads? r.contacted/r.leads*100 : 0;
-    r.avgatt = r.leads? r.attSum/r.leads : 0;
-    r.medspeed = r.speeds.length? med(r.speeds) : null;
-    r.slaBase = r.leads - r.unmeasurable;
-    r.sla = r.slaBase? r.slaHit/r.slaBase*100 : 0;        // uncalled = miss; unmeasurable = excluded
-    r.slaOfContacted = r.speeds.length? r.slaHit/r.speeds.length*100 : 0;
-    r.uncalledPct = r.leads? r.uncalled/r.leads*100 : 0;
-    rows.push(r);
-  }
-  return {rows, sla, sIdx, eIdx};
-}
-
-// ---- totals across ALL owners in scope (min-volume/name filters don't affect totals) ----
-function totals(rows){
-  const t={leads:0,contacted:0,uncalled:0,attSum:0,speeds:[],slaHit:0,overdue:0,enrolled:0,unmeasurable:0};
-  for(const r of rows){
-    t.leads+=r.leads; t.contacted+=r.contacted; t.uncalled+=r.uncalled;
-    t.attSum+=r.attSum; t.slaHit+=r.slaHit; t.overdue+=r.overdue; t.enrolled+=r.enrolled;
-    t.unmeasurable+=r.unmeasurable;
-    t.speeds.push(...r.speeds);
-  }
-  t.cov = t.leads? t.contacted/t.leads*100 : 0;
-  t.avgatt = t.leads? t.attSum/t.leads : 0;
-  t.medspeed = t.speeds.length? med(t.speeds) : null;
-  t.slaBase = t.leads - t.unmeasurable;
-  t.sla = t.slaBase? t.slaHit/t.slaBase*100 : 0;
-  t.slaOfContacted = t.speeds.length? t.slaHit/t.speeds.length*100 : 0;
-  t.uncalledPct = t.leads? t.uncalled/t.leads*100 : 0;
-  return t;
-}
-
-function sortVal(r,k){
-  switch(k){
-    case "owner": return r.name.toLowerCase();
-    case "cov": return r.cov;
-    case "avgatt": return r.avgatt;
-    case "medspeed": return r.medspeed==null?(sortDir<0?-Infinity:Infinity):r.medspeed;
-    case "sla": return r.sla;
-    default: return r[k];
-  }
+  return {top,sub,agg,lo,hi,sla};
 }
 
 function render(){
-  const {rows,sla,sIdx,eIdx}=compute();
-  const t=totals(rows);
-  const minVol=Math.max(0,+minVolEl.value||0);
-  const nameQ=rowfilter.value.trim().toLowerCase();
-
-  // ---- tiles ----
-  document.getElementById("tiles").innerHTML=`
-    <div class="tile hi"><div class="n">${t.leads.toLocaleString()}</div><div class="l">Leads created (window)</div></div>
-    <div class="tile"><div class="n">${t.contacted.toLocaleString()}</div><div class="l">Attempted (any sign of an attempt)</div></div>
-    <div class="tile ${t.cov>=50?'good':(t.cov>=25?'warn':'unc')}"><div class="n">${t.cov.toFixed(1)}%</div><div class="l">Coverage (attempted / leads)</div></div>
-    <div class="tile"><div class="n">${fm(t.medspeed)}</div><div class="l">Median first-attempt speed (from assignment)</div></div>
-    <div class="tile ${t.sla>=50?'good':(t.sla>=25?'warn':'unc')}"><div class="n">${t.sla.toFixed(1)}%</div><div class="l">SLA met (&le;${sla}m, of all leads)</div></div>`;
-
-  // ---- header ----
-  const head=document.getElementById("head");
-  head.innerHTML=COLS.map((c,i)=>{
-    const arrow=i===sortCol?`<span class="sortarrow">${sortDir<0?"▼":"▲"}</span>`:"";
-    return `<th data-i="${i}" class="${c.grp?'grp':''} ${i===sortCol?'sorted':''}">${c.label} ${arrow}</th>`;
-  }).join("");
-  head.querySelectorAll("th").forEach(th=>{
-    th.onclick=()=>{ const i=+th.dataset.i; if(i===sortCol) sortDir*=-1; else { sortCol=i; sortDir=(i===0?1:-1); } render(); };
+  const {top,sub,agg,lo,hi,sla}=compute();
+  $("os-reset").hidden = $("dStart").value===DATA.base && $("dEnd").value===idxToStr(maxDay) && SEL.size===DATA.sources.length && !CSEL.size && sla===120 && !$("rowfilter").value;
+  const T=agg, cov=T.leads?100*T.att/T.leads:0, base=T.leads-T.unmeas, slaAll=base?100*T.hit/base:0;
+  const tile=(n,l,cls)=>`<div class="tile ${cls||""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  $("tiles").innerHTML=tile(nf(T.leads),"Leads created (window)","hi")
+    +tile(cov.toFixed(0)+"%",`Coverage<br><span style="opacity:.75">${nf(T.att)} attempted · ${nf(T.leads-T.att)} uncalled</span>`,cov>=50?"good":cov>=25?"warn":"unc")
+    +tile(fm(med(T.speeds)),"Median first-attempt speed<br><span style=\"opacity:.75\">from assignment</span>")
+    +tile(slaAll.toFixed(0)+"%",`Within the ${sla}-min SLA<br><span style="opacity:.75">${nf(T.hit)} of ${nf(base)} leads</span>`,slaAll>=50?"good":slaAll>=25?"warn":"unc")
+    +tile(nf(T.over),"Overdue follow-up","warn")
+    +tile(nf(T.enr),"Enrolled","good");
+  $("head").innerHTML=`<tr class="ef-band"><th></th><th></th><th colspan="4" class="ef-g ef-s">Coverage</th><th colspan="2" class="ef-g ef-s">Speed from assignment</th><th colspan="2" class="ef-g ef-s">Outcomes</th></tr>`
+    +`<tr><th>Centre / counsellor</th><th>Leads</th><th class="ef-s">Attempted</th><th>Uncalled</th><th>Coverage</th><th>Avg attempts</th>`
+    +`<th class="ef-s">Median</th><th>Within SLA</th><th class="ef-s">Overdue FU</th><th>Enrolled</th></tr>`;
+  const row=(name,r,cls,extra)=>{
+    const tot=(cls||"").includes("totrow"), c=r.leads?100*r.att/r.leads:0, u=r.leads-r.att, b=r.leads-r.unmeas, s=b?100*r.hit/b:null;
+    return `<tr class="${cls||""}" ${extra||""}><td class="dim">${name}</td><td>${nf(r.leads)}</td>`
+      +`<td class="ef-s">${nf(r.att)}</td><td class="${!tot&&u/(r.leads||1)>=.25?"unc":""}">${nf(u)} <span class="fpct">${r.leads?Math.round(100*u/r.leads):0}%</span></td>`
+      +`<td>${tot?c.toFixed(0)+"%":`<span class="cov ${cc(c)}">${c.toFixed(0)}%</span>`}</td><td>${r.leads?(r.attSum/r.leads).toFixed(1):"—"}</td>`
+      +`<td class="ef-s">${fm(med(r.speeds))}</td><td>${s==null?"—":s.toFixed(0)+"%"}</td>`
+      +`<td class="ef-s ${!tot&&r.over?"warncol":""}">${nf(r.over)}</td><td>${nf(r.enr)}</td></tr>`;
+  };
+  const muted=x=>` <span class="stl-sub">${x}</span>`, q=$("rowfilter").value.trim().toLowerCase();
+  let html="", shown=0, ng=0; const parts=[];
+  Object.keys(top).sort((a,b)=>(CTR_LAST.has(a)-CTR_LAST.has(b))||top[b].leads-top[a].leads).forEach(c=>{
+    let ks=Object.keys(sub[c]).sort((x,y)=>sub[c][y].leads-sub[c][x].leads);
+    if(q) ks=ks.filter(k=>String(DATA.owners[k]??"").toLowerCase().includes(q));
+    if(!ks.length) return; ng++; shown+=ks.length;
+    if(q) ks.forEach(k=>parts.push(sub[c][k])); else parts.push(top[c]);
+    const open=!!q||OPEN.has(c), n=Object.keys(sub[c]).length;
+    html+=row(c+muted(n+" counsellor"+(n>1?"s":"")),top[c],"stl-g"+(open?" open":""),`data-g="${c}" tabindex="0" aria-expanded="${open}"`);
+    if(open) ks.forEach(k=>html+=row(DATA.owners[k]??"—",sub[c][k],"stl-c"));
   });
-
-  // ---- rows: apply min-volume + name filter, then sort ----
-  let disp=rows.filter(r=>r.leads>=minVol && (!nameQ||r.name.toLowerCase().includes(nameQ)));
-  const key=COLS[sortCol].k;
-  disp.sort((a,b)=>{ const va=sortVal(a,key),vb=sortVal(b,key); if(va<vb)return sortDir<0?1:-1; if(va>vb)return sortDir<0?-1:1; return a.name.localeCompare(b.name); });
-
-  const body=document.getElementById("body");
-  if(!disp.length){
-    body.innerHTML=`<tr><td colspan="${COLS.length}" style="text-align:center;color:var(--muted);padding:20px">No owners match the current filters.</td></tr>`;
-  } else {
-    body.innerHTML=disp.map(r=>{
-      const covCls=cc(r.cov);
-      const uncCls=r.uncalledPct>=50?"crit":(r.uncalledPct>=25?"warncol":"");
-      return `<tr>
-        <td class="dim owncol">${r.name}</td>
-        <td>${r.leads.toLocaleString()}</td>
-        <td>${r.contacted.toLocaleString()}</td>
-        <td class="${uncCls}">${r.uncalled.toLocaleString()}<span class="muted-pct">${r.uncalledPct.toFixed(0)}%</span></td>
-        <td class="grp"><span class="cov ${covCls}">${r.cov.toFixed(0)}%</span></td>
-        <td>${r.avgatt.toFixed(1)}</td>
-        <td>${smallN(fm(r.medspeed), r.speeds.length)}</td>
-        <td>${smallN(r.sla.toFixed(0)+"%", r.slaBase)}</td>
-        <td class="grp ${r.overdue>0?'warncol':''}">${r.overdue.toLocaleString()}</td>
-        <td>${r.enrolled.toLocaleString()}</td>
-      </tr>`;
-    }).join("");
-  }
-
-  // ---- total row (all owners in scope) ----
-  document.getElementById("foot").innerHTML=`<tr class="totrow">
-    <td class="owncol">Total (${rows.length} owners)</td>
-    <td>${t.leads.toLocaleString()}</td>
-    <td>${t.contacted.toLocaleString()}</td>
-    <td>${t.uncalled.toLocaleString()}<span class="muted-pct">${t.uncalledPct.toFixed(0)}%</span></td>
-    <td class="tot"><span class="cov ${cc(t.cov)}">${t.cov.toFixed(0)}%</span></td>
-    <td>${t.avgatt.toFixed(1)}</td>
-    <td>${fm(t.medspeed)}</td>
-    <td>${t.sla.toFixed(0)}%</td>
-    <td class="tot">${t.overdue.toLocaleString()}</td>
-    <td>${t.enrolled.toLocaleString()}</td>
-  </tr>`;
-
-  // ---- truncation note ----
-  const hiddenVol=rows.filter(r=>r.leads<minVol).length;
-  const hiddenName=rows.filter(r=>r.leads>=minVol && nameQ && !r.name.toLowerCase().includes(nameQ)).length;
-  let tr=`Showing <b>${disp.length}</b> of ${rows.length} owners with leads in scope.`;
-  if(minVol>0) tr+=` Min-volume floor = <b>${minVol}</b> lead(s) — <b>${hiddenVol}</b> owner(s) below the floor hidden.`;
-  if(nameQ) tr+=` Name filter "${rowfilter.value.trim()}" hides <b>${hiddenName}</b> more.`;
-  tr+=` The Total row and tiles include all ${rows.length} in-scope owners regardless of these display filters.`;
-  const unmNote = t.unmeasurable ? ' <b>'+t.unmeasurable.toLocaleString('en-IN')+'</b> contacted lead(s) were first '
-    + 'called <b>before</b> their current assignment (automated reassignment) &mdash; unmeasurable, so they are excluded '
-    + 'from Median speed and from the SLA denominator.' : '';
-  document.getElementById("trunc").innerHTML=tr.replace(/<b>/g,'<b style="color:var(--ink-2)">')+unmNote;
-
-  // ---- cross-check note ----
-  const srcNames=srcOrder.filter(i=>srcOn.has(i)).map(i=>DATA.sources[i]);
-  document.getElementById("xnote").innerHTML=`<b>Cross-check in LSQ.</b> Each owner's <b>Leads</b> = Manage Leads filtered by <b>Owner = [name]</b> + <b>Created On</b> between <b>${isoToDMY(dStart.value)}</b> and <b>${isoToDMY(dEnd.value)}</b> (IST), Source in {${srcNames.join(", ")||"—"}}. The Total leads count reconciles with the LSQ lead-inflow dashboard for the same window (IST). Speed and SLA run from the first-call timestamp minus the <b>assignment</b> date (mx_Date_of_Lead_Assignment).`;
-
-  // ---- footer ----
-  const enrolTxt = ENROLLED_LABELS.length? `stage class “won”: ${ENROLLED_LABELS.join(", ")}` : `no stage is classed “won” in this dataset`;
-  document.getElementById("footer").innerHTML=`
-    As-of day <b>${dmy(ASOF)}</b> · window <b>${isoToDMY(dStart.value)}</b> → <b>${isoToDMY(dEnd.value)}</b> · all dates &amp; times in <b>${DATA.tz||"IST"}</b>.<br>
-    Cohort (created ${isoToDMY(DATA.base)}+) pulled complete; leads created before that are excluded (their buckets would be biased).<br>
-    Owner = current lead owner (OwnerIdName), not the creator or first-toucher.<br>
-    Avg attempts is a <b>floor</b> — reach-outs are under-logged (mx_Reached_Out_Attempts). Attempted = attempt count &gt; 0, a first-call time, or a connect (same rule on every report).<br>
-    Overdue FU = open lead whose follow-up date is before the as-of day, with no activity since it fell due. Enrolled = ${enrolTxt}.`;
+  // during a search the total reconciles the matching counsellors only
+  const sum=parts.reduce((a,r)=>{ ["leads","att","attSum","hit","unmeas","over","enr"].forEach(k=>a[k]+=r[k]); a.speeds.push(...r.speeds); return a; },blank());
+  $("body").innerHTML=row(q?`Total (${shown} matching)`:"Total",q?sum:agg,"totrow stl-top")+html
+    +(shown?"":`<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px">No counsellors match.</td></tr>`);
+  $("body").querySelectorAll("tr.stl-g").forEach(tr=>{ const tg=()=>{ if(q) return; const g=tr.dataset.g; OPEN.has(g)?OPEN.delete(g):OPEN.add(g); render(); };
+    tr.onclick=tg; tr.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tg(); } }; });
+  $("trunc").textContent=q?`${shown} counsellor${shown!==1?"s":""} matching “${q}”, in ${ng} centre${ng!==1?"s":""}.`:`${ng} centres, ranked by leads. Click a centre to see its counsellors.`;
+  const DEFS=[
+    ["Leads",`leads created ${dmy(lo)} → ${dmy(hi)} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}. Owner = the <b>current</b> lead owner (OwnerIdName), not the creator or first caller.`],
+    ["Attempted · Uncalled · Coverage","any sign of an attempt (attempt count &gt; 0, a first-call time or a connect — the rule on every report) · the rest · attempted ÷ leads."],
+    ["Avg attempts","logged reach-out attempts per lead (mx_Reached_Out_Attempts). A floor, since attempts are under-logged."],
+    ["Median · Within SLA",`first-call time minus the <b>assignment</b> date (mx_Date_of_Lead_Assignment), and the share of leads first attempted within ${sla} min. Uncalled leads count as misses. ${agg.unmeas?nf(agg.unmeas)+" attempted leads can't be timed (no first-call time, or called before their current assignment) and are left out of both.":""}`],
+    ["Overdue FU",`open lead whose follow-up date is before ${dmy(ASOF)} (the last complete day), with no activity since it fell due.`],
+    ["Enrolled","lead stage class “won”."],
+    ["Centre","the counsellor's LSQ <b>Admission(s) &lt;centre&gt;</b> user group; deactivated owners fall back to the centre in their name."],
+    ["Cross-check in LSQ",`Manage Leads filtered by Owner = [name] and Created On ${dmy(lo)} → ${dmy(hi)} (IST), with the same sources.`],
+  ];
+  $("os-foot").innerHTML=`<summary>How this is measured<span>Definitions for every column · as of ${dmy(ASOF)}</span></summary>`
+    +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("");
 }
 
-// ---- wire controls ----
-document.getElementById("srcAll").onclick=()=>{ srcOrder.forEach(i=>srcOn.add(i)); drawChips(); render(); };
-document.getElementById("srcNoIntern").onclick=()=>{
-  srcOrder.forEach(i=>{ if(String(DATA.sources[i]).toLowerCase().includes("internshala")) srcOn.delete(i); else srcOn.add(i); });
-  drawChips(); render();
-};
-[dStart,dEnd,slaMinEl,minVolEl].forEach(el=>el.addEventListener("input",render));
-rowfilter.addEventListener("input",render);
-drawChips();
-render();
-
-// ---- theme toggle (keep; default light) ----
+// ---- controls ----
+const srcSel=$("os-src"), ctrSel=$("os-ctr");
+const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++;
+srcSel.innerHTML=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]).map(k=>`<option value="${k}">${DATA.sources[k]}</option>`).join("");
+srcSel._presets=[{label:"All except Internshala",pick:()=>[...srcSel.options].forEach(o=>o.selected=o.textContent!=="Internshala")}];
+ctrSel.innerHTML=[...new Set(OC)].sort((a,b)=>(CTR_LAST.has(a)-CTR_LAST.has(b))||a.localeCompare(b)).map(c=>`<option>${c}</option>`).join("");
+if(!OC.length) ctrSel.style.display="none";
+srcSel.onchange=()=>{ const p=[...srcSel.selectedOptions].map(o=>+o.value); SEL.clear(); (p.length?p:DATA.sources.map((_,i)=>i)).forEach(k=>SEL.add(k)); render(); };
+ctrSel.onchange=()=>{ CSEL.clear(); [...ctrSel.selectedOptions].forEach(o=>CSEL.add(o.value)); render(); };
+document.querySelectorAll("#os-fbar .fnum button").forEach(b=>b.onclick=()=>{ const i=$("slaMin"); i.value=Math.max(1,(+i.value||0)+(+b.dataset.d)); render(); });
+$("slaMin").oninput=render; $("rowfilter").oninput=render;
+const DS=$("dStart"), DE=$("dEnd");
+[DS,DE].forEach(e=>{ e.min=DATA.base; e.max=idxToStr(maxDay); e.onchange=render; });
+DS.value=DATA.base; DE.value=idxToStr(maxDay);
+$("os-reset").onclick=()=>{ DS.value=DATA.base; DE.value=idxToStr(maxDay); syncDateText(); $("slaMin").value=120; $("rowfilter").value="";
+  [...srcSel.options].forEach(o=>o.selected=false); [...ctrSel.options].forEach(o=>o.selected=false);
+  srcSel.dispatchEvent(new Event("change")); ctrSel.dispatchEvent(new Event("change")); };
+DATA.sources.forEach((s,i)=>SEL.add(i)); render();
 
 }
 function init_attempts(){
 
 const DATA = window.__DATA;
-const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
-// ---- shared helpers (keep) ----
+// lead columns used: 0 src · 1 created · 4 owner · 7 attempts · 21 interested-on · 22 raw Source
+// (attempted / connected come from the shared isAttempted / isConnected)
+const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000, RAW=DATA.raw_sources||[], OC=DATA.owner_centre||[];
+const $=id=>document.getElementById(id);
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
 function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
-function fm(m){ if(m==null)return "—"; if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
-function cc(c){return c>=50?"g":(c>=25?"a":"r");}
-function med(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
-function p90(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length*.9)]; }
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "—"; }   // display only; inputs stay ISO
+const nf=n=>Math.round(n).toLocaleString("en-IN"), av=v=>v==null?"—":v.toFixed(2);
+const cc=c=>c>=50?"g":(c>=25?"a":"r");
 function heat(v,max){ if(!v||!max) return ""; const pct=Math.min(52,Math.round(52*v/max)); return `background:color-mix(in srgb, var(--accent) ${pct}%, transparent)`; }
 const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>m)m=d; } return m; })();
-// ---- REPORT-SPECIFIC CODE: implement compute()/render(), wire controls, call render() ----
 
-// ---- breakdown dimensions ----
-// one place that defines every per-dimension difference, so ST.by never needs an if-chain
-const OC=DATA.owner_centre||[];
-const BY={
-  src:   { key:L=>L[0], label:k=>DATA.sources[k]??"—", noun:"source", head:"By source",     lsq:"Source",     filter:false },
-  centre:{ key:L=>OC[L[4]]||"No centre", label:k=>k,   noun:"centre", head:"By centre",     lsq:"Lead Owner (grouped by centre)", filter:true, ph:"Filter centre…" },
-  owner: { key:L=>L[4], label:k=>DATA.owners[k]??"—",  noun:"owner",  head:"By lead owner", lsq:"Lead Owner", filter:true, ph:"Filter owner name…" }
-};
-function dim(){ return BY[ST.by] || BY.src; }
+// which date picks the leads: creation, or the (latest) interested-in date — which also catches returning leads
+const BASIS={created:1, interested:21};
+let DIM="source"; const SEL=new Set(), CSEL=new Set(), OPEN=new Set();
+const bucket=a=>a<=0?0 : a<=2?1 : a<=5?2 : 3;
+const blank=()=>({leads:0,att:0,conn:0,total:0,connAtt:0,b:[0,0,0,0]});
+function add(r,L){ const a=L[7]||0; r.leads++; r.total+=a; r.b[bucket(a)]++;
+  if(isAttempted(L)) r.att++;
+  if(isConnected(L)){ r.conn++; r.connAtt+=a; } }
+const bump=(o,k,L)=>add(o[k]=o[k]||blank(),L);
 
-
-// ---- state ----
-const ST={ d0:0, d1:maxDay, srcs:new Set((DATA.sources||[]).map((_,i)=>i)), by:"src", minVol:5, rowFilter:"", sortKey:"leads", sortDir:-1 };
-
-// bucket a lead's attempt count into 0 / 1-2 / 3-5 / 6+
-function bucket(a){ return a<=0?0 : a<=2?1 : a<=5?2 : 3; }
-const BUCKET_LABELS=["0","1–2","3–5","6+"];
-
-function fmtInt(n){ return n==null?"—":Math.round(n).toLocaleString("en-IN"); }
-function fmtAvg(n){ return n==null?"—":n.toFixed(2); }
-function fmtPct(n){ return n==null?"—":n.toFixed(0)+"%"; }
-
-// columns: key, label, group?(distribution), numeric getter for sort, cell renderer
-const COLS=[
-  {key:"name",    label:"", grp:false},
-  {key:"leads",   label:"Leads", grp:false},
-  {key:"att",     label:"Attempted", grp:false},
-  {key:"conn",    label:"Connected", grp:false},
-  {key:"connPct", label:"Connect %", grp:false},
-  {key:"notConn", label:"Not connected", grp:false},
-  {key:"total",   label:"Total attempts", grp:false},
-  {key:"avg",     label:"Avg / lead", grp:false},
-  {key:"avgConn", label:"Avg to connect", grp:false},
-  {key:"b0",      label:"0 att", grp:true},
-  {key:"b1",      label:"1–2", grp:true},
-  {key:"b2",      label:"3–5", grp:true},
-  {key:"b3",      label:"6+", grp:true},
-];
-
+// one pass: the aggregate, plus group -> member rows (source group -> raw Source, centre -> counsellor)
 function compute(){
-  const D=dim();
-  const map=new Map(); // key -> agg
-  function agg(k){ let a=map.get(k); if(!a){ a={idx:k, name:D.label(k), leads:0, att:0, total:0, conn:0, connAtt:0, b:[0,0,0,0]}; map.set(k,a); } return a; }
-  let matched=0;
+  const f=BASIS[$("ef-basis").value];
+  const a=dateToIdx($("ef-d0").value), b=dateToIdx($("ef-d1").value), lo=Math.min(a,b), hi=Math.max(a,b);
+  const top={}, sub={}, agg=blank();
   for(const L of DATA.leads){
-    if(poolSkip(L)) continue;
-    const d=dayIdx(L[1]);
-    if(d==null||d<0) continue;                 // created cohort only
-    if(d<ST.d0||d>ST.d1) continue;             // date-range window
-    if(!ST.srcs.has(L[0])) continue;           // source filter
-    matched++;
-    const a=agg(D.key(L));
-    const att=L[7]||0;
-    a.leads++; a.total+=att; a.b[bucket(att)]++;
-    if(isAttempted(L)) a.att++;
-    if(isConnected(L)){ a.conn++; a.connAtt+=att; }
+    if(poolSkip(L) || !SEL.has(L[0])) continue;
+    const d=dayIdx(L[f]); if(d==null || d<lo || d>hi) continue;
+    const c=centreOf(L); if(CSEL.size && !CSEL.has(c)) continue;
+    add(agg,L);
+    if(DIM==="source"){ const g=srcGroupOf(L[0]); bump(top,g,L); bump(sub[g]=sub[g]||{},L[0]+":"+(L[22]??""),L); }
+    else { bump(top,c,L); bump(sub[c]=sub[c]||{},L[4],L); }
   }
-  let rows=[...map.values()].map(a=>({
-    idx:a.idx, name:a.name, leads:a.leads, att:a.att, total:a.total,
-    avg: a.leads? a.total/a.leads : null,
-    conn:a.conn, connPct: a.att? 100*a.conn/a.att : null, notConn:a.att-a.conn,
-    avgConn: a.conn? a.connAtt/a.conn : null,
-    b0:a.b[0], b1:a.b[1], b2:a.b[2], b3:a.b[3]
-  }));
-  // totals across ALL matched rows (before min-vol / name filter), so the Total row is a true grand total
-  const tot={ leads:0, att:0, total:0, conn:0, connAtt:0, b0:0,b1:0,b2:0,b3:0 };
-  for(const r of rows){ tot.leads+=r.leads; tot.att+=r.att; tot.total+=r.total; tot.conn+=r.conn; tot.connAtt+=(r.avgConn!=null?r.avgConn*r.conn:0); tot.b0+=r.b0; tot.b1+=r.b1; tot.b2+=r.b2; tot.b3+=r.b3; }
-  tot.avg = tot.leads? tot.total/tot.leads : null;
-  tot.avgConn = tot.conn? tot.connAtt/tot.conn : null;
-  tot.connPct = tot.att? 100*tot.conn/tot.att : null; tot.notConn = tot.att-tot.conn;
-  // filters that only affect the displayed rows
-  let hiddenN=0, hiddenRows=0;
-  rows=rows.filter(r=>{
-    if(r.leads<ST.minVol){ hiddenN+=r.leads; hiddenRows++; return false; }
-    if(D.filter && ST.rowFilter && !String(r.name).toLowerCase().includes(ST.rowFilter.toLowerCase())) return false;
-    return true;
-  });
-  // sort
-  const k=ST.sortKey, dir=ST.sortDir;
-  rows.sort((x,y)=>{
-    if(k==="name") return dir*String(x.name).localeCompare(String(y.name));
-    const xv=x[k]==null?-Infinity:x[k], yv=y[k]==null?-Infinity:y[k];
-    return dir*(xv-yv);
-  });
-  return {rows, tot, matched, hiddenN, hiddenRows};
+  return {top,sub,agg,lo,hi};
 }
 
-function tile(n,l,cls){ return `<div class="tile ${cls||''}"><div class="n">${n}</div><div class="l">${l}</div></div>`; }
+// rows for either mode: Total, then each group (its totals) expanding to its members.
+// rawOf(k) -> [label, bucket] for source members; nameOf(k) for counsellor members.
+function groupRows(top,sub,agg,row,own,q,size,rawOf,nameOf,cols){
+  const muted=x=>` <span class="stl-sub">${x}</span>`;
+  let html=row("Total",agg,"totrow stl-top"), shown=0, ng=0;
+  const groups=own ? Object.keys(top).sort((a,b)=>(CTR_LAST.has(a)-CTR_LAST.has(b))||size(top[b])-size(top[a])) : SRC_GROUPS.filter(g=>top[g]);
+  groups.forEach(g=>{
+    let ks=Object.keys(sub[g]).sort((x,y)=>size(sub[g][y])-size(sub[g][x]));
+    if(own) ks=ks.filter(k=>String(nameOf(k)).toLowerCase().includes(q));
+    if(!ks.length) return; shown+=ks.length; ng++;
+    const open=!!q||OPEN.has(g), n=Object.keys(sub[g]).length;
+    html+=row(g+(own?muted(n+" counsellor"+(n>1?"s":"")):""),top[g],"stl-g"+(open?" open":""),`data-g="${g}" tabindex="0" aria-expanded="${open}"`);
+    if(open) ks.forEach(k=>{
+      if(own) return html+=row(nameOf(k),sub[g][k],"stl-c");
+      const [raw,bn]=rawOf(k);
+      html+=row(raw+(g==="Others"&&raw!==bn?muted(bn):""),sub[g][k],"stl-c");
+    });
+  });
+  if(!shown) html+=`<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:16px">No ${own?"counsellors":"rows"} match.</td></tr>`;
+  return {html,shown,ng};
+}
+function wireGroups(q){
+  $("ef-rows").querySelectorAll("tr.stl-g").forEach(tr=>{ const tg=()=>{ if(q) return; const g=tr.dataset.g; OPEN.has(g)?OPEN.delete(g):OPEN.add(g); render(); };
+    tr.onclick=tg; tr.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tg(); } }; });
+}
+
+// ---- calling activity: the call log (talktime.json), which dates the work — calls on older leads count on the day made ----
+let TT=null, TTerr=false;
+function loadTT(){ fetch("data/talktime.json",{cache:"no-cache"}).then(r=>{ if(!r.ok) throw 0; return r.json(); })
+  .then(t=>{ TT=t; render(); }).catch(()=>{ TTerr=true; render(); }); }
+function renderCalls(){
+  const own=DIM==="owner", q=own?$("ef-filter").value.trim().toLowerCase():"";
+  $("ef-filter").style.display=own?"":"none";
+  $("ef-reset").hidden=false;
+  if(!TT || !TT.effort){
+    $("ef-tiles").innerHTML=""; $("ef-thead").innerHTML="";
+    $("ef-rows").innerHTML=`<tr><td style="text-align:left;color:var(--muted);padding:18px">${TTerr?"Could not load the call log (data/talktime.json). If the dashboard was updated while this tab was open, reload the page.":TT?"The call log has no calling-activity data yet — it arrives with the next nightly refresh.":"Loading the call log…"}</td></tr>`;
+    if(!TT && !TTerr) loadTT(); return;
+  }
+  const H=TT.effort_header, ix=k=>H.indexOf(k), SN=TT.effort_sources, RN=TT.effort_raw;
+  const days=TT.days, d0=$("ef-d0").value, d1=$("ef-d1").value, lo=d0<d1?d0:d1, hi=d0<d1?d1:d0;
+  const inDays=days.filter(d=>d>=lo && d<=hi);
+  const srcIdx=n=>DATA.sources.indexOf(n);
+  const ctrOfUser=u=>{ const c=(TT.agents[u]||{}).centre; return !c||c==="No centre group"||c==="Not in user list"?"No centre":c; };
+  const blankC=()=>({dials:0,leads:0,conn:0,nw:0,first:0});
+  const addC=(r,x)=>{ r.dials+=x[ix("dials")]; r.leads+=x[ix("leads")]; r.conn+=x[ix("connected")]; r.nw+=x[ix("new_leads")]; r.first+=x[ix("first_calls")]; };
+  const top={}, sub={}, agg=blankC();
+  for(const x of TT.effort){
+    const d=x[ix("day")]; if(d<lo || d>hi) continue;
+    const sname=SN[x[ix("src")]], si=srcIdx(sname); if(si>=0 && !SEL.has(si)) continue;
+    const c=ctrOfUser(x[ix("user")]); if(CSEL.size && !CSEL.has(c)) continue;
+    addC(agg,x);
+    const g=own?c:(SRC_GROUPS.includes(sname)?sname:"Others"), k=own?x[ix("user")]:sname+""+RN[x[ix("raw")]];
+    addC(top[g]=top[g]||blankC(),x); addC((sub[g]=sub[g]||{})[k]=sub[g][k]||blankC(),x);
+  }
+  const span=inDays.length?(inDays.length===1?isoToDMY(inDays[0]):isoToDMY(inDays[0])+" → "+isoToDMY(inDays[inDays.length-1])):"none";
+  const tile=(n,l,cls)=>`<div class="tile ${cls||""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  const pc=(a,b)=>b?Math.round(100*a/b)+"%":"—";
+  $("ef-tiles").innerHTML=tile(nf(agg.dials),`Calls made<br><span style="opacity:.75">${span}</span>`,"hi")
+    +tile(nf(agg.leads),"Leads dialled (per day)")
+    +tile(av(agg.leads?agg.dials/agg.leads:null),"Calls per lead")
+    +tile(pc(agg.conn,agg.leads),`Connected<br><span style="opacity:.75">${nf(agg.conn)} leads answered</span>`,"good")
+    +tile(pc(agg.leads-agg.nw,agg.leads),`Older leads<br><span style="opacity:.75">${nf(agg.leads-agg.nw)} not created that day</span>`)
+    +tile(nf(agg.first),"First-ever calls");
+  $("ef-thead").innerHTML=`<tr class="ef-band"><th></th><th colspan="3" class="ef-g ef-s">Calls</th><th colspan="2" class="ef-g ef-s">Connects</th><th colspan="4" class="ef-g ef-s">Which leads</th></tr>`
+    +`<tr><th>${own?"Centre / caller":"Source"}</th><th class="ef-s">Calls</th><th>Leads dialled</th><th>Per lead</th>`
+    +`<th class="ef-s">Connected</th><th>%</th><th class="ef-s">New that day</th><th>Older</th><th>Older %</th><th>First-ever call</th></tr>`;
+  const row=(name,r,cls,extra)=>{ const tot=(cls||"").includes("totrow"), cp=r.leads?100*r.conn/r.leads:null;
+    return `<tr class="${cls||""}" ${extra||""}><td class="dim">${name}</td><td class="ef-s">${nf(r.dials)}</td><td>${nf(r.leads)}</td><td>${av(r.leads?r.dials/r.leads:null)}</td>`
+      +`<td class="ef-s">${nf(r.conn)}</td><td>${cp==null?"—":tot?cp.toFixed(1)+"%":`<span class="cov ${cc(cp)}">${cp.toFixed(1)}%</span>`}</td>`
+      +`<td class="ef-s">${nf(r.nw)}</td><td>${nf(r.leads-r.nw)}</td><td>${pc(r.leads-r.nw,r.leads)}</td><td>${nf(r.first)}</td></tr>`; };
+  const {html,shown,ng}=groupRows(top,sub,agg,row,own,q,r=>r.dials,
+    k=>{ const [b,raw]=k.split(""); return [raw==="—"?"(blank)":raw,b]; },
+    u=>(TT.agents[u]||{}).name||"Unknown caller", 10);
+  $("ef-rows").innerHTML=html; wireGroups(q);
+  $("ef-trunc").textContent=(own?(q?`${shown} caller${shown!==1?"s":""} matching “${q}”, in ${ng} centre${ng!==1?"s":""}.`:`${ng} centres, ranked by calls. Click a centre to see its callers.`):"Click a group to see the raw LSQ Source values behind it.")
+    +` Call log covers ${isoToDMY(days[0])} → ${isoToDMY(days[days.length-1])}; dates outside it have no calls here.`;
+  const DEFS=[
+    ["Calling activity",`every <b>outbound call</b> (Ameyo, activity 22) made ${span}, on any lead — including leads created long before. Counsellor = the person who <b>made</b> the call, and their centre; not the lead's owner.`],
+    ["Calls · Leads dialled","calls made, and unique leads dialled <b>per day</b>: a lead called on three days counts three times over a multi-day range."],
+    ["Connected · %","leads with at least one answered outbound call that day, as a share of leads dialled."],
+    ["New that day · Older","leads created on the day they were called, and every other lead dialled — the work on older leads that lead-level dates can't see."],
+    ["First-ever call","leads that got their first human call ever that day."],
+    ["Source groups","the lead's source, grouped as on the other reports; expanding a group lists the raw LSQ Source values."],
+    ["Window",`the call log keeps the last ${days.length} days (${isoToDMY(days[0])} → ${isoToDMY(days[days.length-1])}), refreshed nightly with Talk Time.`],
+  ];
+  $("ef-foot").innerHTML=`<summary>How this is measured<span>Definitions for every column · call log ${isoToDMY(days[0])} to ${isoToDMY(days[days.length-1])}</span></summary>`
+    +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("");
+}
 
 function render(){
-  const D=dim();
-  const {rows, tot, matched, hiddenN, hiddenRows}=compute();
-  // tiles
-  document.getElementById("tiles").innerHTML =
-    tile(fmtInt(tot.leads), "Leads created (selected)", "hi") +
-    tile(fmtInt(tot.att), "Attempted") +
-    tile(fmtInt(tot.conn), "Connected (proxy)", "good") +
-    tile(tot.connPct==null?"—":tot.connPct.toFixed(1)+"%", "Connect % (of attempted)") +
-    tile(fmtInt(tot.total), "Total attempts (logged)") +
-    tile(fmtAvg(tot.avg), "Avg attempts / lead") +
-    tile(fmtAvg(tot.avgConn), "Avg attempts to connect");
+  if($("ef-basis").value==="calls") return renderCalls();
+  const {top,sub,agg,lo,hi}=compute();
+  const basis=$("ef-basis").value, verb=basis==="created"?"created":"interested";
+  $("ef-reset").hidden = basis==="created" && SEL.size===DATA.sources.length && !CSEL.size
+    && $("ef-d0").value===DATA.base && $("ef-d1").value===idxToStr(maxDay) && !$("ef-filter").value;
+  // tiles follow the table's grouping: leads · attempts · connects
+  const t=agg, ap=t.leads?100*t.att/t.leads:null, cp=t.att?100*t.conn/t.att:null;
+  const tile=(n,l,cls)=>`<div class="tile ${cls||""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  $("ef-tiles").innerHTML=
+    tile(nf(t.leads),`Leads ${verb} (selected)`,"hi")
+    +tile(ap==null?"—":ap.toFixed(0)+"%",`Attempted<br><span style="opacity:.75">${nf(t.att)} of ${nf(t.leads)} leads</span>`)
+    +tile(nf(t.total),"Total attempts (logged)")
+    +tile(av(t.leads?t.total/t.leads:null),"Avg attempts / lead")
+    +tile(cp==null?"—":cp.toFixed(0)+"%",`Connect % (of attempted)<br><span style="opacity:.75">${nf(t.conn)} connected</span>`,"good")
+    +tile(av(t.conn?t.connAtt/t.conn:null),"Avg attempts to connect");
 
-  // head
-  const th=COLS.map(c=>{
-    const active = c.key===ST.sortKey;
-    const arrow = active ? (ST.sortDir<0?" ▼":" ▲") : "";
-    const cls = c.grp ? ' class="grp"' : (c.key==="name"?'':'');
-    return `<th data-k="${c.key}"${cls}>${c.label}${arrow}</th>`;
-  }).join("");
-  document.getElementById("thead").innerHTML = `<tr>${th}</tr>`;
+  // header: parent bands (like Talk Time), then the columns under each
+  const own=DIM==="owner";
+  $("ef-thead").innerHTML=`<tr class="ef-band"><th></th><th></th><th colspan="4" class="ef-g ef-s">Attempts</th><th colspan="4" class="ef-g ef-s">Connects</th><th colspan="4" class="ef-g ef-s">Attempts per lead</th></tr>`
+    +`<tr><th>${own?"Centre / counsellor":"Source"}</th><th>Leads</th>`
+    +`<th class="ef-s">Attempted</th><th>%</th><th>Total</th><th>Per lead</th>`
+    +`<th class="ef-s">Connected</th><th>%</th><th>Not conn.</th><th>Att. to connect</th>`
+    +`<th class="ef-s">0</th><th>1–2</th><th>3–5</th><th>6+</th></tr>`;
+  let maxB=1; Object.values(top).forEach(r=>r.b.forEach(v=>{ if(v>maxB) maxB=v; }));
+  const row=(name,r,cls,extra)=>{
+    const ap=r.leads?100*r.att/r.leads:null, cp=r.att?100*r.conn/r.att:null, tot=(cls||"").includes("totrow");
+    const pct=v=>v==null?"—":tot?v.toFixed(1)+"%":`<span class="cov ${cc(v)}">${v.toFixed(1)}%</span>`;
+    const bc=(v,i)=>`<td${i?"":' class="ef-s"'}>${tot?nf(v):`<span class="cell" style="${heat(v,maxB)}">${nf(v)}</span>`}</td>`;
+    return `<tr class="${cls||""}" ${extra||""}><td class="dim">${name}</td><td>${nf(r.leads)}</td>`
+      +`<td class="ef-s">${nf(r.att)}</td><td>${pct(ap)}</td><td>${nf(r.total)}</td><td>${av(r.leads?r.total/r.leads:null)}</td>`
+      +`<td class="ef-s">${nf(r.conn)}</td><td>${pct(cp)}</td><td>${nf(r.att-r.conn)}</td><td>${av(r.conn?r.connAtt/r.conn:null)}</td>`
+      +r.b.map(bc).join("")+`</tr>`;
+  };
+  const q=own?$("ef-filter").value.trim().toLowerCase():"";
+  const {html,shown,ng}=groupRows(top,sub,agg,row,own,q,r=>r.total,
+    k=>{ const [bi,ri]=k.split(":"), bn=DATA.sources[+bi]; return [ri===""?bn:RAW[+ri]==="—"?"(blank)":RAW[+ri], bn]; },
+    k=>DATA.owners[k]??"—", 14);
+  const msg = own ? (q ? `${shown} counsellor${shown!==1?"s":""} matching “${q}”, in ${ng} centre${ng!==1?"s":""}.` : `${ng} centres, ranked by attempts. Click a centre to see its counsellors.`)
+            : "Click a group to see the raw LSQ Source values behind it.";
+  const rows=$("ef-rows"); rows.innerHTML=html;
+  wireGroups(q);
+  $("ef-trunc").textContent=msg;
+  $("ef-filter").style.display=own?"":"none";
 
-  // body — heat the distribution cells relative to the max bucket count in view
-  let maxB=1; for(const r of rows){ maxB=Math.max(maxB,r.b0,r.b1,r.b2,r.b3); }
-  const body = rows.map(r=>{
-    const bcell=(v)=>`<td class="grp"><span class="cell" style="${heat(v,maxB)}">${fmtInt(v)}</span></td>`;
-    return `<tr>
-      <td class="dim">${r.name}</td>
-      <td>${fmtInt(r.leads)}</td>
-      <td>${fmtInt(r.att)}</td>
-      <td>${fmtInt(r.conn)}</td>
-      <td>${r.connPct==null?"—":`<span class="cov ${cc(r.connPct)}">${r.connPct.toFixed(1)}%</span>`}</td>
-      <td>${fmtInt(r.notConn)}</td>
-      <td>${fmtInt(r.total)}</td>
-      <td>${fmtAvg(r.avg)}</td>
-      <td>${fmtAvg(r.avgConn)}</td>
-      ${bcell(r.b0)}${bcell(r.b1)}${bcell(r.b2)}${bcell(r.b3)}
-    </tr>`;
-  }).join("");
-  const totRow = `<tr class="totrow">
-    <td>Total</td>
-    <td>${fmtInt(tot.leads)}</td>
-    <td>${fmtInt(tot.att)}</td>
-    <td>${fmtInt(tot.conn)}</td>
-    <td>${tot.connPct==null?"—":tot.connPct.toFixed(1)+"%"}</td>
-    <td>${fmtInt(tot.notConn)}</td>
-    <td>${fmtInt(tot.total)}</td>
-    <td>${fmtAvg(tot.avg)}</td>
-    <td>${fmtAvg(tot.avgConn)}</td>
-    <td>${fmtInt(tot.b0)}</td><td>${fmtInt(tot.b1)}</td><td>${fmtInt(tot.b2)}</td><td>${fmtInt(tot.b3)}</td>
-  </tr>`;
-  document.getElementById("tbody").innerHTML = body + totRow;
-
-  document.getElementById("tblHead").textContent = D.head;
-  const rf=document.getElementById("rowFilter");
-  rf.style.display = D.filter ? "" : "none";
-  if(D.filter && D.ph) rf.placeholder = D.ph;
-
-  // truncation note
-  const floor = ST.minVol;
-  let t=`Showing ${rows.length} ${D.noun} row${rows.length===1?"":"s"} over ${fmtInt(matched)} leads created ${dmy(ST.d0)} → ${dmy(ST.d1)}.`;
-  if(hiddenRows) t+=` ${hiddenRows} row${hiddenRows===1?"":"s"} hidden (below min volume of ${floor} leads, ${fmtInt(hiddenN)} leads); Total row still counts them.`;
-  document.getElementById("trunc").textContent=t;
-
-  // footer
-  document.getElementById("footer").innerHTML =
-    `All dates &amp; times in <b>IST</b>. Cohort complete — rows count only leads created ≥ ${isoToDMY(DATA.base)} (dayIdx ≥ 0). ` +
-    `Attempts field = <b>mx_Reached_Out_Attempts</b> (logged, under-logged floor). <b>Attempted</b> = attempts &gt; 0, a first-call time or a connect; <b>Connected</b> = interacted count &gt; 0 or a first-connect time (proxy) — the same rules on every report. <b>Connect %</b> = connected ÷ attempted; <b>Avg to connect</b> = attempts logged on the connected leads. ` +
-    `<b>Centre</b> = the lead owner's LSQ admission group (the lead's own centre field is only ~22% filled). ` +
-    `<b>Cross-check in LSQ:</b> Manage Leads → filter Lead Created between ${dmy(ST.d0)} and ${dmy(ST.d1)} (IST), group by ${D.lsq}; ` +
-    `bucket counts map to mx_Reached_Out_Attempts = 0 / 1–2 / 3–5 / ≥6.`;
+  // definitions: the same fold-out as Speed to Lead and Talk Time
+  const span=lo===hi?dmy(lo):dmy(lo)+" → "+dmy(hi);
+  const DEFS=[
+    ["Leads",`leads ${verb==="created"?"<b>created</b>":"whose latest <b>interested-in</b> date falls"} in ${span} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}.${basis==="interested"?" Interested-in catches returning leads too; a lead created before "+isoToDMY(DATA.base)+" appears only if it was also called or reassigned since then.":""}`],
+    ["Attempted","leads with any sign of an attempt: attempt count &gt; 0, a first-call time, or a connect. Same rule on every report."],
+    ["Attempt %","attempted ÷ leads."],
+    ["Total · Avg / lead","logged reach-out attempts (mx_Reached_Out_Attempts), summed, and per lead. Attempts are under-logged, so read these as floors."],
+    ["Connected","leads with an interaction count &gt; 0 or a first-connect time — a proxy, not a verified conversation."],
+    ["Connect % · Not connected","connected ÷ attempted, and attempted − connected."],
+    ["Avg to connect","attempts logged on the connected leads, per connected lead."],
+    ["Attempts per lead","how many leads sit at 0, 1–2, 3–5 and 6+ logged attempts. Shading is relative to the largest group cell."],
+    ["Source groups","Meta, Google and Internshala have their own rows; every other source is under <b>Others</b>. Expanding a group lists the raw LSQ <b>Source</b> values behind it."],
+    ["Centre","the counsellor's centre, from their LSQ <b>Admission(s) &lt;centre&gt;</b> user group; deactivated owners fall back to the centre in their name."],
+  ];
+  $("ef-foot").innerHTML=`<summary>How this is measured<span>Definitions for every column · data ${isoToDMY(DATA.base)} to ${dmy(maxDay)}</span></summary>`
+    +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("")
+    +`<div><b>Cross-check in LSQ:</b> Manage Leads, filtered to the same ${verb} dates and sources, grouped by ${own?"Lead Owner":"Source"}.</div>`;
 }
 
-// ---- wire controls ----
-function initSrcChips(){
-  const box=document.getElementById("srcChips");
-  box.innerHTML=(DATA.sources||[]).map((s,i)=>`<span class="chk on" data-i="${i}"><span class="dot"></span>${s}</span>`).join("");
-  box.onclick=e=>{ const c=e.target.closest(".chk"); if(!c)return; const i=+c.dataset.i;
-    if(ST.srcs.has(i)) ST.srcs.delete(i); else ST.srcs.add(i);
-    c.classList.toggle("on", ST.srcs.has(i)); render(); };
-}
-function syncChips(){ document.querySelectorAll("#srcChips .chk").forEach(c=>c.classList.toggle("on", ST.srcs.has(+c.dataset.i))); }
-
-document.getElementById("srcAll").onclick=()=>{ (DATA.sources||[]).forEach((_,i)=>ST.srcs.add(i)); syncChips(); render(); };
-document.getElementById("srcNoIsh").onclick=()=>{
-  (DATA.sources||[]).forEach((s,i)=>{ if(/internshala/i.test(s)) ST.srcs.delete(i); else ST.srcs.add(i); });
-  syncChips(); render();
-};
-
-document.getElementById("segBy").onclick=e=>{ const b=e.target.closest("button"); if(!b)return;
-  ST.by=b.dataset.v;
-  [...e.currentTarget.children].forEach(x=>x.classList.toggle("on", x===b));
-  render();
-};
-
-const d0=document.getElementById("d0"), d1=document.getElementById("d1");
-function clampIdx(i){ return Math.max(0, Math.min(maxDay, i)); }
-d0.min=d1.min=DATA.base; d0.max=d1.max=idxToStr(maxDay);
-d0.value=DATA.base; d1.value=idxToStr(maxDay);
-document.getElementById("datehint").innerHTML=`Full pulled cohort: <b>${isoToDMY(DATA.base)}</b> → <b>${dmy(maxDay)}</b> (IST). Window filters on lead-created date.`;
-d0.onchange=()=>{ ST.d0=clampIdx(dateToIdx(d0.value)); if(ST.d0>ST.d1){ST.d1=ST.d0; d1.value=idxToStr(ST.d1);} render(); };
-d1.onchange=()=>{ ST.d1=clampIdx(dateToIdx(d1.value)); if(ST.d1<ST.d0){ST.d0=ST.d1; d0.value=idxToStr(ST.d0);} render(); };
-
-document.getElementById("minVol").oninput=e=>{ ST.minVol=Math.max(0, parseInt(e.target.value,10)||0); render(); };
-document.getElementById("rowFilter").oninput=e=>{ ST.rowFilter=e.target.value.trim(); render(); };
-
-document.getElementById("thead").addEventListener("click",e=>{
-  const th=e.target.closest("th"); if(!th)return; const k=th.dataset.k;
-  if(ST.sortKey===k) ST.sortDir*=-1; else { ST.sortKey=k; ST.sortDir = k==="name"?1:-1; }
-  render();
-});
-
-initSrcChips();
-render();
-
-// ---- theme toggle (keep; default light) ----
+// ---- controls ----
+const srcSel=$("ef-src"), ctrSel=$("ef-ctr");
+const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++;
+srcSel.innerHTML=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]).map(k=>`<option value="${k}">${DATA.sources[k]}</option>`).join("");
+srcSel._presets=[{label:"All except Internshala",pick:()=>[...srcSel.options].forEach(o=>o.selected=o.textContent!=="Internshala")}];
+ctrSel.innerHTML=[...new Set(OC)].sort((a,b)=>(CTR_LAST.has(a)-CTR_LAST.has(b))||a.localeCompare(b)).map(c=>`<option>${c}</option>`).join("");
+if(!OC.length) ctrSel.style.display="none";
+const allSrc=()=>{ SEL.clear(); DATA.sources.forEach((s,i)=>SEL.add(i)); };
+srcSel.onchange=()=>{ const p=[...srcSel.selectedOptions].map(o=>+o.value); SEL.clear(); (p.length?p:DATA.sources.map((_,i)=>i)).forEach(k=>SEL.add(k)); render(); };
+ctrSel.onchange=()=>{ CSEL.clear(); [...ctrSel.selectedOptions].forEach(o=>CSEL.add(o.value)); render(); };
+$("ef-basis").onchange=render;
+["ef-d0","ef-d1"].forEach(id=>{ const el=$(id); el.min=DATA.base; el.max=idxToStr(maxDay); el.onchange=render; });
+$("ef-d0").value=DATA.base; $("ef-d1").value=idxToStr(maxDay);   // whole pulled range: effort accumulates over time
+$("ef-filter").oninput=render;
+document.querySelectorAll("#ef-seg button").forEach(bt=>bt.onclick=()=>{ DIM=bt.dataset.v; document.querySelectorAll("#ef-seg button").forEach(x=>x.classList.toggle("on",x===bt)); render(); });
+$("ef-reset").onclick=()=>{ $("ef-basis").value="created"; $("ef-basis").dispatchEvent(new Event("change"));
+  $("ef-d0").value=DATA.base; $("ef-d1").value=idxToStr(maxDay); syncDateText(); $("ef-filter").value="";
+  [...srcSel.options].forEach(o=>o.selected=false); [...ctrSel.options].forEach(o=>o.selected=false);
+  srcSel.dispatchEvent(new Event("change")); ctrSel.dispatchEvent(new Event("change")); allSrc(); render(); };
+allSrc(); render();
 
 }
 function init_funnel(){
 
 const DATA = window.__DATA;
-const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
-// ---- shared helpers (keep) ----
+// lead columns used: 0 src · 1 created · 4 owner · 7 attempts · 9 stage · 11 pool · 12 programme · 16 counselled
+//                    17 amount paid · 22 raw Source · 23 programme group
+const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000, RAW=DATA.raw_sources||[], OC=DATA.owner_centre||[];
+const PROGS=Array.isArray(DATA.programs)?DATA.programs:[], FPG=DATA.prog_groups||[];
+const $=id=>document.getElementById(id);
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
 function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
-function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "\u2014"; }   // display only; inputs stay ISO
-function fm(m){ if(m==null)return "—"; if(m>=1440)return (m/1440).toFixed(1)+"d"; if(m>=60)return (m/60).toFixed(1)+"h"; return Math.round(m)+"m"; }
+function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "—"; }   // display only; inputs stay ISO
+const nf=n=>n.toLocaleString("en-IN");
 function cc(c){return c>=50?"g":(c>=25?"a":"r");}
 function ccLeak(c){return c<=2?"g":(c<=10?"a":"r");}          // leakage: small = good
 function relCls(v,avg){ if(!avg) return "a"; return v>=avg*1.2?"g":(v<=avg*0.8?"r":"a"); }
-function med(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
-function p90(a){ if(!a.length)return null; const s=a.slice().sort((x,y)=>x-y); return s[Math.floor(s.length*.9)]; }
 function heat(v,max){ if(!v||!max) return ""; const pct=Math.min(52,Math.round(52*v/max)); return `background:color-mix(in srgb, var(--accent) ${pct}%, transparent)`; }
-const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>m)m=d; } return m; })();
-// ---- REPORT-SPECIFIC CODE ----
-let BREAK="overall";                 // stage table: overall | source | owner | program
-let DIM="source";                    // funnel breakdown: source | owner | program
-let START=0, END=maxDay;             // created-window day indices
-let sortCol="count", sortDir=-1;     // overall stage table sort
-const SEL=new Set();                 // selected source indices
-const PROGS = Array.isArray(DATA.programs)? DATA.programs : [];
-const HASPROG = PROGS.length>0;
-const NOPROG = -1;                   // synthetic key for leads with no program
-const FPG = DATA.prog_groups||[];     // program groups (pull.py); the programme breakdown groups by them when present
-const FOPEN = new Set();              // expanded program groups
-const PROGCAP = 14;                  // max program columns in the heat matrix
-// "Enrolled/paid" = ProspectStage whose class is "won", or whose label contains "enrol".
-// Discovered at runtime from DATA.stage_class / DATA.stages — never a hardcoded index.
-// (isEnrolled — shared definition)
-
 function pctStr(n,d){ return d? (100*n/d).toFixed(1)+"%" : "0%"; }
 function pctNum(n,d){ return d? 100*n/d : 0; }
-function pname(k){ return k===NOPROG ? "(no programme)" : (PROGS[k] || "(unknown)"); }
-function dimNames(){ return DIM==="owner" ? DATA.owners : (DIM==="program" ? PROGS : DATA.sources); }
-function dimLabel(k){ if(DIM==="program") return pname(k); const a=dimNames(); return a[k] || "(unknown)"; }
-function dimTitle(){ return DIM==="owner" ? "lead owner" : (DIM==="program" ? "programme" : "source"); }
+const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>m)m=d; } return m; })();
+let DIM="source", BREAK="overall"; const SEL=new Set(), CSEL=new Set(), OPEN_C=new Set(), OPEN_D=new Set();
+const pname=k=>k==null||k<0?"(no programme)":(PROGS[k]??"(unknown)");
+const pgroup=L=>FPG.length?(FPG[L[23]]??"Other"):"All programmes";
+const stName=i=>stageCls(i)==="won"?`<span style="color:var(--good)">${DATA.stages[i]}</span>`:DATA.stages[i];
+const muted=x=>` <span class="stl-sub">${x}</span>`;
+const srcRaw=k=>{ const [bi,ri]=k.split(":"), bn=DATA.sources[+bi]; return [ri===""?bn:RAW[+ri]==="—"?"(blank)":RAW[+ri],bn]; };
 
+// ---- one pass: as-reported (f) and strict-path (n) counts, the C rows and the D stage tables ----
+// f = each step evaluated on its own LSQ field · n = cumulative AND down the funnel order, so each
+// step really is a subset of the one above; f - n = leads that skipped an earlier step.
 function compute(){
-  // f = AS-REPORTED counts: each condition evaluated independently on its own LSQ field.
-  // n = STRICT-PATH counts: cumulative AND down the spec order, so each step really is
-  //     a subset of the one above it. f - n = leads that skipped an earlier step.
+  const a=dateToIdx($("dstart").value), b=dateToIdx($("dend").value), lo=Math.min(a,b), hi=Math.max(a,b);
   const f={created:0,attempted:0,connected:0,counselled:0,enrolled:0,enrCns:0};
   const n={attempted:0,connected:0,counselled:0,enrolled:0};
-  const miss={enrNoAttempt:0,enrNoConnect:0,enrNoCouns:0,cnsNoConnect:0,anyRev:0,rev:0};
-  const stageCount=DATA.stages.map(()=>0);
-  const srcM = BREAK==="source"  ? DATA.stages.map(()=>({})) : null;  // srcM[stage][src]=count
-  const ownM = BREAK==="owner"   ? {} : null;                         // ownM[owner][stage]=count
-  const proM = BREAK==="program" ? DATA.stages.map(()=>({})) : null;  // proM[stage][prog]=count
-  const dimM = {};                                                    // funnel rows by DIM key
-  const blankRow=()=>({leads:0,att:0,con:0,cns:0,enr:0,enrCns:0,attSum:0,paid:0,pool:0});
-  // programme view with groups: dimM is keyed by group, subM[group][programme] holds the rows inside it
-  // (a programme can sit in different groups, because the campaign decides the group first)
-  const GRP = DIM==="program" && FPG.length>0, subM = {};
+  const miss={enrNoAttempt:0,enrNoConnect:0,enrNoCouns:0,cnsNoConnect:0};
+  const blank=()=>({leads:0,att:0,con:0,cns:0,enr:0,enrCns:0,attSum:0,paid:0,pool:0});
+  const cTop={}, cSub={}, stage=DATA.stages.map(()=>0), dCol={}, dTop={}, dSub={};
   for(const L of DATA.leads){
-    const d=dayIdx(L[1]); if(d==null||d<0||d<START||d>END) continue;
+    const d=dayIdx(L[1]); if(d==null||d<0||d<lo||d>hi) continue;
     if(!SEL.has(L[0])) continue;
-    // a source can look strong purely because most of it is parked in the pool, so the
-    // pooled share is counted per row before pool leads are skipped
-    const pk = (L[12]==null? NOPROG : L[12]);
-    const dk = DIM==="owner" ? L[4] : (DIM==="program" ? (GRP ? (L[23]??FPG.length-1) : pk) : L[0]);
-    if(L[11]===1){ (dimM[dk]||(dimM[dk]=blankRow())).pool++; }
+    const ctr=centreOf(L); if(CSEL.size && !CSEL.has(ctr)) continue;
+    // C rows: group -> member (source group -> raw Source · centre -> counsellor · programme group -> programme)
+    const g = DIM==="source"?srcGroupOf(L[0]) : DIM==="owner"?ctr : pgroup(L);
+    const k = DIM==="source"?L[0]+":"+(L[22]??"") : DIM==="owner"?L[4] : (L[12]??-1);
+    // a source can look strong purely because most of it is parked in the pool, so the pooled share is counted first
+    if(L[11]===1){ (cTop[g]=cTop[g]||blank()).pool++; const s=cSub[g]=cSub[g]||{}; (s[k]=s[k]||blank()).pool++; }
     if(poolSkip(L)) continue;
-    const st=L[9];
-    const at=isAttempted(L);     // Attempted  — shared definition (attempts, first call or connect)
-    const cn=isConnected(L);     // Connected  — shared definition (interacted or first connect)
-    const cs=L[16]===1;          // Counselled — counselling flag
-    const en=isEnrolled(L);      // Enrolled / paid — stage class "won"
-    f.created++;
-    if(at) f.attempted++;
-    if(cn) f.connected++;
-    if(cs) f.counselled++;
-    if(en) f.enrolled++;
-    // C2P must divide a SUBSET of the counselled base or it is not a conversion rate:
-    // 60% of enrolments are never flagged counselled, which pushed C2P over 100% —
-    // one owner rendered 6,700% in a green badge.
+    const at=isAttempted(L), cn=isConnected(L), cs=L[16]===1, en=isEnrolled(L);
+    f.created++; if(at) f.attempted++; if(cn) f.connected++; if(cs) f.counselled++; if(en) f.enrolled++;
+    // C2P must divide a SUBSET of the counselled base: 60% of enrolments are never flagged counselled
     if(en && cs) f.enrCns++;
-    // strict nesting: created -> attempted -> connected -> counselled -> enrolled
-    if(at){ n.attempted++;
-      if(cn){ n.connected++;
-        if(cs){ n.counselled++;
-          if(en) n.enrolled++; } } }
-    if(en){
-      if(!at) miss.enrNoAttempt++;
-      if(!cn) miss.enrNoConnect++;
-      if(!cs) miss.enrNoCouns++;
-      const r=L[17]||0; if(r>0){ miss.anyRev++; miss.rev+=r; }
-    }
+    if(at){ n.attempted++; if(cn){ n.connected++; if(cs){ n.counselled++; if(en) n.enrolled++; } } }
+    if(en){ if(!at) miss.enrNoAttempt++; if(!cn) miss.enrNoConnect++; if(!cs) miss.enrNoCouns++; }
     if(cs && !cn) miss.cnsNoConnect++;
-    stageCount[st]++;
-    if(srcM){ const r=srcM[st]; r[L[0]]=(r[L[0]]||0)+1; }
-    if(ownM){ const o=L[4]; (ownM[o]||(ownM[o]={}))[st]=(ownM[o][st]||0)+1; }
-    if(proM){ const r=proM[st]; r[pk]=(r[pk]||0)+1; }
-    const upd=row=>{ row.attSum+=(L[7]||0); if((L[17]||0)>0) row.paid++;
-      row.leads++; if(at)row.att++; if(cn)row.con++; if(cs)row.cns++; if(en)row.enr++; if(en&&cs)row.enrCns++; };
-    upd(dimM[dk] || (dimM[dk]=blankRow()));
-    if(GRP){ const g=subM[dk]||(subM[dk]={}); upd(g[pk]||(g[pk]=blankRow())); }
+    const upd=r=>{ r.leads++; r.attSum+=(L[7]||0); if((L[17]||0)>0) r.paid++; if(at)r.att++; if(cn)r.con++; if(cs)r.cns++; if(en)r.enr++; if(en&&cs)r.enrCns++; };
+    upd(cTop[g]=cTop[g]||blank()); const s=cSub[g]=cSub[g]||{}; upd(s[k]=s[k]||blank());
+    // D: stage counts, plus the matrix for the chosen view
+    const st=L[9]; stage[st]++;
+    if(BREAK==="source"||BREAK==="program"){ const col=BREAK==="source"?srcGroupOf(L[0]):pgroup(L); const r=dCol[st]=dCol[st]||{}; r[col]=(r[col]||0)+1; }
+    if(BREAK==="owner"){ const t=dTop[ctr]=dTop[ctr]||{}; t[st]=(t[st]||0)+1; const u=(dSub[ctr]=dSub[ctr]||{})[L[4]]=(dSub[ctr]||{})[L[4]]||{}; u[st]=(u[st]||0)+1; }
   }
-  return {f,n,miss,stageCount,srcM,ownM,proM,dimM,subM:GRP?subM:null};
+  return {lo,hi,f,n,miss,cTop,cSub,stage,dCol,dTop,dSub};
 }
 
-// ---- A · the spec funnel -----------------------------------------------------
-// Bars are drawn in two parts: the SOLID part is the strict-path count (this lead
-// cleared every earlier step too); the FADED part is the extra leads that satisfy
-// this step but skipped one above it. Bar total length = the as-reported count.
+// ---- A · funnel bars ----
 function renderFunnel(f,n){
   const base=f.created||1;
   const steps=[
-    {label:"Lead created",  val:f.created,    nest:f.created,    desc:"All leads created in the window (unworked bulk pool excluded)"},
-    {label:"Attempted",     val:f.attempted,  nest:n.attempted,  desc:"Any sign of an attempt: attempts &gt; 0, a first-call time, or a connect"},
-    {label:"Connected*",    val:f.connected,  nest:n.connected,  desc:"Interacted count &gt; 0 or a first-connect time — proxy for a real conversation"},
-    {label:"Counselled",    val:f.counselled, nest:n.counselled, desc:"Counselling-done flag on the lead"},
-    {label:"Enrolled / paid",val:f.enrolled,  nest:n.enrolled,   desc:"ProspectStage class “won”"}
-  ];
+    {label:"Lead created",   val:f.created,    nest:f.created},
+    {label:"Attempted",      val:f.attempted,  nest:n.attempted},
+    {label:"Connected",      val:f.connected,  nest:n.connected},
+    {label:"Counselled",     val:f.counselled, nest:n.counselled},
+    {label:"Enrolled",       val:f.enrolled,   nest:n.enrolled}];
   const neutral='style="background:var(--surface-2);color:var(--ink-2)"';
-  let html="";
-  steps.forEach((s,i)=>{
-    const solid=100*s.nest/base, extra=100*Math.max(0,s.val-s.nest)/base, pct=100*s.val/base;
-    const rSolid = extra>0 ? "5px 0 0 5px" : "5px";
-    const rExtra = solid>0 ? "0 5px 5px 0" : "5px";
+  $("funnel").innerHTML=steps.map((s,i)=>{
+    const solid=100*s.nest/base, extra=100*Math.max(0,s.val-s.nest)/base;
     let badges="";
-    // the enrolled step's conversion is C2P (badge below); a raw enrolled ÷ counselled would count
-    // enrolments that were never flagged counselled, inflating it ~3x
-    if(i>0 && s.label!=="Enrolled / paid"){
-      const prev=steps[i-1].val, conv=prev?Math.round(100*s.val/prev):0;
-      badges+=` <span class="cov ${cc(conv)}">&rarr; ${conv}% step</span>`;
-    }
-    if(s.label==="Counselled") badges+=` <span class="cov" ${neutral}>L2C ${pctStr(f.counselled,f.created)}</span>`;
-    if(s.label==="Enrolled / paid") badges+=` <span class="cov" ${neutral}>C2P ${pctStr(f.enrCns,f.counselled)}</span> <span class="cov" ${neutral}>L2P ${pctStr(f.enrolled,f.created)}</span>`;
-    const skip = s.val-s.nest;
-    const skipLine = i>0 && skip>0
-      ? `<span class="fpct">${skip.toLocaleString()} of these skipped an earlier step</span>`
-      : (i>0 ? `<span class="fpct">all on the full path</span>` : "");
-    html+=`<div class="fstep">
-      <div class="flabel">${s.label}<span class="fdesc">${s.desc}</span></div>
-      <div class="ftrack">
-        <span class="bar" style="width:${solid.toFixed(1)}%;height:22px;border-radius:${rSolid}"></span>
-        <span style="display:block;height:22px;border-radius:${rExtra};width:${extra.toFixed(1)}%;background:color-mix(in srgb, var(--accent) 26%, transparent)"></span>
-      </div>
-      <div class="fval"><b>${s.val.toLocaleString()}</b><span class="fpct">${pct.toFixed(1)}% of leads</span>${badges}<br>${skipLine}</div>
-    </div>`;
-  });
-  document.getElementById("funnel").innerHTML=html;
+    // the enrolled step's own conversion is C2P; a raw enrolled ÷ counselled would inflate it ~3x
+    if(i>0 && i<4){ const prev=steps[i-1].val, conv=prev?Math.round(100*s.val/prev):0; badges+=` <span class="cov ${cc(conv)}">&rarr; ${conv}% step</span>`; }
+    if(i===3) badges+=` <span class="cov" ${neutral}>L2C ${pctStr(f.counselled,f.created)}</span>`;
+    if(i===4) badges+=` <span class="cov" ${neutral}>C2P ${pctStr(f.enrCns,f.counselled)}</span> <span class="cov" ${neutral}>L2P ${pctStr(f.enrolled,f.created)}</span>`;
+    const skip=s.val-s.nest, skipLine=i>0?(skip>0?`<span class="fpct">${nf(skip)} skipped an earlier step</span>`:`<span class="fpct">all on the full path</span>`):"";
+    return `<div class="fstep"><div class="flabel">${s.label}</div>
+      <div class="ftrack"><span class="bar" style="width:${solid.toFixed(1)}%;height:22px;border-radius:${extra>0?"5px 0 0 5px":"5px"}"></span><span style="display:block;height:22px;border-radius:${solid>0?"0 5px 5px 0":"5px"};width:${extra.toFixed(1)}%;background:color-mix(in srgb, var(--accent) 26%, transparent)"></span></div>
+      <div class="fval"><b>${nf(s.val)}</b><span class="fpct">${(100*s.val/base).toFixed(1)}% of leads</span>${badges}<br>${skipLine}</div></div>`;
+  }).join("");
 }
 
-// ---- B · path integrity ------------------------------------------------------
-function renderLeak(f,n,miss){
-  const rows=[
-    {name:"Attempted",   field:"attempts &gt; 0, first call or connect", val:f.attempted,  nest:n.attempted,  ref:false},
-    {name:"Connected*",  field:"interacted &gt; 0 or first connect", val:f.connected, nest:n.connected, ref:false},
-    {name:"Counselled",  field:"counselling-done flag",   val:f.counselled, nest:n.counselled, ref:false},
-    {name:"Enrolled / paid",field:"ProspectStage class “won”", val:f.enrolled, nest:n.enrolled, ref:false}
-  ];
-  let body="";
-  rows.forEach(r=>{
-    const skip=Math.max(0,r.val-r.nest), sp=pctNum(skip,r.val);
-    const nm = r.ref ? `${r.name} <span class="fpct">(reference, not a spec step)</span>` : r.name;
-    body+=`<tr><td class="dim">${nm}</td><td class="fpct">${r.field}</td><td>${r.val.toLocaleString()}</td><td>${r.nest.toLocaleString()}</td><td>${skip.toLocaleString()}</td><td><span class="cov ${ccLeak(sp)}">${r.val?sp.toFixed(1):"0.0"}%</span></td></tr>`;
-  });
-  document.getElementById("leakhead").innerHTML=`<tr><th>Step</th><th>LSQ field behind it</th><th>As reported</th><th class="grp">On the full path</th><th>Skipped an earlier step</th><th>% off-path</th></tr>`;
-  document.getElementById("leakrows").innerHTML=body;
-  const e=f.enrolled||1;
-  document.getElementById("leaknote").innerHTML =
-    `Of the <b>${f.enrolled.toLocaleString()}</b> enrolled leads in scope: `+
-    `<b>${miss.enrNoAttempt.toLocaleString()}</b> (${pctStr(miss.enrNoAttempt,e)}) have <b>no sign of an attempt</b>, `+
-    `<b>${miss.enrNoConnect.toLocaleString()}</b> (${pctStr(miss.enrNoConnect,e)}) were <b>never connected</b>, and `+
-    `<b>${miss.enrNoCouns.toLocaleString()}</b> (${pctStr(miss.enrNoCouns,e)}) are <b>not flagged counselled</b>. `+
-    `<b>${miss.cnsNoConnect.toLocaleString()}</b> counselled leads have no connect logged. `+
-    `These are activity-logging gaps, not impossible journeys — which is exactly why the ratios above are quoted as-reported, not off the narrowed path.`;
+// ---- B · path integrity ----
+function renderLeak(f,n){
+  const rows=[["Attempted","attempts &gt; 0, first call or connect",f.attempted,n.attempted],["Connected","interacted &gt; 0 or first connect",f.connected,n.connected],
+              ["Counselled","counselling-done flag",f.counselled,n.counselled],["Enrolled","lead stage class “won”",f.enrolled,n.enrolled]];
+  $("leakhead").innerHTML=`<tr><th>Step</th><th>LSQ field behind it</th><th>As reported</th><th class="grp">On the full path</th><th>Skipped an earlier step</th><th>% off-path</th></tr>`;
+  $("leakrows").innerHTML=rows.map(([nm,fld,v,ne])=>{ const skip=Math.max(0,v-ne), sp=pctNum(skip,v);
+    return `<tr><td class="dim">${nm}</td><td class="fpct">${fld}</td><td>${nf(v)}</td><td>${nf(ne)}</td><td>${nf(skip)}</td><td><span class="cov ${ccLeak(sp)}">${v?sp.toFixed(1):"0.0"}%</span></td></tr>`; }).join("");
 }
 
-// ---- C · funnel by source / owner / programme --------------------------------
-function renderDim(dimM,f,subM){
-  const head=document.getElementById("dhead"), body=document.getElementById("drows");
-  const rf=document.getElementById("rowfilter2");
-  const q=rf.value.trim().toLowerCase();
-  let keys=Object.keys(dimM).map(Number).filter(k=>dimM[k].leads>0);   // pool-only rows carry no funnel
-  // grouped programme view: a search matches programme names, and keeps every group that holds a match
-  const subKeys=k=>Object.keys(subM[k]).map(Number).filter(p=>pname(p).toLowerCase().includes(q)).sort((a,b)=>subM[k][b].leads-subM[k][a].leads);
-  if(q) keys=keys.filter(k=>subM ? subKeys(k).length>0 : dimLabel(k).toLowerCase().includes(q));
-  const isSrc=DIM==="source";   // % in pool means something per source; per owner it just names the pool accounts
-  const poolPct=r=>{ const base=r.leads+(window.__EXPOOL?r.pool:0); return base?100*r.pool/base:0; };
-  const poolCell=r=>{ const p=poolPct(r); return p>0.05?`<span class="cov ${p>=50?"r":p>=20?"a":"g"}" title="${r.pool.toLocaleString()} of these leads sit in the unworked pool${window.__EXPOOL?" and are not in Leads":""}">${p.toFixed(0)}%</span>`:'<span class="fpct">—</span>'; };
-  const OTHER=FPG.indexOf("Other");
-  keys.sort((a,b)=>(subM?(a===OTHER)-(b===OTHER):0)||dimM[b].leads-dimM[a].leads);
-  const shown=keys.slice(0,60);
+// ---- C · funnel by source / centre & counsellor / programme ----
+function renderDim(cTop,cSub,f){
+  const isSrc=DIM==="source", cols=isSrc?13:12, q=$("rowfilter2").value.trim().toLowerCase();
   const avgL2C=pctNum(f.counselled,f.created), avgL2P=pctNum(f.enrolled,f.created), avgC2P=pctNum(f.enrCns,f.counselled);
-  document.getElementById("ctitle").textContent="C · Funnel by "+(subM?"program group":dimTitle())+" — L2C / C2P / L2P";
-  head.innerHTML=`<tr><th>${subM?"Program group / programme":dimTitle().replace(/^./,c=>c.toUpperCase())}</th><th>Leads</th>${isSrc?"<th>% in pool</th>":""}<th>Attempted</th><th>Connected</th><th>Avg att.</th><th>Counselled</th><th>Enrolled</th><th>Paying leads</th><th class="grp">L2C</th><th>C2P</th><th>L2P</th></tr>`;
-  body.innerHTML="";
-  const rowHtml=(label,r,cls,extra)=>{
-    const l2c=pctNum(r.cns,r.leads), c2p=pctNum(r.enrCns,r.cns), l2p=pctNum(r.enr,r.leads);
-    return `<tr class="${cls||""}" ${extra||""}>
-      <td class="dim">${label}</td>
-      <td>${r.leads.toLocaleString()}</td>
-      ${isSrc?`<td>${poolCell(r)}</td>`:""}
-      <td>${r.att.toLocaleString()} <span class="fpct">${pctStr(r.att,r.leads)}</span></td>
-      <td>${r.con.toLocaleString()} <span class="fpct">${pctStr(r.con,r.leads)}</span></td>
-      <td>${(r.attSum/r.leads).toFixed(2)}</td>
-      <td>${r.cns.toLocaleString()}</td>
-      <td>${r.enr.toLocaleString()}</td>
-      <td>${r.paid?r.paid.toLocaleString()+` <span class="fpct">${pctStr(r.paid,r.leads)}</span>`:'<span class="fpct">—</span>'}</td>
-      <td class="grp"><span class="cov ${relCls(l2c,avgL2C)}">${l2c.toFixed(1)}%</span></td>
-      <td>${r.cns?`<span class="cov ${relCls(c2p,avgC2P)}">${c2p.toFixed(1)}%</span>`:'<span class="fpct">—</span>'}</td>
-      <td><span class="cov ${relCls(l2p,avgL2P)}">${l2p.toFixed(1)}%</span></td>
-    </tr>`;
+  const poolCell=r=>{ const base=r.leads+(window.__EXPOOL?r.pool:0), p=base?100*r.pool/base:0;
+    return p>0.05?`<span class="cov ${p>=50?"r":p>=20?"a":"g"}" title="${nf(r.pool)} of these leads sit in the unworked pool">${p.toFixed(0)}%</span>`:'<span class="fpct">—</span>'; };
+  const title={source:"Source",owner:"Centre / counsellor",program:"Programme group / programme"}[DIM];
+  $("dhead").innerHTML=`<tr class="ef-band"><th></th><th colspan="${isSrc?2:1}"></th><th colspan="4" class="ef-g ef-s">Funnel</th><th colspan="2" class="ef-g ef-s">Effort &amp; revenue</th><th colspan="3" class="ef-g ef-s">Conversion</th></tr>`
+    +`<tr><th>${title}</th><th>Leads</th>${isSrc?"<th>% in pool</th>":""}<th class="ef-s">Attempted</th><th>Connected</th><th>Counselled</th><th>Enrolled</th>`
+    +`<th class="ef-s">Avg att.</th><th>Paying</th><th class="ef-s">L2C</th><th>C2P</th><th>L2P</th></tr>`;
+  const row=(label,r,cls,extra)=>{
+    const tot=(cls||"").includes("totrow"), l2c=pctNum(r.cns,r.leads), c2p=pctNum(r.enrCns,r.cns), l2p=pctNum(r.enr,r.leads);
+    const badge=(v,avg,ok=true)=>!ok?'<span class="fpct">—</span>':tot?v.toFixed(1)+"%":`<span class="cov ${relCls(v,avg)}">${v.toFixed(1)}%</span>`;
+    const cp=(v)=>` <span class="fpct">${pctStr(v,r.leads)}</span>`;
+    return `<tr class="${cls||""}" ${extra||""}><td class="dim">${label}</td><td>${nf(r.leads)}</td>${isSrc?`<td>${poolCell(r)}</td>`:""}`
+      +`<td class="ef-s">${nf(r.att)}${cp(r.att)}</td><td>${nf(r.con)}${cp(r.con)}</td><td>${nf(r.cns)}</td><td>${nf(r.enr)}</td>`
+      +`<td class="ef-s">${r.leads?(r.attSum/r.leads).toFixed(2):"—"}</td><td>${r.paid?nf(r.paid)+cp(r.paid):'<span class="fpct">—</span>'}</td>`
+      +`<td class="ef-s">${badge(l2c,avgL2C)}</td><td>${badge(c2p,avgC2P,r.cns>0)}</td><td>${badge(l2p,avgL2P)}</td></tr>`;
   };
-  shown.forEach(k=>{
-    if(!subM){ body.insertAdjacentHTML("beforeend",rowHtml(dimLabel(k),dimM[k])); return; }
-    const open=!!q||FOPEN.has(k), n=Object.keys(subM[k]).length;
-    body.insertAdjacentHTML("beforeend",rowHtml(FPG[k]+` <span class="stl-sub">${n} programme${n>1?"s":""}</span>`,dimM[k],"stl-g"+(open?" open":""),`data-g="${k}" tabindex="0" aria-expanded="${open}"`));
-    if(open) subKeys(k).forEach(p=>body.insertAdjacentHTML("beforeend",rowHtml(pname(p),subM[k][p],"stl-c")));
+  const sumRows=rs=>rs.reduce((a,r)=>{ for(const x in a) a[x]+=r[x]||0; return a; },{leads:0,att:0,con:0,cns:0,enr:0,enrCns:0,attSum:0,paid:0,pool:0});
+  const order = DIM==="source" ? SRC_GROUPS.filter(g=>cTop[g])
+    : Object.keys(cTop).sort((a,b)=>(DIM==="owner"?(CTR_LAST.has(a)-CTR_LAST.has(b)):((a==="Other")-(b==="Other")))||cTop[b].leads-cTop[a].leads);
+  const nameOf=(g,k)=>DIM==="owner"?(DATA.owners[k]??"—"):DIM==="program"?pname(+k):srcRaw(k)[0];
+  const parts=[]; let html="", shown=0, ng=0;
+  order.forEach(g=>{
+    if(!cTop[g].leads) return;                                        // pool-only rows carry no funnel
+    let ks=Object.keys(cSub[g]).filter(k=>cSub[g][k].leads>0).sort((x,y)=>cSub[g][y].leads-cSub[g][x].leads);
+    if(q) ks=ks.filter(k=>String(nameOf(g,k)).toLowerCase().includes(q));
+    if(!ks.length) return; ng++; shown+=ks.length;
+    const open=!!q||OPEN_C.has(g), nm=Object.keys(cSub[g]).length, unit=DIM==="owner"?"counsellor":DIM==="program"?"programme":"source";
+    html+=row(g+(DIM==="source"?"":muted(nm+" "+unit+(nm>1?"s":""))),cTop[g],"stl-g"+(open?" open":""),`data-g="${g}" tabindex="0" aria-expanded="${open}"`);
+    if(q) ks.forEach(k=>parts.push(cSub[g][k])); else parts.push(cTop[g]);
+    if(open) ks.forEach(k=>{ const [raw,bn]=DIM==="source"?srcRaw(k):[nameOf(g,k),null];
+      html+=row(raw+(g==="Others"&&bn&&raw!==bn?muted(bn):""),cSub[g][k],"stl-c"); });
   });
-  body.querySelectorAll("tr.stl-g").forEach(tr=>{ const t=()=>{ if(q) return; const g=+tr.dataset.g; FOPEN.has(g)?FOPEN.delete(g):FOPEN.add(g); renderDim(dimM,f,subM); };
-    tr.onclick=t; tr.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); t(); } }; });
-  // during a grouped search the total reconciles the matching programmes, not their whole groups
-  const parts = subM && q ? keys.flatMap(k=>subKeys(k).map(p=>subM[k][p])) : keys.map(k=>dimM[k]);
-  const t=parts.reduce((a,r)=>{ for(const x in a) a[x]+=r[x]||0; return a; },{leads:0,att:0,con:0,cns:0,enr:0,enrCns:0,attSum:0,paid:0,pool:0});
-  body.insertAdjacentHTML("beforeend",`<tr class="totrow"><td>${subM&&q?`Total (${parts.length} matching programme rows)`:`Total (all ${keys.length})`}</td><td>${t.leads.toLocaleString()}</td>${isSrc?`<td>${poolCell(t)}</td>`:""}<td>${t.att.toLocaleString()}</td><td>${t.con.toLocaleString()}</td><td>${t.leads?(t.attSum/t.leads).toFixed(2):"—"}</td><td>${t.cns.toLocaleString()}</td><td>${t.enr.toLocaleString()}</td><td>${t.paid.toLocaleString()} <span class="fpct">${pctStr(t.paid,t.leads)}</span></td><td class="grp">${pctStr(t.cns,t.leads)}</td><td>${pctStr(t.enrCns,t.cns)}</td><td>${pctStr(t.enr,t.leads)}</td></tr>`);
-  if(!shown.length) body.innerHTML=`<tr><td colspan="${isSrc?12:11}" style="text-align:center;color:var(--muted);padding:16px">No ${dimTitle()} matches.</td></tr>`;
-  document.getElementById("trunc2").innerHTML = `<b>L2C</b> = counselled ÷ leads · <b>C2P</b> = enrolled <i>that were also flagged counselled</i> ÷ counselled · <b>L2P</b> = enrolled ÷ leads, all on <b>as-reported</b> counts. <b>Paying leads</b> = any amount collected (mx_Total_Amount_Paid &gt; 0, part-payments included), which is not the same as the Enrolled stage.${isSrc?" <b>% in pool</b> = this source's leads parked in the unworked pool accounts.":""} Badges are shaded <b>relative to the overall rate</b> in scope (green ≥ 1.2×, red ≤ 0.8×), not against an absolute bar. `
-    + (q ? `Showing ${shown.length} of ${keys.length} matching “${q}”; the total row reconciles all matches.`
-         : subM ? `${keys.length} program groups. Click a group to see its programmes. The group is read from the campaign name first, then Program of Interest; “Gen AI-powered Data Science” counts as DS.`
-         : `${keys.length} ${dimTitle()}s in scope; top ${shown.length} shown by volume. The total row reconciles all of them.`);
+  html=row(q?`Total (${shown} matching)`:"Total",sumRows(parts),"totrow stl-top")+html;
+  if(!shown) html+=`<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:16px">No rows match.</td></tr>`;
+  $("drows").innerHTML=html;
+  $("drows").querySelectorAll("tr.stl-g").forEach(tr=>{ const tg=()=>{ if(q) return; const g=tr.dataset.g; OPEN_C.has(g)?OPEN_C.delete(g):OPEN_C.add(g); render(); };
+    tr.onclick=tg; tr.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tg(); } }; });
+  const unit={source:"source group",owner:"centre",program:"programme group"}[DIM];
+  $("trunc2").textContent = q ? `${shown} row${shown!==1?"s":""} matching “${q}”, in ${ng} ${unit}${ng!==1?"s":""}.` : `${ng} ${unit}s. Click one to expand it. Conversion badges are shaded relative to the overall rate.`;
+  $("rowfilter2").placeholder={source:"Filter source…",owner:"Filter counsellor…",program:"Filter programme…"}[DIM];
 }
 
-function selectedSrcOrder(){
-  const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0);
-  for(const L of DATA.leads) cnt[L[0]]++;
-  return Object.keys(cnt).map(Number).filter(k=>SEL.has(k)).sort((a,b)=>cnt[b]-cnt[a]);
-}
-function progColsInScope(proM){
-  const tot={}; DATA.stages.forEach((s,i)=>{ const r=proM[i]; for(const k in r) tot[k]=(tot[k]||0)+r[k]; });
-  const cols=Object.keys(tot).map(Number).sort((a,b)=>tot[b]-tot[a]);
-  return {cols:cols.slice(0,PROGCAP), hidden:Math.max(0,cols.length-PROGCAP)};
-}
-
-// ---- D · ProspectStage distribution -----------------------------------------
-function renderStage(res){
-  const {stageCount,srcM,ownM,proM}=res;
-  const total=stageCount.reduce((a,b)=>a+b,0);
-  const thead=document.getElementById("thead"), body=document.getElementById("rows");
-  const rf=document.getElementById("rowfilter");
-  rf.style.display = BREAK==="owner" ? "" : "none";
-  const q=rf.value.trim().toLowerCase();
-
+// ---- D · lead stage ----
+function renderStage(stage,dCol,dTop,dSub){
+  const total=stage.reduce((a,b)=>a+b,0), st=DATA.stages.map((s,i)=>i).filter(i=>stage[i]>0).sort((a,b)=>stage[b]-stage[a]);
+  const own=BREAK==="owner", q=own?$("rowfilter").value.trim().toLowerCase():"";
+  $("rowfilter").style.display=own?"":"none";
+  const thead=$("thead"), body=$("rows");
+  const none=c=>`<tr><td colspan="${c}" style="text-align:center;color:var(--muted);padding:16px">No leads in scope.</td></tr>`;
   if(BREAK==="overall"){
-    document.getElementById("btitle").textContent="D · ProspectStage distribution — overall";
-    let idx=DATA.stages.map((s,i)=>i).filter(i=>stageCount[i]>0);
-    const maxc=Math.max(1,...idx.map(i=>stageCount[i]));
-    idx.sort((a,b)=> sortCol==="name" ? sortDir*DATA.stages[a].localeCompare(DATA.stages[b]) : sortDir*(stageCount[a]-stageCount[b]));
-    const arrow=k=> sortCol===k?(sortDir<0?" ▾":" ▴"):"";
-    thead.innerHTML=`<tr><th data-k="name">Stage${arrow("name")}</th><th data-k="count">Leads${arrow("count")}</th><th data-k="count">% of total</th><th>Distribution</th></tr>`;
-    body.innerHTML="";
-    idx.forEach(i=>{
-      const c=stageCount[i]; const w=Math.round(100*c/maxc);
-      const nm = stageCls(i)==="won"?`<span style="color:var(--good)">${DATA.stages[i]}</span>`:DATA.stages[i];
-      body.insertAdjacentHTML("beforeend",`<tr><td class="dim">${nm}</td><td>${c.toLocaleString()}</td><td>${pctStr(c,total)}</td><td><span style="display:block;background:var(--surface-2);border-radius:4px;overflow:hidden"><span class="bar" style="width:${w}%"></span></span></td></tr>`);
-    });
-    body.insertAdjacentHTML("beforeend",`<tr class="totrow"><td>Total</td><td>${total.toLocaleString()}</td><td>100%</td><td></td></tr>`);
-    if(!idx.length) body.innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No leads in scope.</td></tr>`;
-    thead.querySelectorAll("th[data-k]").forEach(th=>th.onclick=()=>{ const k=th.dataset.k; if(sortCol===k) sortDir=-sortDir; else{ sortCol=k; sortDir=(k==="name"?1:-1);} render(); });
-    document.getElementById("trunc").textContent="Enrolled stage(s) highlighted in green. Click Stage / Leads headers to sort.";
+    thead.innerHTML=`<tr><th>Lead stage</th><th>Lifecycle</th><th>Leads</th><th>% of leads</th></tr>`;
+    const CL={open:"Open",lost:"Closed",won:"Enrolled"};
+    body.innerHTML=`<tr class="totrow stl-top"><td>Total</td><td></td><td>${nf(total)}</td><td>100%</td></tr>`
+      +st.map(i=>`<tr><td class="dim">${stName(i)}</td><td class="fpct" style="text-align:left">${CL[stageCls(i)]||stageCls(i)}</td><td>${nf(stage[i])}</td><td>${pctStr(stage[i],total)}</td></tr>`).join("")
+      +(st.length?"":none(4));
+    $("trunc").textContent="Enrolled stage in green.";
     return;
   }
-
-  if(BREAK==="source"){
-    document.getElementById("btitle").textContent="D · ProspectStage × Source — heat matrix";
-    const cols=selectedSrcOrder();                                  // source columns
-    let stIdx=DATA.stages.map((s,i)=>i).filter(i=>stageCount[i]>0);
-    stIdx.sort((a,b)=>stageCount[b]-stageCount[a]);
-    let cmax=0; stIdx.forEach(i=>cols.forEach(c=>{ const v=(srcM[i][c]||0); if(v>cmax)cmax=v; }));
-    thead.innerHTML=`<tr><th>Stage</th>${cols.map(c=>`<th>${DATA.sources[c]}</th>`).join("")}<th class="grp">Total</th><th>% of total</th></tr>`;
-    body.innerHTML="";
-    stIdx.forEach(i=>{
-      const cells=cols.map(c=>{ const v=srcM[i][c]||0; return `<td><span class="cell" style="${heat(v,cmax)}">${v||""}</span></td>`; }).join("");
-      const nm = stageCls(i)==="won"?`<span style="color:var(--good)">${DATA.stages[i]}</span>`:DATA.stages[i];
-      body.insertAdjacentHTML("beforeend",`<tr><td class="dim">${nm}</td>${cells}<td class="tot">${stageCount[i].toLocaleString()}</td><td>${pctStr(stageCount[i],total)}</td></tr>`);
-    });
-    const colTot=cols.map(c=>{ let s=0; stIdx.forEach(i=>s+=(srcM[i][c]||0)); return s; });
-    body.insertAdjacentHTML("beforeend",`<tr class="totrow"><td>Total</td>${colTot.map(v=>`<td>${v.toLocaleString()}</td>`).join("")}<td>${total.toLocaleString()}</td><td>100%</td></tr>`);
-    if(!stIdx.length||!cols.length) body.innerHTML=`<tr><td colspan="${cols.length+3}" style="text-align:center;color:var(--muted);padding:16px">No leads in scope.</td></tr>`;
-    document.getElementById("trunc").textContent="Cells shaded by lead count (deeper = more). Rows ranked by total volume; Enrolled stage(s) in green.";
+  if(BREAK==="source"||BREAK==="program"){
+    // stages (rows) × source groups or programme groups (columns)
+    const cols=BREAK==="source"?SRC_GROUPS.filter(g=>st.some(i=>(dCol[i]||{})[g])):FPG.filter(g=>st.some(i=>(dCol[i]||{})[g]));
+    let cmax=1; st.forEach(i=>cols.forEach(c=>{ const v=(dCol[i]||{})[c]||0; if(v>cmax)cmax=v; }));
+    const colTot=cols.map(c=>st.reduce((a,i)=>a+((dCol[i]||{})[c]||0),0));
+    thead.innerHTML=`<tr class="ef-band"><th></th><th colspan="${cols.length}" class="ef-g ef-s">${BREAK==="source"?"Source group":"Programme group"}</th><th colspan="2" class="ef-g ef-s">All</th></tr>`
+      +`<tr><th>Lead stage</th>${cols.map((c,j)=>`<th${j?"":' class="ef-s"'}>${c}</th>`).join("")}<th class="ef-s">Leads</th><th>% of leads</th></tr>`;
+    body.innerHTML=`<tr class="totrow stl-top"><td>Total</td>${colTot.map((v,j)=>`<td${j?"":' class="ef-s"'}>${nf(v)}</td>`).join("")}<td class="ef-s">${nf(total)}</td><td>100%</td></tr>`
+      +st.map(i=>`<tr><td class="dim">${stName(i)}</td>${cols.map((c,j)=>{ const v=(dCol[i]||{})[c]||0; return `<td${j?"":' class="ef-s"'}><span class="cell" style="${heat(v,cmax)}">${v?nf(v):""}</span></td>`; }).join("")}<td class="ef-s tot">${nf(stage[i])}</td><td>${pctStr(stage[i],total)}</td></tr>`).join("")
+      +(st.length?"":none(cols.length+3));
+    $("trunc").textContent="Cells shaded by lead count (deeper = more); enrolled stage in green.";
     return;
   }
-
-  if(BREAK==="program"){
-    document.getElementById("btitle").textContent="D · ProspectStage × Programme — heat matrix";
-    const {cols,hidden}=progColsInScope(proM);
-    let stIdx=DATA.stages.map((s,i)=>i).filter(i=>stageCount[i]>0);
-    stIdx.sort((a,b)=>stageCount[b]-stageCount[a]);
-    let cmax=0; stIdx.forEach(i=>cols.forEach(c=>{ const v=(proM[i][c]||0); if(v>cmax)cmax=v; }));
-    thead.innerHTML=`<tr><th>Stage</th>${cols.map(c=>`<th>${pname(c)}</th>`).join("")}<th class="grp">Total</th><th>% of total</th></tr>`;
-    body.innerHTML="";
-    stIdx.forEach(i=>{
-      const cells=cols.map(c=>{ const v=proM[i][c]||0; return `<td><span class="cell" style="${heat(v,cmax)}">${v||""}</span></td>`; }).join("");
-      const nm = stageCls(i)==="won"?`<span style="color:var(--good)">${DATA.stages[i]}</span>`:DATA.stages[i];
-      body.insertAdjacentHTML("beforeend",`<tr><td class="dim">${nm}</td>${cells}<td class="tot">${stageCount[i].toLocaleString()}</td><td>${pctStr(stageCount[i],total)}</td></tr>`);
-    });
-    const colTot=cols.map(c=>{ let s=0; stIdx.forEach(i=>s+=(proM[i][c]||0)); return s; });
-    body.insertAdjacentHTML("beforeend",`<tr class="totrow"><td>Total (all programmes)</td>${colTot.map(v=>`<td>${v.toLocaleString()}</td>`).join("")}<td>${total.toLocaleString()}</td><td>100%</td></tr>`);
-    if(!stIdx.length||!cols.length) body.innerHTML=`<tr><td colspan="${cols.length+3}" style="text-align:center;color:var(--muted);padding:16px">No leads in scope.</td></tr>`;
-    document.getElementById("trunc").textContent = hidden
-      ? `Top ${cols.length} programmes by volume shown; ${hidden} smaller programme${hidden===1?"":"s"} hidden (their leads are still in the Total column). Cells shaded by lead count.`
-      : "Cells shaded by lead count (deeper = more). Rows ranked by total volume; Enrolled stage(s) in green.";
-    return;
-  }
-
-  // BREAK === "owner": owners (rows) × stages (columns)
-  document.getElementById("btitle").textContent="D · Lead owner × ProspectStage — heat matrix";
-  let stCols=DATA.stages.map((s,i)=>i).filter(i=>stageCount[i]>0);
-  stCols.sort((a,b)=>stageCount[b]-stageCount[a]);
-  let owners=Object.keys(ownM).map(Number);
-  const ownTot=o=>{ let s=0; const r=ownM[o]; for(const k in r) s+=r[k]; return s; };
-  if(q) owners=owners.filter(o=>DATA.owners[o].toLowerCase().includes(q));
-  owners.sort((a,b)=>ownTot(b)-ownTot(a));
-  const shown=owners.slice(0,60);
-  let cmax=0; owners.forEach(o=>stCols.forEach(st=>{ const v=(ownM[o][st]||0); if(v>cmax)cmax=v; }));
-  thead.innerHTML=`<tr><th>Lead owner</th>${stCols.map(st=>`<th>${DATA.stages[st]}</th>`).join("")}<th class="grp">Total</th><th>% of total</th></tr>`;
-  body.innerHTML="";
-  shown.forEach(o=>{
-    const cells=stCols.map(st=>{ const v=ownM[o][st]||0; return `<td><span class="cell" style="${heat(v,cmax)}">${v||""}</span></td>`; }).join("");
-    const t=ownTot(o);
-    body.insertAdjacentHTML("beforeend",`<tr><td class="dim">${DATA.owners[o]}</td>${cells}<td class="tot">${t.toLocaleString()}</td><td>${pctStr(t,total)}</td></tr>`);
+  // centres (rows, expanding to counsellors) × stages (columns)
+  let cmax=1; Object.values(dTop).forEach(r=>st.forEach(i=>{ if((r[i]||0)>cmax) cmax=r[i]; }));
+  const rowTot=r=>st.reduce((a,i)=>a+(r[i]||0),0);
+  thead.innerHTML=`<tr class="ef-band"><th></th><th colspan="${st.length}" class="ef-g ef-s">Lead stage</th><th colspan="2" class="ef-g ef-s">All</th></tr>`
+    +`<tr><th>Centre / counsellor</th>${st.map((i,j)=>`<th${j?"":' class="ef-s"'}>${DATA.stages[i].replace(/^B2C\s*:\s*/,"")}</th>`).join("")}<th class="ef-s">Leads</th><th>% of leads</th></tr>`;
+  const line=(label,r,cls,extra)=>`<tr class="${cls||""}" ${extra||""}><td class="dim">${label}</td>${st.map((i,j)=>{ const v=r[i]||0, tot=(cls||"").includes("totrow"); return `<td${j?"":' class="ef-s"'}>${tot?nf(v):`<span class="cell" style="${heat(v,cmax)}">${v?nf(v):""}</span>`}</td>`; }).join("")}<td class="ef-s tot">${nf(rowTot(r))}</td><td>${pctStr(rowTot(r),total)}</td></tr>`;
+  const sum={}; let html="", shown=0, ng=0;
+  Object.keys(dTop).sort((a,b)=>(CTR_LAST.has(a)-CTR_LAST.has(b))||rowTot(dTop[b])-rowTot(dTop[a])).forEach(c=>{
+    let ks=Object.keys(dSub[c]).sort((x,y)=>rowTot(dSub[c][y])-rowTot(dSub[c][x]));
+    if(q) ks=ks.filter(k=>String(DATA.owners[k]??"").toLowerCase().includes(q));
+    if(!ks.length) return; ng++; shown+=ks.length;
+    (q?ks.map(k=>dSub[c][k]):[dTop[c]]).forEach(r=>st.forEach(i=>sum[i]=(sum[i]||0)+(r[i]||0)));
+    const open=!!q||OPEN_D.has(c), nm=Object.keys(dSub[c]).length;
+    html+=line(c+muted(nm+" counsellor"+(nm>1?"s":"")),dTop[c],"stl-g"+(open?" open":""),`data-g="${c}" tabindex="0" aria-expanded="${open}"`);
+    if(open) ks.forEach(k=>html+=line(DATA.owners[k]??"—",dSub[c][k],"stl-c"));
   });
-  const colTot=stCols.map(st=>{ let s=0; owners.forEach(o=>s+=(ownM[o][st]||0)); return s; });
-  body.insertAdjacentHTML("beforeend",`<tr class="totrow"><td>Total (all ${owners.length})</td>${colTot.map(v=>`<td>${v.toLocaleString()}</td>`).join("")}<td>${total.toLocaleString()}</td><td>100%</td></tr>`);
-  if(!owners.length) body.innerHTML=`<tr><td colspan="${stCols.length+3}" style="text-align:center;color:var(--muted);padding:16px">No owners match.</td></tr>`;
-  document.getElementById("trunc").textContent = q
-    ? `Owners matching “${q}” (${owners.length}); top ${shown.length} shown.`
-    : `${owners.length} owners with leads in scope; top ${shown.length} shown, ranked by volume. Type to filter, or the total row reconciles all owners.`;
+  body.innerHTML=line(q?`Total (${shown} matching)`:"Total",sum,"totrow stl-top")+html+(shown?"":none(st.length+3));
+  body.querySelectorAll("tr.stl-g").forEach(tr=>{ const tg=()=>{ if(q) return; const g=tr.dataset.g; OPEN_D.has(g)?OPEN_D.delete(g):OPEN_D.add(g); render(); };
+    tr.onclick=tg; tr.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tg(); } }; });
+  $("trunc").textContent=q?`${shown} counsellor${shown!==1?"s":""} matching “${q}”.`:`${ng} centres, ranked by leads. Click a centre to see its counsellors.`;
 }
 
 function render(){
-  START=dateToIdx(document.getElementById("dstart").value);
-  END=dateToIdx(document.getElementById("dend").value);
-  if(END<START){ const t=START; START=END; END=t; }
-  document.getElementById("rangel").textContent = dmy(START)+" → "+dmy(END);
-  const res=compute(); const f=res.f, n=res.n;
-  document.getElementById("t-tot").textContent=f.created.toLocaleString();
-  document.getElementById("t-att").textContent=f.attempted.toLocaleString();
-  document.getElementById("t-con").textContent=f.connected.toLocaleString();
-  document.getElementById("t-cns").textContent=f.counselled.toLocaleString();
-  document.getElementById("t-enr").textContent=f.enrolled.toLocaleString();
-  document.getElementById("t-l2c").textContent=pctStr(f.counselled,f.created);
-  document.getElementById("t-c2p").textContent=pctStr(f.enrCns,f.counselled);
-  document.getElementById("t-rate").textContent=pctStr(f.enrolled,f.created);
-  renderFunnel(f,n);
-  renderLeak(f,n,res.miss);
-  renderDim(res.dimM,f,res.subM);
-  renderStage(res);
-  const offPath = f.enrolled - n.enrolled;
-  const noCouns = !f.counselled;
-  document.getElementById("xnote").innerHTML=
-    `<b>Read this before quoting a conversion rate.</b> The spec funnel is <b>Lead created &rarr; Attempted &rarr; Connected &rarr; Counselled &rarr; Enrolled</b>, `+
-    `with <b>L2C</b> = counselled ÷ leads, <b>C2P</b> = enrolled <i>that were also flagged counselled</i> ÷ counselled, <b>L2P</b> = enrolled ÷ leads. `+
-    `<b>These five steps are NOT a nested funnel.</b> Each one is a separate LSQ field — attempts, interacted count, the counselling flag, ProspectStage — and a lead can satisfy a later one without ever satisfying an earlier one, `+
-    `usually because the activity was never logged. In this window <b>${offPath.toLocaleString()}</b> of <b>${f.enrolled.toLocaleString()}</b> enrolled leads (${pctStr(offPath,f.enrolled||1)}) did not clear every step above them. `+
-    `So: the <b>solid</b> part of each bar is the strict subset that cleared every earlier step, the <b>faded</b> part is the leads that skipped one, and the headline number is the <b>as-reported</b> count — the figure the business quotes. Section B breaks the gap down step by step. `+
-    (noCouns ? `<b>No counselled leads are present in this scope</b>, so L2C reads 0% and C2P is undefined — check the pull before reporting that as a real collapse. ` : ``)+
-    `<b>Counselled being larger than Enrolled is expected</b> (counselling precedes payment); the thing to watch is the off-path share, not that ordering. `+
-    `<b>Attempted</b> and <b>Connected</b> use the dashboard-wide definitions: attempted = attempts &gt; 0, a first-call time or a connect; connected = interacted &gt; 0 or a first-connect time. `+
-    `<b>Connected</b> is still a proxy, not a verified conversation. Enrolled is low in a young cohort — many leads are still “New Lead” — so L2P is a <b>floor, not a mature rate</b>. `+
-    `<b>Cross-check in LSQ:</b> stage counts here should match the LSQ <b>Lead-Stage distribution</b> report (Manage Leads → group by ProspectStage) on the same created-date window and sources.`;
-  document.getElementById("foot").innerHTML=`Window ${dmy(START)} → ${dmy(END)} (IST). Cohort — leads created ${isoToDMY(DATA.base)} onwards, pulled complete (earlier creates excluded, d≥0). Unworked bulk/bot pool excluded from every denominator when the pool toggle is on. Stage labels and the enrolled/“won” class read live from the data — never hardcoded. Fields: created; attempts / first call / connect (Attempted); interacted count / first connect (Connected); counselling flag (Counselled); ProspectStage class “won” (Enrolled); programme (breakdown).`;
+  const R=compute(), {f,n,miss}=R;
+  $("fn-reset").hidden = $("dstart").value===DATA.base && $("dend").value===idxToStr(maxDay) && SEL.size===DATA.sources.length && !CSEL.size;
+  // one row of tiles: each ratio sits under the count it comes from
+  const tile=(v,l,sub,cls)=>`<div class="tile ${cls||""}"><div class="n">${v}</div><div class="l">${l}${sub?`<br><span style="opacity:.8">${sub}</span>`:""}</div></div>`;
+  $("fn-tiles").innerHTML=tile(nf(f.created),"Leads created (selected)","","hi")
+    +tile(nf(f.attempted),"Attempted",pctStr(f.attempted,f.created)+" of leads")
+    +tile(nf(f.connected),"Connected",pctStr(f.connected,f.created)+" of leads")
+    +tile(nf(f.counselled),"Counselled",`<b>L2C ${pctStr(f.counselled,f.created)}</b>`)
+    +tile(nf(f.enrolled),"Enrolled",`<b>C2P ${pctStr(f.enrCns,f.counselled)}</b> · <b>L2P ${pctStr(f.enrolled,f.created)}</b>`,"good");
+  renderFunnel(f,n); renderLeak(f,n); renderDim(R.cTop,R.cSub,f); renderStage(R.stage,R.dCol,R.dTop,R.dSub);
+  const off=f.enrolled-n.enrolled, e=f.enrolled||1;
+  const DEFS=[
+    ["Cohort",`leads created ${dmy(R.lo)} → ${dmy(R.hi)} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}. Counselled, Enrolled and the ratios are measured as of the last refresh, so a young cohort reads low — L2P is a floor, not a mature rate.`],
+    ["Attempted · Connected","the dashboard-wide rules: attempted = attempts &gt; 0, a first-call time or a connect; connected = interacted &gt; 0 or a first-connect time (a proxy, not a verified conversation)."],
+    ["Counselled · Enrolled","the counselling-done flag on the lead · lead stage class “won”."],
+    ["L2C · C2P · L2P","counselled ÷ leads · enrolled <i>that were also flagged counselled</i> ÷ counselled · enrolled ÷ leads."],
+    ["A · Funnel","bar length = as-reported count. <b>Solid</b> = cleared every step above it; <b>faded</b> = skipped an earlier step; badges = step conversion."],
+    ["B · Path integrity",`the five steps come from five separate LSQ fields, so they don't nest: a lead can be enrolled with no logged attempt. In this window ${nf(off)} of ${nf(f.enrolled)} enrolled leads (${pctStr(off,e)}) skipped a step — ${nf(miss.enrNoAttempt)} with no sign of an attempt, ${nf(miss.enrNoConnect)} never connected, ${nf(miss.enrNoCouns)} not flagged counselled; ${nf(miss.cnsNoConnect)} counselled leads have no connect logged. These are logging gaps, which is why the ratios use as-reported counts.`],
+    ["C · Paying · % in pool","any amount collected (mx_Total_Amount_Paid &gt; 0, part-payments included — not the same as the Enrolled stage) · a source's leads parked in the unworked pool accounts."],
+    ["C · Groups","sources: Meta, Google, Internshala, Others (expanding to raw LSQ Source values) · centres: the counsellor's LSQ admission group · programmes: the programme group, from the campaign name first, then Program of Interest."],
+    ["D · Lead stage","each lead's current stage (LSQ ProspectStage) and its lifecycle class: open = still being worked, closed = finished without enrolling, enrolled."],
+    ["Cross-check in LSQ","stage counts should match Manage Leads grouped by Lead Stage, on the same created dates and sources."],
+  ];
+  $("fn-foot").innerHTML=`<summary>How this is measured<span>Definitions for every section · data ${isoToDMY(DATA.base)} to ${dmy(maxDay)}</span></summary>`
+    +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("");
 }
 
-// ---- controls wiring ----
-function sync(){ document.querySelectorAll("#srcs .chk").forEach(c=>c.classList.toggle("on",SEL.has(+c.dataset.k))); }
-function srcOrder(){ const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++; return Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]); }
-function chips(){ const box=document.getElementById("srcs"); box.innerHTML=""; srcOrder().forEach(k=>{ const c=document.createElement("span"); c.className="chk on"; c.dataset.k=k; c.innerHTML=`<span class="dot"></span>${DATA.sources[k]}`; c.onclick=()=>{ SEL.has(k)?SEL.delete(k):SEL.add(k); sync(); render(); }; box.appendChild(c); }); }
-function resetSel(){ SEL.clear(); DATA.sources.forEach((s,i)=>SEL.add(i)); }
-if(!HASPROG){ document.querySelectorAll('#segbreak button[data-b="program"], #segdim button[data-d="program"]').forEach(b=>b.style.display="none"); }
+// ---- controls ----
+const srcSel=$("fn-src"), ctrSel=$("fn-ctr");
+const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++;
+srcSel.innerHTML=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]).map(k=>`<option value="${k}">${DATA.sources[k]}</option>`).join("");
+srcSel._presets=[{label:"All except Internshala",pick:()=>[...srcSel.options].forEach(o=>o.selected=o.textContent!=="Internshala")}];
+ctrSel.innerHTML=[...new Set(OC)].sort((a,b)=>(CTR_LAST.has(a)-CTR_LAST.has(b))||a.localeCompare(b)).map(c=>`<option>${c}</option>`).join("");
+if(!OC.length) ctrSel.style.display="none";
+if(!PROGS.length) document.querySelectorAll('#segbreak button[data-b="program"], #segdim button[data-d="program"]').forEach(b=>b.style.display="none");
+srcSel.onchange=()=>{ const p=[...srcSel.selectedOptions].map(o=>+o.value); SEL.clear(); (p.length?p:DATA.sources.map((_,i)=>i)).forEach(k=>SEL.add(k)); render(); };
+ctrSel.onchange=()=>{ CSEL.clear(); [...ctrSel.selectedOptions].forEach(o=>CSEL.add(o.value)); render(); };
+document.querySelectorAll("#segdim button").forEach(b=>b.onclick=()=>{ DIM=b.dataset.d; document.querySelectorAll("#segdim button").forEach(x=>x.classList.toggle("on",x===b)); $("rowfilter2").value=""; render(); });
 document.querySelectorAll("#segbreak button").forEach(b=>b.onclick=()=>{ BREAK=b.dataset.b; document.querySelectorAll("#segbreak button").forEach(x=>x.classList.toggle("on",x===b)); render(); });
-document.querySelectorAll("#segdim button").forEach(b=>b.onclick=()=>{ DIM=b.dataset.d; document.querySelectorAll("#segdim button").forEach(x=>x.classList.toggle("on",x===b)); render(); });
-document.getElementById("rowfilter").oninput=render;
-document.getElementById("rowfilter2").oninput=render;
-document.getElementById("s-all").onclick=()=>{ resetSel(); sync(); render(); };
-document.getElementById("s-exint").onclick=()=>{ SEL.clear(); DATA.sources.forEach((s,i)=>{ if(s!=="Internshala") SEL.add(i); }); sync(); render(); };
-const DS=document.getElementById("dstart"), DE=document.getElementById("dend");
-DS.min=DATA.base; DS.max=idxToStr(maxDay); DS.value=DATA.base;
-DE.min=DATA.base; DE.max=idxToStr(maxDay); DE.value=idxToStr(maxDay);
-DS.onchange=render; DE.onchange=render;
-resetSel(); chips(); render();
-
-// ---- theme toggle (keep; default light) ----
+$("rowfilter").oninput=render; $("rowfilter2").oninput=render;
+const DS=$("dstart"), DE=$("dend");
+[DS,DE].forEach(e=>{ e.min=DATA.base; e.max=idxToStr(maxDay); e.onchange=render; });
+DS.value=DATA.base; DE.value=idxToStr(maxDay);
+$("fn-reset").onclick=()=>{ DS.value=DATA.base; DE.value=idxToStr(maxDay); syncDateText();
+  [...srcSel.options].forEach(o=>o.selected=false); [...ctrSel.options].forEach(o=>o.selected=false);
+  srcSel.dispatchEvent(new Event("change")); ctrSel.dispatchEvent(new Event("change")); };
+DATA.sources.forEach((s,i)=>SEL.add(i)); render();
 
 }
 function init_home(){
@@ -2472,22 +2077,26 @@ function skinFrame(f){
   const d=f.contentDocument; if(!d||!d.documentElement) return;
   const t=document.documentElement.getAttribute("data-theme");
   if(t) d.documentElement.setAttribute("data-theme",t); else d.documentElement.removeAttribute("data-theme");
-  const cs=getComputedStyle(document.documentElement), v=n=>cs.getPropertyValue(n).trim();
-  const map={"--plane":"--bg","--surface":"--surface","--surface-2":"--surface-2","--ink":"--ink","--ink-2":"--ink-2","--ink-3":"--muted",
-    "--grid":"--line","--axis":"--line-2","--s1":"--accent","--crit":"--crit","--f":"--sans","--m":"--mono"};
+  // the page is built on the dashboard's token names, so every live value passes straight through
+  const cs=getComputedStyle(document.documentElement);
+  const toks=["--bg","--surface","--surface-2","--ink","--ink-2","--muted","--line","--line-2","--accent","--accent-2","--accent-soft",
+    "--good","--good-soft","--warn","--warn-soft","--warn-line","--crit","--crit-soft","--crit-line","--shadow","--sans","--mono"];
   let st=d.getElementById("dash-skin"); if(!st){ st=d.createElement("style"); st.id="dash-skin"; d.head.appendChild(st); }
-  st.textContent=":root,:root[data-theme]{"+Object.entries(map).map(([k,p])=>v(p)?k+":"+v(p)+";":"").join("")+"}"
-    +"body{background:transparent!important;margin:0;}.wrap{max-width:none!important;padding:0 0 24px!important;}";
+  st.textContent=":root,:root[data-theme]{"+toks.map(k=>{ const v=cs.getPropertyValue(k).trim(); return v?k+":"+v+";":""; }).join("")+"}"
+    // the frame is sized to its content, so the page itself must never scroll (that was the stray scrollbar)
+    +"html,body{overflow:hidden!important;background:transparent!important;margin:0;}.wrap{max-width:none!important;padding:0 0 24px!important;}";
 }
 function init_internshala(){
   const f=document.getElementById("is-frame");
-  const fit=()=>{ try{ f.style.height=f.contentDocument.documentElement.scrollHeight+"px"; }catch(_){} };
+  const fit=()=>{ try{ const d=f.contentDocument; f.style.height=Math.max(d.documentElement.scrollHeight,d.body.scrollHeight)+"px"; }catch(_){} };
   f.addEventListener("load",()=>{
     const d=f.contentDocument;
     if(!d||!/Internshala/.test(d.title||"")){   // a 404 page also "loads"
        f.hidden=true; document.getElementById("is-err").hidden=false; return; }
     skinFrame(f); fit();
-    new ResizeObserver(fit).observe(d.body);
+    // web fonts and expanding rows change the height after load
+    if(d.fonts&&d.fonts.ready) d.fonts.ready.then(fit);
+    const ro=new ResizeObserver(fit); ro.observe(d.documentElement); ro.observe(d.body);
     // follow the dashboard's light/dark toggle while this view is open
     const mo=new MutationObserver(()=>{ if(!f.isConnected){ mo.disconnect(); return; } skinFrame(f); });
     mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
@@ -2504,11 +2113,11 @@ const NAV=[
 const NAV_TIP={
   speed:"Time from creation / first-call / assignment to first contact, by source and owner, with SLA compliance.",
   ageing:"How long a creation cohort has sat: pending first attempt, no activity and overdue follow-up across age buckets.",
-  owner:"Per-counsellor accountability: leads, coverage, attempts, speed, SLA and overdue follow-ups.",
+  owner:"Per-counsellor accountability, grouped by centre: coverage, attempts, speed from assignment, SLA, overdue follow-ups and enrolments.",
   attempts:"Dialling effort and connects by source, centre or owner: attempted, connected, connect %, attempts per lead and to connect, attempt buckets.",
   funnel:"Created → Attempted → Connected → Counselled → Enrolled, with conversion rates and the full stage distribution.",
   talk:"Each counsellor's day: first and last call, talk, active and idle time, connected leads and landed leads not attempted.",
-  internshala:"Internshala leads since the window start: arrivals, pooling, human vs bot calling and outcomes."
+  internshala:"Internshala leads: arrivals, pooling, human vs bot calling and outcomes, on a created, interested or touched basis."
 };
 function buildSide(){
   const side=document.getElementById("side");
@@ -2546,11 +2155,11 @@ function tipBtn(text,inl){ return text?'<button type="button" class="tipbtn'+(in
 const VIEWS={
   speed:{title:"Speed to Lead",init:init_speed},
   ageing:{title:"Lead Ageing",init:init_ageing},
-  owner:{title:"Owner Scorecard",init:init_owner},
+  owner:{title:"Counsellor Scorecard",init:init_owner},
   attempts:{title:"Effort & Connects",init:init_attempts},
-  funnel:{title:"Funnel / Stage",init:init_funnel},
+  funnel:{title:"Funnel & Lead Stage",init:init_funnel},
   talk:{title:"Talk Time",init:init_talk},
-  internshala:{title:"Internshala Funnel",init:init_internshala}
+  internshala:{title:"Internshala",init:init_internshala}
 };
 // retired reports: an old bookmark or shared link lands on the report that absorbed it
 const ALIAS={connect:"attempts", source:"funnel"};
@@ -2675,6 +2284,7 @@ function upgradeSelects(){
     const fire=()=>nat.dispatchEvent(new Event('change',{bubbles:true}));
     const sync=()=>{
       if(multi){ const sel=[...nat.selectedOptions];
+        const own=nat._label&&nat._label(sel); if(own){ lab.textContent=own; return; }   // e.g. "Open stages only"
         lab.textContent=!sel.length?(nat.dataset.all||'All'):sel.length===1?sel[0].textContent:sel.length+' '+(nat.dataset.noun||'selected'); return; }
       const o=nat.options[nat.selectedIndex]; lab.textContent=o?o.textContent:'';
     };
@@ -2699,7 +2309,7 @@ function upgradeSelects(){
         add(nat.dataset.all||'All', !nat.selectedOptions.length, ()=>{ [...nat.options].forEach(o=>o.selected=false); refresh(); });
         pre.forEach(p=>{ add(p.label, false, ()=>{ p.pick(); refresh(); }); pop.lastChild.classList.add('preset'); });
         if(pre.length) pop.appendChild(Object.assign(document.createElement('div'),{className:'xsel-sep'}));
-        [...nat.options].forEach(o=>add(o.textContent, o.selected, ()=>{ o.selected=!o.selected; refresh(); }));
+        [...nat.options].forEach(o=>add(o.textContent, o.selected, ()=>{ o.selected=!o.selected; refresh(); }, o.dataset.desc));
       } else [...nat.options].forEach((o,i)=>add(o.textContent, i===nat.selectedIndex, ()=>{
         close(); btn.focus();
         if(i===nat.selectedIndex) return;

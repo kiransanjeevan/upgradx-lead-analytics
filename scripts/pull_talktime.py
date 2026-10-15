@@ -35,7 +35,12 @@ For every counsellor and every IST day in the window it writes one row:
                                     counsellor's last call are left out (they had no chance);
                                     for someone who made no calls, every landed lead counts.
 
-Output: data/talktime.json (compact rows; header list in the file).
+Calling effort (the Effort report's "calling activity" view): every outbound call (22) in the
+window, totalled per IST day x caller x lead source — calls, unique leads dialled, leads
+connected (answered), leads created that day, and leads getting their first-ever call that day.
+Unlike the lead-level fields, this dates the work, so calls on older leads count on the day made.
+
+Output: data/talktime.json (compact rows; header lists in the file).
 
 Env: LSQ_HOST, LSQ_ACCESS, LSQ_SECRET (required); TT_DAYS (default 14);
      TT_AS_OF (IST date, default yesterday); TT_GAP_MIN (3); TT_LOG_WINDOW_MIN (60);
@@ -189,7 +194,7 @@ print("median ringing (s): answered", ring[True].total_seconds(), "not answered"
 
 
 # ---------- leads: landed with a counsellor in the window, plus every lead called ----------
-COLS = "ProspectID,CreatedOn,OwnerId,mx_Assignment_Date_Current_Owner,mx_First_Call_Date_and_Time"
+COLS = "ProspectID,CreatedOn,OwnerId,mx_Assignment_Date_Current_Owner,mx_First_Call_Date_and_Time,Source"
 start_utc = (datetime(DAY_LIST[0].year, DAY_LIST[0].month, DAY_LIST[0].day) - IST).strftime("%Y-%m-%d %H:%M:%S")
 leads = {}
 for anchor in ("CreatedOn", "mx_Assignment_Date_Current_Owner"):
@@ -294,6 +299,37 @@ for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}
                  last.strftime("%H:%M") if cs else "",
                  sum(1 for c in cs if c["ans"] and not has_log(c)), brk, brk_at])
 
+# ---------- calling effort by source: what was dialled each day, on new leads and older ones ----------
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from pull import grp                               # the one source-bucket table in the repo
+eff_src, eff_raw, eff = [], [], {}
+def _ix(arr, v):
+    if v not in arr:
+        arr.append(v)
+    return arr.index(v)
+for c in calls:
+    d = c["start"].date()
+    if c["ev"] != 22 or d not in DAY_LIST or not c["user"]:
+        continue
+    x = leads.get(c["lead"]) or {}
+    raw = (x.get("Source") or "").strip()
+    e = eff.setdefault((str(d), c["user"], _ix(eff_src, grp(raw)), _ix(eff_raw, raw or "—")),
+                       {"dials": 0, "leads": set(), "conn": set(), "new": set(), "first": set()})
+    e["dials"] += 1
+    l = c["lead"]
+    if l:
+        e["leads"].add(l)
+        if c["ans"]:
+            e["conn"].add(l)
+        cr = ist_of(x.get("CreatedOn"))
+        if cr and cr.date() == d:
+            e["new"].add(l)
+        if first_call.get(l) and first_call[l].date() == d:
+            e["first"].add(l)
+EFF_HDR = ["day", "user", "src", "raw", "dials", "leads", "connected", "new_leads", "first_calls"]
+eff_rows = [[*k, e["dials"], len(e["leads"]), len(e["conn"]), len(e["new"]), len(e["first"])]
+            for k, e in sorted(eff.items())]
+
 agents = {uid: users[uid] for uid in {r[0] for r in rows} if uid in users}
 for uid in {r[0] for r in rows} - set(agents):
     nm = next((c["name"] for c in calls if c["user"] == uid), "Unknown user")
@@ -302,5 +338,8 @@ for uid in {r[0] for r in rows} - set(agents):
 OUT.write_text(json.dumps({
     "generated_at": (datetime.now(timezone.utc).replace(tzinfo=None) + IST).strftime("%Y-%m-%d %H:%M IST"),
     "days": [str(d) for d in DAY_LIST], "gap_min": int(GAP.total_seconds() // 60),
-    "header": HDR, "agents": agents, "rows": rows, "api_calls": calls_api}, separators=(",", ":")))
-print(f"wrote {OUT.name}: {len(rows)} counsellor-days, {len(agents)} counsellors, {len(calls)} calls, {calls_api} API calls")
+    "header": HDR, "agents": agents, "rows": rows, "api_calls": calls_api,
+    "effort_header": EFF_HDR, "effort_sources": eff_src, "effort_raw": eff_raw, "effort": eff_rows},
+    separators=(",", ":")))
+print(f"wrote {OUT.name}: {len(rows)} counsellor-days, {len(agents)} counsellors, {len(calls)} calls, "
+      f"{len(eff_rows)} effort rows, {calls_api} API calls")
