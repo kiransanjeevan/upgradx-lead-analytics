@@ -1801,8 +1801,10 @@ function init_home(){
     // ---- tiles: one row, each ratio under the count it comes from ----
     const tile=(v,l,sub,cls)=>`<div class="tile ${cls||""}"><div class="n">${v}</div><div class="l">${l}${sub?`<br><span style="opacity:.8">${sub}</span>`:""}</div></div>`;
     const n=S.length;
+    const poolIn=DATA.leads.filter(r=>r[11]===1 && inScope(r) && inWin(r[1])).length;   // pool leads created in this range
+    const poolTxt=poolIn?(window.__EXPOOL?`<br>+ ${num(poolIn)} in pool accounts, not counted`:`<br>incl. ${num(poolIn)} in pool accounts`):"";
     $("kpis").innerHTML = MODE==="cohort"
-      ? tile(num(n),"Leads created",`${span}`,"hi")
+      ? tile(num(n),"Leads created",`${span}${poolTxt}`,"hi")
         +tile(num(att),"Attempted",`${pct(att,n)} of leads · ${n?(attSum/n).toFixed(2):"—"} attempts / lead`)
         +tile(num(con),"Connected",`${pct(con,att)} of attempted`)
         +tile(dur(med(spd)),"Median speed from assignment",`<b>${pct(slaHit,slaBase)}</b> within ${SLA} min`)
@@ -2451,7 +2453,7 @@ function paintPool(){
   const {n,names}=poolStats();
   PB.classList.toggle("on", window.__EXPOOL);
   PB.innerHTML='<span class="dot"></span>'+(window.__EXPOOL?"Pool excluded":"Pool included")
-    +(n?' · '+n.toLocaleString('en-IN'):'');
+    +(n?' · '+n.toLocaleString('en-IN')+' since '+isoToDMY(window.__DATA.base).slice(0,6):'');
 }
 // the pill always shows the state; its overlay explains it and holds the switch
 function poolPop(){
@@ -2459,6 +2461,7 @@ function poolPop(){
   return (window.__EXPOOL
     ? `<h4>${N} leads excluded</h4><p>They are held by unworked pool account${names.length>1?"s":""} (${who}), which hold leads without working them. Every rate on the dashboard describes leads a counsellor actually owns.</p>`
     : `<h4>${N} unworked-pool leads included</h4><p>Leads held by ${who} are counted, so coverage, attempts, connect % and enrolment % are diluted by leads nobody worked.</p>`)
+    +`<p style="font-size:12px;color:var(--muted)">${N} is every pool lead created since ${isoToDMY(window.__DATA.base)}. Each report only adds or removes the pool leads inside its own date range, so the change you see on a page is usually smaller.</p>`
     +`<label class="fswitch"><input type="checkbox" id="pool-sw" role="switch"${window.__EXPOOL?" checked":""}><span class="trk"></span>Exclude pool accounts</label>`;
 }
 // one overlay, opened from whichever pill was clicked
