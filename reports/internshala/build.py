@@ -71,15 +71,24 @@ for _chan, _d in other.items():
             OTHER[_pid] = _v
 
 
+IST = dt.timedelta(hours=5, minutes=30)
+
+
 def pd(s):
-    """Parse the several datetime shapes LeadSquared returns; None if absent."""
+    """Parse the several datetime shapes LeadSquared returns, as IST; None if absent.
+    LSQ timestamps are UTC, and every day/week bucket on the page is an IST day, so a
+    lead created at 02:00 IST belongs to that day, not the one before. Date-only values
+    carry no time of day and are left as they are."""
     s = (s or "").strip()
-    for f in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+    for f in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
         try:
-            return dt.datetime.strptime(s, f)
+            return dt.datetime.strptime(s, f) + IST
         except Exception:
             pass
-    return None
+    try:
+        return dt.datetime.strptime(s, "%Y-%m-%d")
+    except Exception:
+        return None
 
 
 SPEED = ['&lt;1h', '1–4h', '4–24h', '1–3d', '3d+']
@@ -147,7 +156,7 @@ IDX = dict(wkC=0, dyC=1, wkI=2, dyI=3, wkA=4, dyA=5, pool=6, worked=7, called=8,
            # measures human effort. slot 23 is the activity log across every channel.
            touch=23)
 
-mk = lambda key, step: [dict(label=(WIN + dt.timedelta(days=i * step)).strftime('%d %b'),
+mk = lambda key, step: [dict(label=(WIN + dt.timedelta(days=i * step)).strftime('%d %b %Y'),
                              dow=(WIN + dt.timedelta(days=i * step)).strftime('%a'),
                              age=(TODAY - (WIN + dt.timedelta(days=i * step))).days,
                              partial=(TODAY - (WIN + dt.timedelta(days=i * step))).days < 14)
@@ -165,7 +174,7 @@ bc = sum(r[21] for r in rows if r[4] >= 0)
 # the window moves. Days are zero-padded (%d) to match the dashboard's DD Mon YYYY.
 WINLBL = f"{WIN:%d %b %Y}"             # 01 Sep 2026 (dashboard-wide DD Mon YYYY)
 WINSHORT = f"{WIN:%d %b}"               # 01 Sep
-ASOF = f"{TODAY:%d %b}"                 # 19 Sep
+ASOF = f"{TODAY:%d %b %Y}"              # 19 Sep 2026 (dashboard-wide DD Mon YYYY)
 SAME = (WIN.year, WIN.month) == (TODAY.year, TODAY.month)
 RANGE = f"{WIN:%d}–{ASOF}" if SAME else f"{WINSHORT}–{ASOF}"   # 01–19 Sep
 PERIOD = WIN.strftime('%B') if SAME else "the window"           # September
@@ -176,7 +185,8 @@ D = dict(
     weeksC=mk(0, 7), weeksI=mk(2, 7), weeksA=mk(4, 7), daysC=mk(1, 1), daysI=mk(3, 1), daysA=mk(5, 1),
     totals=dict(C=nC, I=nI, A=nA), calls=dict(human=hc, bot=bc),
     lede=f"Every Internshala lead since {WINLBL}: how many arrived, how many went to a bulk pool, who called them "
-         f"(counsellors or the bot), and what came of it.",
+         f"(counsellors or the bot), and what came of it. It always includes leads parked in the pool accounts — "
+         f"that's part of what it measures — so the top-bar pool switch doesn't apply here; use Population to leave them out.",
     bases=[dict(id='C', label='Created in window', q="how did the leads we acquired perform?",
                 note=f"<code>CreatedOn</code> on or after {WINSHORT} — the acquisition cohort ({nC:,} leads)."),
            dict(id='I', label='Interested in window', q="new arrivals plus older leads that came back",
@@ -212,7 +222,9 @@ D = dict(
         ["Activity", f"the activity log {RANGE} (events 22, 328, 330, 310, 210, 200, 203, 21), refreshed nightly with the leads."],
         ["Totals", f"{nC:,} created · {nI:,} interested · {nA:,} touched · {hc:,} human and {bc:,} bot calls on touched leads."],
     ],
-    asOfLbl=f"as of {ASOF}", winShort=WINSHORT, winLbl=WINLBL, period=PERIOD)
+    asOfLbl=f"as of {ASOF}",
+    builtOn=f"{dt.datetime.now(dt.timezone.utc) + IST:%Y-%m-%d}",  # IST day of this build
+    winShort=WINSHORT, winLbl=WINLBL, period=PERIOD)
 
 tpl = open(BASE / "template.html", encoding='utf-8').read()
 dest = OUT / "internshala-funnel.html"

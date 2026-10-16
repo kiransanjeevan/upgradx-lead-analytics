@@ -91,19 +91,19 @@ def ts(s):
 
 
 # ---------- users -> name, centre ----------
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from pull import centre_of_user                     # one centre rule for the whole repo
 users = {}
 p = 1
 while True:
     r = post("UserManagement.svc/User/AdvancedSearch", {"Columns": "", "Paging": {"PageIndex": p, "PageSize": 100}})
+    if not (isinstance(r, dict) and isinstance(r.get("Users"), list)):
+        raise RuntimeError(f"User/AdvancedSearch page {p}: unexpected response — {str(r)[:200]}")
     for u in r.get("Users") or []:
-        groups = [g.strip() for g in (u.get("Groups") or "").split(",")]
-        cs = [re.sub(r"^Admissions?[ .]*", "", g).replace("_LC", "").replace("Hyd_", "Hyderabad ")
-              .replace("Blr_", "Bangalore ").replace("blr_", "Bangalore ").replace("Pune2", "Pune 2")
-              .replace("Kolkata2", "Kolkata 2").replace("Bhubaneshwar", "Bhubaneswar")
-              for g in groups if g.lower().startswith("admission")]
         name = re.sub(r"\s+", " ", f"{u.get('FirstName') or ''} {u.get('LastName') or ''}").strip()
+        # same centre rule as the lead pull (pull.centre_of_user), so both reports agree
         users[u["UserId"]] = {"name": name, "login": (u.get("EmailAddress") or "").split("@")[0],
-                              "centre": " / ".join(sorted(cs)) or "No centre group"}
+                              "centre": centre_of_user(u) or "No centre group"}
     if len(r.get("Users") or []) < 100:
         break
     p += 1
@@ -121,7 +121,11 @@ def activities(event, d):
                           "ActivityEvent": event, "RemoveEmptyValue": True},
             "Paging": {"PageIndex": page, "PageSize": 1000},
             "Sorting": {"ColumnName": "CreatedOn", "Direction": "0"}})
-        L = r.get("List") or []
+        # a fault body (rate limit, transient error) has no List; treating it as "no more
+        # activities" would publish a short day as if it were complete
+        if not (isinstance(r, dict) and isinstance(r.get("List"), list)):
+            raise RuntimeError(f"event {event} {d} page {page}: unexpected response — {str(r)[:200]}")
+        L = r["List"]
         out += L
         if len(L) < 1000:
             return out
@@ -202,6 +206,8 @@ for anchor in ("CreatedOn", "mx_Assignment_Date_Current_Owner"):
     while True:
         L = post("LeadManagement.svc/Leads.Get", {"Parameter": {"LookupName": anchor, "LookupValue": start_utc, "SqlOperator": ">="},
                                                   "Columns": {"Include_CSV": COLS}, "Paging": {"PageIndex": p, "PageSize": 1000}})
+        if not isinstance(L, list):
+            raise RuntimeError(f"Leads.Get {anchor} page {p}: unexpected response — {str(L)[:200]}")
         for x in L:
             leads[x["ProspectID"]] = x
         if len(L) < 1000:
@@ -211,7 +217,9 @@ need = list({c["lead"] for c in calls if c["lead"] and c["lead"] not in leads})
 for i in range(0, len(need), 200):
     r = post("LeadManagement.svc/Leads/Retrieve/ByIds", {"SearchParameters": {"LeadIds": need[i:i + 200]},
              "Columns": {"Include_CSV": COLS}, "Paging": {"PageIndex": 1, "PageSize": 200}})
-    for x in r.get("Leads") or []:
+    if not (isinstance(r, dict) and isinstance(r.get("Leads"), list)):
+        raise RuntimeError(f"Leads/Retrieve/ByIds batch {i // 200}: unexpected response — {str(r)[:200]}")
+    for x in r["Leads"]:
         leads[x["ProspectID"]] = x
 
 ist_of = lambda v: (ts(v) + IST) if ts(v) else None
@@ -300,7 +308,6 @@ for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}
                  sum(1 for c in cs if c["ans"] and not has_log(c)), brk, brk_at])
 
 # ---------- calling effort by source: what was dialled each day, on new leads and older ones ----------
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pull import grp                               # the one source-bucket table in the repo
 eff_src, eff_raw, eff = [], [], {}
 def _ix(arr, v):
@@ -338,6 +345,7 @@ for uid in {r[0] for r in rows} - set(agents):
 OUT.write_text(json.dumps({
     "generated_at": (datetime.now(timezone.utc).replace(tzinfo=None) + IST).strftime("%Y-%m-%d %H:%M IST"),
     "days": [str(d) for d in DAY_LIST], "gap_min": int(GAP.total_seconds() // 60),
+    "log_window_min": int(LOG_WIN.total_seconds() // 60),
     "header": HDR, "agents": agents, "rows": rows, "api_calls": calls_api,
     "effort_header": EFF_HDR, "effort_sources": eff_src, "effort_raw": eff_raw, "effort": eff_rows},
     separators=(",", ":")))

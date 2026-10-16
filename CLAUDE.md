@@ -120,7 +120,7 @@ addresses. Counsellor and owner names are fine; they are internal staff.
 
 ## 9. `data/universe.json` is machine-written — take the remote copy on conflict
 
-The daily GitHub Action (`.github/workflows/refresh.yml`, 07:00 IST) runs
+The daily GitHub Action (`.github/workflows/refresh.yml`, 01:11 IST, with a backup run at 07:53 IST) runs
 `scripts/pull.py`, rewrites `data/universe.json` and pushes. Vercel is
 git-connected and redeploys on that push.
 
@@ -136,7 +136,7 @@ git add data/universe.json && git rebase --continue
 Then re-apply any local schema change (e.g. re-flagging pool owners) as a fresh
 commit rather than keeping the stale local file.
 
-`universe.json` is compact **arrays, not objects** — 21 columns per lead, order
+`universe.json` is compact **arrays, not objects** — 24 columns per lead, order
 defined by the header list in `pull.py`. If you add a column, append it at the end
 and update both the header list and `index.html`'s index constants together.
 

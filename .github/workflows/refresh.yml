@@ -64,7 +64,8 @@ jobs:
           LSQ_POOLS: ${{ vars.LSQ_POOLS }}   # optional; defaults to "Avtar LCoffline,Futworks Lc" in the script
         run: python scripts/pull.py
 
-      # Talk Time report: last 7 complete IST days of Ameyo call activity (~90 API calls).
+      # Talk Time report: last 14 complete IST days of Ameyo call activity (TT_DAYS), plus the
+      # calling-activity totals the Effort report reads.
       # Runs after the lead pull; a failure here must not block the main refresh.
       - name: Pull talk-time data
         if: steps.freshness.outputs.skip != 'true'

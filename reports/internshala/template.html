@@ -135,6 +135,7 @@
 
 <script>
 const D = __DATA__, X = D.IDX, R = D.rows;
+window.__BUILT = D.builtOn;   // read by the dashboard to flag a page the nightly run didn't refresh
 const $ = s => document.querySelector(s);
 const nf = n => n.toLocaleString('en-IN');
 const pf = (a,b) => b ? a/b*100 : 0;

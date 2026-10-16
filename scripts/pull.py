@@ -8,10 +8,9 @@ Reads credentials from environment variables (set as GitHub Secrets in CI):
 Optional:
   LSQ_START   window start, an IST calendar date (default 2026-09-01); widen for more history.
   LSQ_POOLS   comma-separated owner names that are unworked holding/bot pools
-              (default: Avtar LCoffline,Futworks Lc)
-              (default "Avtar LCoffline"). Their leads are flagged pool=1 so the
+              (default: Avtar LCoffline,Futworks Lc). Their leads are flagged pool=1 so the
               dashboard can keep them out of rate denominators.
-  LSQ_REFRESH_IST  the daily schedule as HH:MM IST (default 07:00), written into the
+  LSQ_REFRESH_IST  the daily schedule as HH:MM IST (default 01:11), written into the
               data file so the dashboard can show "next refresh in ...". Keep it in
               sync with the cron in .github/workflows/refresh.yml.
 
@@ -52,7 +51,7 @@ POOL_OWNERS = {o.strip().lower() for o in
 
 # Daily refresh time (IST), surfaced to the dashboard so it can show the next run and
 # flag a missed one. The workflow passes this from the same place the cron is defined.
-REFRESH_IST = (os.environ.get("LSQ_REFRESH_IST") or "07:00").strip()
+REFRESH_IST = (os.environ.get("LSQ_REFRESH_IST") or "01:11").strip()   # = the primary cron in refresh.yml
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "data", "universe.json")
 
@@ -65,7 +64,7 @@ def api_url():
 # Only the fields the dashboard needs — keeps each page ~14 fields instead of 640,
 # which makes the pull ~4-5x faster and the payload far smaller (critical for wide date windows).
 COLS = ("ProspectID,CreatedOn,mx_First_Call_Date_and_Time,mx_Date_of_Lead_Assignment,"
-        "OwnerIdName,ProspectActivityDate_Max,mx_Follow_Up_Date,mx_Reached_Out_Attempts,"
+        "OwnerId,OwnerIdName,ProspectActivityDate_Max,mx_Follow_Up_Date,mx_Reached_Out_Attempts,"
         "mx_Interacted_Count,ProspectStage,mx_Highest_Qualification,Source,"
         # report-architecture fields required by LSQ_Sales_Report_Master_Dashboard.xlsx
         "mx_Program,mx_SA_Allocation_City,mx_Offline_Centre_Name,mx_First_Interaction_Date,"
@@ -232,40 +231,55 @@ def prog_group(campaign, program):
     return PROG_GROUPS.index("Other")
 
 
-def owner_centres(owns):
-    """Centre per owner, parallel to `owns`. A lead's own centre field is ~22% filled,
-    so the centre comes from the owner instead: their LSQ "Admission(s) <centre>_LC"
-    user group (the same rule Talk Time uses). AdvancedSearch only returns ACTIVE users,
-    so deactivated accounts fall back to their name ("Chandigarhlc Ac3" -> Chandigarh)."""
+def centre_of_user(u):
+    """One centre for an LSQ user, from their "Admission(s) <centre>_LC" groups — the only centre
+    signal LSQ holds (a lead's own centre field is ~22% filled). Shared by pull_talktime.py so the
+    dashboard and Talk Time agree. A shared login in two groups ("Admission Dehradun" also in
+    Haldwani) takes the centre in its own name; anything else in 2+ groups keeps both, joined."""
+    cs = sorted({re.sub(r"^Admissions?[ .]*", "", g.strip()).replace("_LC", "").replace("Hyd_", "Hyderabad ")
+                 .replace("Blr_", "Bangalore ").replace("blr_", "Bangalore ").replace("Pune2", "Pune 2")
+                 .replace("Kolkata2", "Kolkata 2").replace("Bhubaneshwar", "Bhubaneswar")
+                 .replace("Mumbaiandheri", "Mumbai Andheri")
+                 for g in (u.get("Groups") or "").split(",") if g.strip().lower().startswith("admission")})
+    if len(cs) > 1:
+        name = f"{u.get('FirstName') or ''} {u.get('LastName') or ''}".lower()
+        own = [c for c in cs if c.lower().split()[0] in name]
+        if len(own) == 1:
+            return own[0]
+    return " / ".join(cs)
+
+
+def user_centres():
+    """{UserId: centre} for every ACTIVE LSQ user (AdvancedSearch returns active users only)."""
     qs = urllib.parse.urlencode({"accessKey": ACCESS, "secretKey": SECRET})
-    by_name, p = {}, 1
+    out, p = {}, 1
     while True:
         req = urllib.request.Request(f"{HOST}/UserManagement.svc/User/AdvancedSearch?{qs}",
                                      data=json.dumps({"Columns": "", "Paging": {"PageIndex": p, "PageSize": 100}}).encode(),
                                      headers={"Content-Type": "application/json"})
-        users = json.loads(urllib.request.urlopen(req, timeout=120).read()).get("Users") or []
-        for u in users:
-            cs = {re.sub(r"^Admissions?[ .]*", "", g.strip()).replace("_LC", "").replace("Hyd_", "Hyderabad ")
-                  .replace("Blr_", "Bangalore ").replace("blr_", "Bangalore ").replace("Pune2", "Pune 2")
-                  .replace("Kolkata2", "Kolkata 2").replace("Bhubaneshwar", "Bhubaneswar")
-                  for g in (u.get("Groups") or "").split(",") if g.strip().lower().startswith("admission")}
-            name = re.sub(r"\s+", " ", f"{u.get('FirstName') or ''} {u.get('LastName') or ''}").strip().lower()
-            by_name.setdefault(name, set()).update(cs)      # two users can share a name
-        if len(users) < 100:
+        r = json.loads(urllib.request.urlopen(req, timeout=120).read())
+        # a short user list would silently mark counsellors "No centre"
+        if not (isinstance(r, dict) and isinstance(r.get("Users"), list)):
+            raise RuntimeError(f"User/AdvancedSearch page {p}: unexpected response — {str(r)[:200]}")
+        for u in r["Users"]:
+            out[u["UserId"]] = centre_of_user(u)
+        if len(r["Users"]) < 100:
             break
         p += 1
-    out = []
-    for o in owns:
-        k = re.sub(r"\s+", " ", o).strip().lower()
-        cs = by_name.get(k)
-        if k in POOL_OWNERS:
-            out.append("Pool accounts")
-        elif cs:
-            out.append(" / ".join(sorted(cs)))
-        else:
-            m = re.match(r"([a-z]+?)(?:lc)?\s+ac\d+$", k)
-            out.append(m.group(1).title() if m else "No centre")
     return out
+
+
+def lead_owner_centre(owner_id, owner_name, ucent):
+    """Centre of the ACCOUNT that owns the lead. Keyed by account, not name: a counsellor who
+    moved centre keeps an old account (old centre) and a new one, and each lead belongs to
+    exactly one of them — so each lead lands in exactly one centre, with no overlap."""
+    k = re.sub(r"\s+", " ", owner_name).strip().lower()
+    if k in POOL_OWNERS:
+        return "Pool accounts"
+    if ucent.get(owner_id):
+        return ucent[owner_id]
+    m = re.match(r"([a-z]+?)(?:lc)?\s+ac\d+$", k)        # deactivated: "Chandigarhlc Ac3" -> Chandigarh
+    return m.group(1).title() if m else "No centre"
 
 
 def main():
@@ -274,15 +288,23 @@ def main():
     print("pulling created...");   a = pull("CreatedOn")
     print("pulling first-call..."); b = pull("mx_First_Call_Date_and_Time")
     print("pulling assignment..."); c = pull("mx_Assignment_Date_Current_Owner")
+    # A lead created before the window that pays or is counselled in it, without a new first
+    # call or reassignment, matched none of the anchors above — so the Overview's activity
+    # view (first payments, counselling sessions) silently missed it. Pull those too.
+    print("pulling first-payment..."); d = pull("mx_First_Transaction_Date")
+    print("pulling first-counselling..."); e = pull("mx_First_Counselling_Date")
     uni = {}
-    for L in a + b + c:
+    for L in a + b + c + d + e:
         pid = L.get("ProspectID")
         if pid and pid not in uni:
             uni[pid] = L
     print(f"union {len(uni)}")
 
     srcs, sidx = [], {}
-    owns, oidx = [], {}
+    # one owner entry per (name, centre): the same counsellor in two centres is two rows, each
+    # holding only that centre's leads; two accounts of one person in the SAME centre merge
+    owns, octr, oidx = [], [], {}
+    ucent = user_centres()
     progs, pidx = [], {}
     citys, cidx = [], {}
     ctrs, ctidx = [], {}
@@ -300,6 +322,9 @@ def main():
     leads, unmapped, unprog = [], {}, {}
     for L in uni.values():
         owner = L.get("OwnerIdName") or "Unassigned"
+        ctr = lead_owner_centre(L.get("OwnerId"), owner, ucent)
+        if (owner, ctr) not in oidx:
+            oidx[(owner, ctr)] = len(owns); owns.append(owner); octr.append(ctr)
         raw = (L.get("Source") or "").strip()
         bucket = grp(raw)
         if bucket == "Other" and raw:
@@ -314,7 +339,7 @@ def main():
             # the Speed "assign" anchor were both measuring the wrong field, and slots 3
             # and 18 were byte-identical for all 131,030 leads.
             mins(L.get("mx_Date_of_Lead_Assignment")),
-            idxof(owner, owns, oidx),
+            oidx[(owner, ctr)],
             mins(L.get("ProspectActivityDate_Max")), mins(L.get("mx_Follow_Up_Date")),
             num(L.get("mx_Reached_Out_Attempts")), num(L.get("mx_Interacted_Count")),
             idxof(L.get("ProspectStage"), stgs, stidx),
@@ -397,11 +422,11 @@ def main():
            "sources": srcs, "owners": owns, "stages": stgs, "quals": quals,
            "programs": progs, "cities": citys, "centres": ctrs,
            # raw LSQ Source values behind each bucket, and each owner's centre (parallel to owners)
-           "raw_sources": rsrcs, "owner_centre": owner_centres(owns),
+           "raw_sources": rsrcs, "owner_centre": octr,
            "prog_groups": PROG_GROUPS,
            # lifecycle class per stage index — one shared definition of "still open"
            "stage_class": [stage_class(s) for s in stgs],
-           "pools": sorted(o for o in owns if o.strip().lower() in POOL_OWNERS),
+           "pools": sorted({o for o in owns if o.strip().lower() in POOL_OWNERS}),
            "refresh_ist": REFRESH_IST,   # daily schedule, HH:MM IST
            # `assign` is now mx_Date_of_Lead_Assignment (the original, near-immutable
            # assignment). mx_Assignment_Date_Current_Owner is kept as `assign_cur`, but it

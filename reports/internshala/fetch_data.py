@@ -57,6 +57,7 @@ DATA.mkdir(parents=True, exist_ok=True)
 WIN = dt.date.fromisoformat(os.environ.get("INTERNSHALA_WINDOW_START") or "2026-09-01")
 END = dt.date.fromisoformat(os.environ["INTERNSHALA_AS_OF"]) if os.environ.get("INTERNSHALA_AS_OF") else dt.date.today()
 END = END + dt.timedelta(days=1)   # exclusive upper bound, so "today" is included
+IST = dt.timedelta(hours=5, minutes=30)   # LSQ stores and filters in UTC; the window is in IST days
 
 HOST = os.environ.get("LSQ_HOST", "https://api-in21.leadsquared.com/v2").rstrip("/")
 QS = urllib.parse.urlencode({"accessKey": os.environ["LSQ_ACCESS"], "secretKey": os.environ["LSQ_SECRET"]})
@@ -101,7 +102,14 @@ def fetch_leads():
             "Columns": {"Include_CSV": COLS},
             "Sorting": {"ColumnName": "CreatedOn", "Direction": "1"},
             "Paging": {"PageIndex": page, "PageSize": 1000}})
-        rows = r if isinstance(r, list) else (r.get("Leads") or [])
+        # anything but a list (or a {"Leads": [...]} wrapper) is LeadSquared reporting a fault —
+        # treating it as "no more data" would publish a short lead list as if it were complete
+        if isinstance(r, list):
+            rows = r
+        elif isinstance(r, dict) and isinstance(r.get("Leads"), list):
+            rows = r["Leads"]
+        else:
+            raise RuntimeError(f"leads page {page}: unexpected response — {str(r)[:200]}")
         out.extend(rows)
         print(f"  leads page {page}: {len(rows)} rows, {len(out):,} total", flush=True)
         if len(rows) < 1000:
@@ -125,14 +133,18 @@ def fetch_event(event, pids, page_size, label):
     d0 = WIN
     while d0 < END:
         d1 = d0 + dt.timedelta(days=1)
+        # the API filters in UTC; an IST day starts 5h30m earlier (18:30 UTC the day before)
+        f0 = dt.datetime.combine(d0, dt.time()) - IST
         page = 1
         while True:
             r = post(ACTS, {
-                "Parameter": {"FromDate": f"{d0} 00:00:00", "ToDate": f"{d1} 00:00:00",
+                "Parameter": {"FromDate": f"{f0:%Y-%m-%d %H:%M:%S}", "ToDate": f"{f0 + dt.timedelta(days=1):%Y-%m-%d %H:%M:%S}",
                               "ActivityEvent": event, "RemoveEmptyValue": True},
                 "Paging": {"PageIndex": page, "PageSize": page_size},
                 "Sorting": {"ColumnName": "CreatedOn", "Direction": "0"}})
-            recs = r.get("List") or []
+            if not (isinstance(r, dict) and isinstance(r.get("List"), list)):
+                raise RuntimeError(f"event {event} {d0} page {page}: unexpected response — {str(r)[:200]}")
+            recs = r["List"]
             total += len(recs)
             for a in recs:
                 pid, ts = a.get("RelatedProspectId"), (a.get("CreatedOn") or "")
