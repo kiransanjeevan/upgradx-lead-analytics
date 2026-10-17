@@ -14,11 +14,11 @@ Optional:
               data file so the dashboard can show "next refresh in ...". Keep it in
               sync with the cron in .github/workflows/refresh.yml.
 
-Read-only: only calls Leads.Get and User/AdvancedSearch (both searches). Never
-creates/updates/deletes.
+Read-only: only calls Leads.Get, User/AdvancedSearch and
+CustomActivity/RetrieveByActivityEvent (21, 22 — the call log). Never creates/updates/deletes.
 Stdlib only — no pip install needed.
 """
-import json, os, re, sys, urllib.request, urllib.parse
+import json, os, re, sys, time, urllib.request, urllib.parse
 from datetime import datetime, timezone, timedelta
 
 HOST   = os.environ.get("LSQ_HOST", "https://api-in21.leadsquared.com/v2").rstrip("/")
@@ -206,6 +206,7 @@ def grp(s):
 # "Gen AI-powered Data Science" is DS and "AI-Powered Digital Marketing" is DM; AI only catches
 # AI-first programs. Anything unmatched (college outreach, seminars, MBA, generic "Product"
 # ads) is Other. Validated on Oct 2026 leads: campaign decides 71%, program 7%, Other 21%.
+# The dashboard explains these rules in plain English (PROG_LOGIC in index.html) — update both together.
 PROG_GROUPS = ["DS", "DA", "DM", "Finance", "AI", "FSD", "Other"]
 PROG_RULES = [
     ("DA", r"data ?anal|analytics|\bda\b|excel|power ?bi|tableau"),
@@ -269,6 +270,71 @@ def user_centres():
     return out
 
 
+# Not counsellors: their calls are not a human counsellor attempt (same list as pull_talktime.py)
+NON_COUNSELLORS = POOL_OWNERS | {"lc team", "arrowhead lcoffline", "system", "upgrad dev user"}
+RETURN_GRACE = 5      # minutes: a call logged just before the interested-in stamp still counts
+
+
+def call_log():
+    """Every human call since START from the activity log: {lead: [(minute, event, answered)]}.
+    A lead that comes back keeps its old CreatedOn and its old first-call / interacted fields,
+    so those describe the FIRST enquiry. Only the log can say whether it was called after it
+    returned. 22 = outbound (an attempt), 21 = inbound (counts once answered: they spoke)."""
+    qs = urllib.parse.urlencode({"accessKey": ACCESS, "secretKey": SECRET})
+    url = f"{HOST}/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent?{qs}"
+    out, day, end = {}, BASE - timedelta(minutes=IST), datetime.now(timezone.utc).replace(tzinfo=None)
+    while day < end:
+        for ev in (22, 21):
+            page = 1
+            while True:
+                body = {"Parameter": {"FromDate": day.strftime("%Y-%m-%d %H:%M:%S"),
+                                      "ToDate": (day + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S"),
+                                      "ActivityEvent": ev, "RemoveEmptyValue": True},
+                        "Paging": {"PageIndex": page, "PageSize": 1000},
+                        "Sorting": {"ColumnName": "CreatedOn", "Direction": "0"}}
+                for i in range(5):                      # transient faults retry; a bad body raises
+                    try:
+                        req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                                     headers={"Content-Type": "application/json"})
+                        r = json.loads(urllib.request.urlopen(req, timeout=180).read())
+                        break
+                    except Exception:
+                        if i == 4:
+                            raise
+                        time.sleep(4 * (i + 1))
+                if not (isinstance(r, dict) and isinstance(r.get("List"), list)):
+                    raise RuntimeError(f"call log {ev} {day:%Y-%m-%d} page {page}: unexpected response — {str(r)[:200]}")
+                for a in r["List"]:
+                    m, pid = mins(a.get("CreatedOn")), a.get("RelatedProspectId")
+                    if m is None or not pid or (a.get("CreatedByName") or "").strip().lower() in NON_COUNSELLORS:
+                        continue
+                    out.setdefault(pid, []).append((m, ev, (a.get("Status") or "").lower() == "answered"))
+                if len(r["List"]) < 1000:
+                    break
+                page += 1
+        day += timedelta(days=1)
+    for v in out.values():
+        v.sort()
+    return out
+
+
+def since_return(calls, interested):
+    """[first attempt, first connect, outbound calls] on/after the interested-in stamp."""
+    if interested is None or not calls:
+        return [None, None, 0]
+    t0, att, con, n = interested - RETURN_GRACE, None, None, 0
+    for m, ev, ans in calls:
+        if m < t0:
+            continue
+        if ev == 22:
+            n += 1
+        if att is None and (ev == 22 or ans):
+            att = m
+        if con is None and ans:
+            con = m
+    return [att, con, n]
+
+
 def lead_owner_centre(owner_id, owner_name, ucent):
     """Centre of the ACCOUNT that owns the lead. Keyed by account, not name: a counsellor who
     moved centre keeps an old account (old centre) and a new one, and each lead belongs to
@@ -293,12 +359,17 @@ def main():
     # view (first payments, counselling sessions) silently missed it. Pull those too.
     print("pulling first-payment..."); d = pull("mx_First_Transaction_Date")
     print("pulling first-counselling..."); e = pull("mx_First_Counselling_Date")
+    # a lead that re-enquires keeps its old CreatedOn, so without this anchor a returning lead
+    # created before the window is missing unless something else happened to it
+    print("pulling interested-in..."); g = pull("mx_Interested_In_Date")
     uni = {}
-    for L in a + b + c + d + e:
+    for L in a + b + c + d + e + g:
         pid = L.get("ProspectID")
         if pid and pid not in uni:
             uni[pid] = L
     print(f"union {len(uni)}")
+    print("pulling call log (21, 22)..."); calls = call_log()
+    print(f"  call log: {sum(len(v) for v in calls.values()):,} calls on {len(calls):,} leads")
 
     srcs, sidx = [], {}
     # one owner entry per (name, centre): the same counsellor in two centres is two rows, each
@@ -358,6 +429,9 @@ def main():
             mins(L.get("mx_Interested_In_Date")),                         # 21 interested-in ON
             idxof(raw, rsrcs, ridx),                                      # 22 raw Source value
             prog_group(L.get("SourceCampaign"), L.get("mx_Program")),     # 23 program group
+            # 24..26: calling AFTER the latest interested-in stamp, from the call log —
+            # first attempt, first connect, outbound calls (for leads that come back)
+            *since_return(calls.get(L.get("ProspectID")), mins(L.get("mx_Interested_In_Date"))),
         ])
         camp = (L.get("SourceCampaign") or "").strip()
         if leads[-1][23] == PROG_GROUPS.index("Other") and camp and not GENERIC_CAMPAIGN.search(camp):
@@ -434,7 +508,8 @@ def main():
            "cols": ["src", "created", "firstcall", "assign", "owner", "lastactivity",
                     "followup", "attempts", "interacted", "stage", "qual", "pool",
                     "program", "city", "centre", "firstconnect", "counselled", "revenue",
-                    "assign_cur", "counselled_on", "paid_on", "interested_on", "rawsrc", "proggroup"],
+                    "assign_cur", "counselled_on", "paid_on", "interested_on", "rawsrc", "proggroup",
+                    "call_after_int", "connect_after_int", "calls_after_int"],
            "leads": leads}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:

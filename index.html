@@ -173,16 +173,7 @@ td.owncol{white-space:nowrap;}
 .muted-pct{color:var(--muted);font-weight:400;font-size:11px;margin-left:4px;}
 /* report-specific: greyed n/a cell + note */
   .na{color:var(--muted);font-style:italic;cursor:help;border-bottom:1px dotted var(--line-2);}
-.funnel{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:16px 18px 18px;}
-.fstep{display:grid;grid-template-columns:158px 1fr 268px;gap:14px;align-items:center;padding:8px 0;}
-.fstep+.fstep{border-top:1px dashed var(--line);}
-.flabel{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);line-height:1.3;}
-.flabel .fdesc{display:block;font-family:var(--sans);font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted);margin-top:2px;}
-.ftrack{background:var(--surface-2);border-radius:5px;overflow:hidden;height:22px;display:flex;align-items:center;}
-.fval{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;}
-.fval b{color:var(--ink);font-size:16px;}
 .fpct{margin:0 6px;}
-@media(max-width:640px){.fstep{grid-template-columns:1fr;gap:5px;} .fval{text-align:left;}}
 /* --- brand tokens --- */
 :root{--brand:#e01820;--brand-2:#c3141b;}
 @media(prefers-color-scheme:dark){:root{--brand:#ff5257;--brand-2:#ff7378;}}
@@ -410,7 +401,11 @@ nav.side.open{transform:none;}
 .xctx .q{color:var(--accent-2);font-style:italic;}
 .xctx-more{font-size:12.5px;font-weight:600;color:var(--accent);white-space:nowrap;}
 .xctx-more::after{content:" ▾";}
-.xctx[open] .xctx-more::after{content:" ▴";}
+.xctx[open] .xctx-more{display:none;}
+.xctx[open] summary::after{content:"Hide ▴";font-size:12.5px;font-weight:600;color:var(--accent);white-space:nowrap;}
+.xfold[open] summary::after{content:"Hide";margin-left:auto;font-size:12.5px;font-weight:600;color:var(--accent);}
+.xhide{display:block;margin:10px 0 0 auto;padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--accent);font:600 12.5px var(--sans);cursor:pointer;}
+.xhide:hover{border-color:var(--accent);}
 .xctx summary:hover .xctx-more{text-decoration:underline;}
 .xctx>div{margin-top:10px;padding:12px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;line-height:1.6;}
 .xctx>div p{margin:0 0 8px;}
@@ -440,11 +435,12 @@ nav.side.open{transform:none;}
 <template id="tpl-home"><div class="wrap">
   <div class="eyebrow">LSQ · Overview</div>
   <h1>Overview</h1>
-  <p class="lede">Headline numbers for any date range — how the leads created in it converted, or what the team did in it. Every other report in the menu goes deeper on one of these.</p>
+  <p class="lede">Headline numbers for any date range — how the leads created in it converted, how the leads that showed interest in it (new or returning) were worked, or what the team did in it. Every other report in the menu goes deeper on one of these.</p>
 
   <div class="fbar" id="h-fbar">
     <select id="h-view" data-label="View" aria-label="View">
       <option value="cohort" data-desc="How did the leads that arrived in the range convert?">Leads created in range</option>
+      <option value="interested" data-desc="Leads that showed interest in the range, new or returning">Leads interested in range</option>
       <option value="ops" data-desc="What did the team do in the range, including older leads?">Activity in range</option>
     </select>
     <select id="h-range" data-label="Range" aria-label="Quick range">
@@ -464,7 +460,7 @@ nav.side.open{transform:none;}
   <div class="tiles" id="kpis"></div>
 
   <div class="shrow"><span class="sh" id="mftitle">Funnel</span></div>
-  <div class="funnel" id="mfunnel"></div>
+  <div class="tblwrap" id="mfunnel"></div>
   <div class="acts" id="macts"></div>
   <div>
       <div class="shrow"><span class="sh" id="msrctitle">By source</span><a class="mdlink" href="#funnel" onclick="event.preventDefault();show('funnel')">Full funnel by source →</a></div>
@@ -618,9 +614,9 @@ nav.side.open{transform:none;}
   <div class="tiles" id="fn-tiles"></div>
 
   <div class="shrow"><span class="sh">A · Funnel</span></div>
-  <div class="funnel" id="funnel"></div>
+  <div class="tblwrap"><table id="fn-a"><thead id="funnelhead"></thead><tbody id="funnelrows"></tbody></table></div>
 
-  <div class="shrow"><span class="sh">B · Path integrity — where the funnel doesn't nest</span></div>
+  <div class="shrow"><span class="sh">B · Logging gaps — leads missing an earlier step</span></div>
   <div class="tblwrap"><table><thead id="leakhead"></thead><tbody id="leakrows"></tbody></table></div>
 
   <div class="shrow">
@@ -633,7 +629,7 @@ nav.side.open{transform:none;}
 
   <div class="shrow">
     <span class="sh">D · Lead stage</span>
-    <div class="seg" id="segbreak"><button data-b="overall" class="on">Overall</button><button data-b="source">By source</button><button data-b="owner">By centre / counsellor</button><button data-b="program">By programme</button></div>
+    <div class="seg" id="segbreak"><button data-b="overall" class="on">Overall</button><button data-b="owner">By centre / counsellor</button><button data-b="program">By programme</button></div>
     <input class="rowfilter" id="rowfilter" placeholder="Filter counsellor…" style="display:none">
   </div>
   <div class="tblwrap"><table id="fn-d" class="banded"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
@@ -720,6 +716,15 @@ function stageCls(i){ const a=window.__DATA.stage_class; return (a && a[i]) || "
 // ---- shared breakdowns (Speed to Lead, Effort) ----
 // Meta, Google and Internshala get their own source group; every other bucket sits under Others.
 const SRC_GROUPS=["Meta","Google","Internshala","Others"];
+// plain-English programme grouping rule, shown wherever a programme breakdown appears.
+// Keep in step with PROG_RULES / prog_group() in scripts/pull.py.
+const PROG_LOGIC=`<b>Programme group</b> (the parent row) comes from the lead's <b>campaign name</b> (LSQ Source Campaign). We look for a product word in this order: `
+  +`<b>DA</b> Data Analytics (data analytics, analytics, Excel, Power BI, Tableau) → <b>DS</b> Data Science → <b>DM</b> Digital Marketing (digital marketing, marketing) → `
+  +`<b>Finance</b> (finance, accounting, ACCA, CFA, banking, investment, CMA) → <b>FSD</b> Full Stack / software (full stack, software, cyber, development, DevOps, cloud) → `
+  +`<b>AI</b> (AI, Gen AI, agentic, artificial intelligence, machine learning, LLM). The first match wins, so the subject beats the AI label: “Gen AI-powered Data Science” is DS. `
+  +`If the campaign name has no product word, the same check runs on <b>Program of Interest</b>. Anything still unmatched (multi-product ads, college outreach, seminars, MBA) is <b>Other</b>. `
+  +`<b>Programme</b> (the child row) is the lead's <b>Program of Interest</b> exactly as stored in LSQ. Because the two levels come from different fields, a group can list a programme from another subject `
+  +`when the campaign and the form disagree, e.g. a lead from a Finance campaign who picked Data Science on the form sits under Finance.`;
 function srcGroupOf(si){ const n=window.__DATA.sources[si]; return SRC_GROUPS.includes(n)?n:"Others"; }
 // Centre = the owner's LSQ admission group (pull.py), because the lead's own centre field is ~22% filled
 const CTR_LAST=new Set(["No centre","Pool accounts"]);
@@ -727,6 +732,23 @@ function centreOf(L){ const oc=window.__DATA.owner_centre; return (oc&&oc[L[4]])
 function isConnected(L){ return (L[8]||0)>0 || L[15]!=null; }
 function isAttempted(L){ return (L[7]||0)>0 || L[2]!=null || isConnected(L); }
 function isEnrolled(L){ return stageCls(L[9])==="won"; }
+// A lead that comes back keeps its old first-call and interacted fields, which describe its FIRST
+// enquiry. For a returning lead, attempts and connects come from the call log after the
+// interested-in stamp instead (pull.py, cols 24-26). n = attempts, first = first attempt time.
+function callFacts(L,returning){
+  return returning ? {att:L[24]!=null, con:L[25]!=null, n:L[26]||0, first:L[24]}
+                   : {att:isAttempted(L), con:isConnected(L), n:L[7]||0, first:L[2]};
+}
+// "Interested in the range" = every lead CREATED in it (new), plus leads created before it whose
+// Interested In Date falls in it (returning). Interested-in is also re-stamped by an automated
+// Program change on leads that had already paid — not a new enquiry — so for a returning lead a
+// stamp after its first payment is ignored. lo/hi are IST day indexes. 0 = out, 1 = new, 2 = returning.
+function interestKind(L,lo,hi){
+  const c=L[1]==null?null:Math.floor(L[1]/1440);
+  if(c!=null && c>=lo) return c<=hi ? 1 : 0;
+  const i=L[21]==null?null:Math.floor(L[21]/1440);
+  return i!=null && i>=lo && i<=hi && !(L[20]!=null && L[20]<L[21]) ? 2 : 0;
+}
 function isOpen(L){ return stageCls(L[9])==="open"; }
 // Overdue = a callback nobody made: open lead, follow-up day before the as-of day, and no
 // activity since it fell due. Date-passed alone flagged 86% of the book, 90% of which had
@@ -921,17 +943,17 @@ function render(){
   // definitions in the same fold-out shape as Talk Time: one term per line
   const DEFS=[
     ["Leads",`every lead ${coh} in the window (${span}, IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}.`],
-    ["Uncalled","no sign of an attempt (no attempt count, first-call time or connect). Counted as an SLA <b>miss</b>, not left out."],
-    ["Attempted","share of leads with any sign of an attempt: attempt count &gt; 0, a first-call time, or a connect. Same rule on every report."],
+    ["Uncalled","no sign of an attempt (no attempt count, first attempted call time or connect). Counted as an SLA <b>miss</b>, not left out."],
+    ["Attempted","share of leads with any sign of an attempt: attempt count &gt; 0, a first attempted call time, or a connect. Same rule on every report."],
     ["Med. 1st attempt",`median of <code>${clkA}</code>, across the attempted leads.`],
-    ["Connected","leads with an interaction count &gt; 0 or a first-connect time. The % is of attempted leads (the connect rate). Same rule on every report."],
+    ["Connected","leads that picked up and spoke: LSQ Interacted Count &gt; 0 or a first connected call time. The % is of attempted leads (the connect rate). Same rule on every report."],
     ["Med. 1st connect",`median of <code>${clkC}</code>. The ${nf(never)} never-connected lead${never!==1?"s":""} in this window are left out (they are not fast connects).`],
     ["SLA % (all)",`leads first attempted within ${sla} min, as a share of <b>all</b> leads, uncalled included.`],
     ["Unmeasurable",unm||agg.cunmeas?`${nf(unm)} attempted and ${nf(agg.cunmeas)} connected lead(s) can't be timed: no timestamp logged, or called before the clock started (reassigned after a call). They are out of the medians and the SLA denominator.`:"none in this window."],
     ["Source groups","Meta, Google and Internshala have their own rows; every other source is under <b>Others</b>. Expanding a group lists the raw LSQ <b>Source</b> values behind it."],
     ["Centre","the lead owner's centre, from their LSQ <b>Admission(s) &lt;centre&gt;</b> user group. Deactivated owners fall back to the centre in their name (e.g. Chandigarhlc Ac3); owners with neither show as <b>No centre</b>."],
     ["Owner","the current lead owner (OwnerIdName)."],
-    ["Program group","DS, DA, DM, Finance, AI, FSD or Other. Read from the <b>campaign name</b> first (LC campaigns end in the product, e.g. …_OFFLINE-data_analytics), then from <b>Program of Interest</b>. The domain wins over the AI label, so “Gen AI-powered Data Science” is DS. College outreach, seminars, MBA and generic ads fall in Other."],
+    ["Program group · program",PROG_LOGIC],
   ];
   document.getElementById("foot").innerHTML=`<summary>How this is measured<span>Definitions for every column · data ${isoToDMY(DATA.base)} to ${dmy(maxIdx)}</span></summary>`
     +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("")
@@ -997,14 +1019,14 @@ const STAGES=(DATA.stages||[]).map((s,i)=>i).filter(i=>stageCls(i)!=="test");
 const OPEN_STG=STAGES.filter(i=>stageCls(i)==="open");
 const CLS_NAME={open:"Open",lost:"Closed",won:"Enrolled"};
 
-function mk(){ return {b:BUCKETS.map(()=>({all:0,pend:0,noact:0,over:0})), all:0,pend:0,noact:0,over:0,att:0}; }
+function mk(){ return {b:BUCKETS.map(()=>({all:0,pend:0,noact:0,over:0})), all:0,pend:0,noact:0,over:0,att:0,atd:0}; }
 function add(r,L,asOf){
   const age=asOf-dayIdx(L[1]), c=r.b[bkt(age)];
   const pend=isAttempted(L)?0:1;
   const la=dayIdx(L[5]), noact=(la!=null && asOf-la>=NOACT)?1:0;
   const over=isOverdue(L,asOf)?1:0;
   c.all++; c.pend+=pend; c.noact+=noact; c.over+=over;
-  r.all++; r.pend+=pend; r.noact+=noact; r.over+=over; r.att+=(L[7]||0);
+  r.all++; r.pend+=pend; r.noact+=noact; r.over+=over; r.att+=(L[7]||0); if(!pend) r.atd++;
 }
 const bump=(o,k,L,asOf)=>add(o[k]=o[k]||mk(),L,asOf);
 function compute(){
@@ -1049,7 +1071,7 @@ function render(){
     +tile(nf(T.pend),"Pending first attempt"+pc(T.pend),"unc")
     +tile(nf(T.noact),`No activity ${NOACT}+ days`+pc(T.noact),"warn")
     +tile(nf(T.over),"Overdue follow-up"+pc(T.over),"warn")
-    +tile(T.all?(T.att/T.all).toFixed(1):"—","Avg attempts / lead");
+    +tile(T.atd?(T.att/T.atd).toFixed(1):"—","Avg attempts / attempted lead");
   // table: parent bands like Talk Time / Effort
   const own=DIM==="owner";
   $("thead").innerHTML=`<tr class="ef-band"><th></th><th colspan="${BUCKETS.length}" class="ef-g ef-s">Age since creation · cells: ${METLABEL[METRIC]}</th><th colspan="6" class="ef-g ef-s">Pipeline flags</th></tr>`
@@ -1061,7 +1083,7 @@ function render(){
     const cells=r.b.map((c,i)=>{ const v=c[METRIC]; return `<td${i?"":' class="ef-s"'}>${tot?(v?nf(v):""):`<span class="cell" style="${heat(v,cmax)}">${v?nf(v):""}</span>`}</td>`; }).join("");
     return `<tr class="${cls||""}" ${extra||""}><td class="dim">${name}</td>${cells}`
       +`<td class="ef-s tot">${nf(r.all)}</td><td class="pend">${nf(r.pend)}</td><td class="warncol">${nf(r.noact)}</td><td class="warncol">${nf(r.over)}</td>`
-      +`<td>${r.all?(r.att/r.all).toFixed(1):"—"}</td><td>${r.all?Math.round(100*r.pend/r.all)+"%":"—"}</td></tr>`;
+      +`<td>${r.atd?(r.att/r.atd).toFixed(1):"—"}</td><td>${r.all?Math.round(100*r.pend/r.all)+"%":"—"}</td></tr>`;
   };
   const muted=x=>` <span class="stl-sub">${x}</span>`;
   const q=own?$("ownfilter").value.trim().toLowerCase():"";
@@ -1097,7 +1119,7 @@ function render(){
     ["Pending","no sign of an attempt: no attempt count, first-call time or connect. Same rule as every report."],
     [`No act. ${NOACT}+d`,`last activity (ProspectActivityDate_Max) ${NOACT} or more days before the as-of date — the same line as the 8+ days age bucket. Leads with no activity at all are counted as Pending, not here.`],
     ["Overdue FU","open lead whose follow-up date (mx_Follow_Up_Date) is before the as-of date, with no activity since it fell due. Same rule as the Counsellor Scorecard and Overview."],
-    ["Avg att.","mean of logged reach-out attempts (mx_Reached_Out_Attempts; empty = 0). A floor, since attempts are under-logged."],
+    ["Avg att.","logged reach-out attempts (mx_Reached_Out_Attempts) ÷ leads that were attempted at least once. A floor, since attempts are under-logged."],
     ["Stages",`${scope}. Lifecycle classes: open = still being worked, closed = finished without enrolling, enrolled. See “What counts as open” above.`],
     ["Source groups","Meta, Google and Internshala have their own rows; every other source is under <b>Others</b>, expanding to the raw LSQ Source values."],
     ["Centre","the counsellor's centre, from their LSQ <b>Admission(s) &lt;centre&gt;</b> user group."],
@@ -1199,7 +1221,7 @@ function render(){
     const tot=(cls||"").includes("totrow"), c=r.leads?100*r.att/r.leads:0, u=r.leads-r.att, b=r.leads-r.unmeas, s=b?100*r.hit/b:null;
     return `<tr class="${cls||""}" ${extra||""}><td class="dim">${name}</td><td>${nf(r.leads)}</td>`
       +`<td class="ef-s">${nf(r.att)}</td><td class="${!tot&&u/(r.leads||1)>=.25?"unc":""}">${nf(u)} <span class="fpct">${r.leads?Math.round(100*u/r.leads):0}%</span></td>`
-      +`<td>${tot?c.toFixed(0)+"%":`<span class="cov ${cc(c)}">${c.toFixed(0)}%</span>`}</td><td>${r.leads?(r.attSum/r.leads).toFixed(1):"—"}</td>`
+      +`<td>${tot?c.toFixed(0)+"%":`<span class="cov ${cc(c)}">${c.toFixed(0)}%</span>`}</td><td>${r.att?(r.attSum/r.att).toFixed(1):"—"}</td>`
       +`<td class="ef-s">${fm(med(r.speeds))}</td><td>${s==null?"—":s.toFixed(0)+"%"}</td>`
       +`<td class="ef-s ${!tot&&r.over?"warncol":""}">${nf(r.over)}</td><td>${nf(r.enr)}</td></tr>`;
   };
@@ -1223,9 +1245,9 @@ function render(){
   $("trunc").textContent=q?`${shown} counsellor${shown!==1?"s":""} matching “${q}”, in ${ng} centre${ng!==1?"s":""}.`:`${ng} centres, ranked by leads. Click a centre to see its counsellors.`;
   const DEFS=[
     ["Leads",`leads created ${dmy(lo)} → ${dmy(hi)} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}. Owner = the <b>current</b> lead owner (OwnerIdName), not the creator or first caller.`],
-    ["Attempted · Uncalled · Coverage","any sign of an attempt (attempt count &gt; 0, a first-call time or a connect — the rule on every report) · the rest · attempted ÷ leads."],
-    ["Avg attempts","logged reach-out attempts per lead (mx_Reached_Out_Attempts). A floor, since attempts are under-logged."],
-    ["Median · Within SLA",`first-call time minus the lead's <b>first assignment</b> (mx_Date_of_Lead_Assignment) — the counsellor it was first given to, who isn't always the current owner — and the share of leads first attempted within ${sla} min. Uncalled leads count as misses. ${agg.unmeas?nf(agg.unmeas)+" attempted leads can't be timed (no first-call time, or called before they were assigned) and are left out of both.":""}`],
+    ["Attempted · Uncalled · Coverage","any sign of an attempt (attempt count &gt; 0, a first attempted call time or a connect — the rule on every report) · the rest · attempted ÷ leads."],
+    ["Avg attempts","logged reach-out attempts (mx_Reached_Out_Attempts) ÷ leads that were attempted at least once. A floor, since attempts are under-logged."],
+    ["Median · Within SLA",`first-call time minus the lead's <b>first assignment</b> (mx_Date_of_Lead_Assignment) — the counsellor it was first given to, who isn't always the current owner — and the share of leads first attempted within ${sla} min. Uncalled leads count as misses. ${agg.unmeas?nf(agg.unmeas)+" attempted leads can't be timed (no first attempted call time, or called before they were assigned) and are left out of both.":""}`],
     ["Overdue FU",`open lead whose follow-up date is before ${dmy(ASOF)} (the last complete day), with no activity since it fell due.`],
     ["Enrolled","lead stage class “won”."],
     ["Centre","the counsellor's LSQ <b>Admission(s) &lt;centre&gt;</b> user group; deactivated owners fall back to the centre in their name."],
@@ -1277,10 +1299,11 @@ const BASIS={created:1, interested:21};
 let DIM="source"; const SEL=new Set(), CSEL=new Set(), OPEN=new Set();
 const bucket=a=>a<=0?0 : a<=2?1 : a<=5?2 : 3;
 const blank=()=>({leads:0,att:0,conn:0,total:0,connAtt:0,b:[0,0,0,0]});
-function add(r,L){ const a=L[7]||0; r.leads++; r.total+=a; r.b[bucket(a)]++;
-  if(isAttempted(L)) r.att++;
-  if(isConnected(L)){ r.conn++; r.connAtt+=a; } }
-const bump=(o,k,L)=>add(o[k]=o[k]||blank(),L);
+// k = callFacts(): a returning lead counts only the calls made after it came back
+function add(r,k){ const a=k.n; r.leads++; r.total+=a; r.b[bucket(a)]++;
+  if(k.att) r.att++;
+  if(k.con){ r.conn++; r.connAtt+=a; } }
+const bump=(o,key,k)=>add(o[key]=o[key]||blank(),k);
 
 // one pass: the aggregate, plus group -> member rows (source group -> raw Source, centre -> counsellor)
 function compute(){
@@ -1289,11 +1312,13 @@ function compute(){
   const top={}, sub={}, agg=blank();
   for(const L of DATA.leads){
     if(poolSkip(L) || !SEL.has(L[0])) continue;
-    const d=dayIdx(L[f]); if(d==null || d<lo || d>hi) continue;
+    const kind=f===21 ? interestKind(L,lo,hi) : (d=>d!=null && d>=lo && d<=hi ? 1 : 0)(dayIdx(L[1]));
+    if(!kind) continue;
     const c=centreOf(L); if(CSEL.size && !CSEL.has(c)) continue;
-    add(agg,L);
-    if(DIM==="source"){ const g=srcGroupOf(L[0]); bump(top,g,L); bump(sub[g]=sub[g]||{},L[0]+":"+(L[22]??""),L); }
-    else { bump(top,c,L); bump(sub[c]=sub[c]||{},L[4],L); }
+    const k=callFacts(L, kind===2);      // returning: created before the range
+    add(agg,k);
+    if(DIM==="source"){ const g=srcGroupOf(L[0]); bump(top,g,k); bump(sub[g]=sub[g]||{},L[0]+":"+(L[22]??""),k); }
+    else { bump(top,c,k); bump(sub[c]=sub[c]||{},L[4],k); }
   }
   return {top,sub,agg,lo,hi};
 }
@@ -1408,7 +1433,7 @@ function render(){
     tile(nf(t.leads),`Leads ${verb} (selected)`,"hi")
     +tile(ap==null?"—":ap.toFixed(0)+"%",`Attempted<br><span style="opacity:.75">${nf(t.att)} of ${nf(t.leads)} leads</span>`)
     +tile(nf(t.total),"Total attempts (logged)")
-    +tile(av(t.leads?t.total/t.leads:null),"Avg attempts / lead")
+    +tile(av(t.att?t.total/t.att:null),"Avg attempts / attempted lead")
     +tile(cp==null?"—":cp.toFixed(0)+"%",`Connect % (of attempted)<br><span style="opacity:.75">${nf(t.conn)} connected</span>`,"good")
     +tile(av(t.conn?t.connAtt/t.conn:null),"Avg attempts to connect");
 
@@ -1425,7 +1450,7 @@ function render(){
     const pct=v=>v==null?"—":tot?v.toFixed(1)+"%":`<span class="cov ${cc(v)}">${v.toFixed(1)}%</span>`;
     const bc=(v,i)=>`<td${i?"":' class="ef-s"'}>${tot?nf(v):`<span class="cell" style="${heat(v,maxB)}">${nf(v)}</span>`}</td>`;
     return `<tr class="${cls||""}" ${extra||""}><td class="dim">${name}</td><td>${nf(r.leads)}</td>`
-      +`<td class="ef-s">${nf(r.att)}</td><td>${pct(ap)}</td><td>${nf(r.total)}</td><td>${av(r.leads?r.total/r.leads:null)}</td>`
+      +`<td class="ef-s">${nf(r.att)}</td><td>${pct(ap)}</td><td>${nf(r.total)}</td><td>${av(r.att?r.total/r.att:null)}</td>`
       +`<td class="ef-s">${nf(r.conn)}</td><td>${pct(cp)}</td><td>${nf(r.att-r.conn)}</td><td>${av(r.conn?r.connAtt/r.conn:null)}</td>`
       +r.b.map(bc).join("")+`</tr>`;
   };
@@ -1443,10 +1468,10 @@ function render(){
   // definitions: the same fold-out as Speed to Lead and Talk Time
   const span=lo===hi?dmy(lo):dmy(lo)+" → "+dmy(hi);
   const DEFS=[
-    ["Leads",`leads ${verb==="created"?"<b>created</b>":"whose latest <b>interested-in</b> date falls"} in ${span} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}.${basis==="interested"?" Interested-in catches returning leads too; a lead created before "+isoToDMY(DATA.base)+" appears only if it was also called or reassigned since then.":""}`],
-    ["Attempted","leads with any sign of an attempt: attempt count &gt; 0, a first-call time, or a connect. Same rule on every report."],
+    ["Leads",`leads ${verb==="created"?"<b>created</b>":"that showed <b>interest</b>"} in ${span} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}.${basis==="interested"?" Interested = every lead created in the range, plus returning leads (created before it, Interested In Date in it). For a returning lead, attempts, attempted and connected count only calls made from 5 min before its Interested In Date onward, from the call log (activities 21 and 22); its older calls belong to its first enquiry. A stamp after the lead's first payment is ignored (an automated programme change, not a new enquiry).":""}`],
+    ["Attempted","leads with any sign of an attempt: attempt count &gt; 0, a first attempted call time, or a connect. Same rule on every report."],
     ["Attempt %","attempted ÷ leads."],
-    ["Total · Avg / lead","logged reach-out attempts (mx_Reached_Out_Attempts), summed, and per lead. Attempts are under-logged, so read these as floors."],
+    ["Total · Avg / attempted lead","logged reach-out attempts (mx_Reached_Out_Attempts), summed, and divided by the leads that were attempted at least once. Attempts are under-logged, so read these as floors."],
     ["Connected","leads with an interaction count &gt; 0 or a first-connect time — a proxy, not a verified conversation."],
     ["Connect % · Not connected","connected ÷ attempted, and attempted − connected."],
     ["Avg to connect","attempts logged on the connected leads, per connected lead."],
@@ -1540,41 +1565,30 @@ function compute(){
     upd(cTop[g]=cTop[g]||blank()); const s=cSub[g]=cSub[g]||{}; upd(s[k]=s[k]||blank());
     // D: stage counts, plus the matrix for the chosen view
     const st=L[9]; stage[st]++;
-    if(BREAK==="source"||BREAK==="program"){ const col=BREAK==="source"?srcGroupOf(L[0]):pgroup(L); const r=dCol[st]=dCol[st]||{}; r[col]=(r[col]||0)+1; }
+    if(BREAK==="program"){ const col=pgroup(L), r=dCol[st]=dCol[st]||{}; r[col]=(r[col]||0)+1; }
     if(BREAK==="owner"){ const t=dTop[ctr]=dTop[ctr]||{}; t[st]=(t[st]||0)+1; const u=(dSub[ctr]=dSub[ctr]||{})[L[4]]=(dSub[ctr]||{})[L[4]]||{}; u[st]=(u[st]||0)+1; }
   }
   return {lo,hi,f,n,miss,cTop,cSub,stage,dCol,dTop,dSub};
 }
 
-// ---- A · funnel bars ----
-function renderFunnel(f,n){
-  const base=f.created||1;
-  const steps=[
-    {label:"Lead created",   val:f.created,    nest:f.created},
-    {label:"Attempted",      val:f.attempted,  nest:n.attempted},
-    {label:"Connected",      val:f.connected,  nest:n.connected},
-    {label:"Counselled",     val:f.counselled, nest:n.counselled},
-    {label:"Enrolled",       val:f.enrolled,   nest:n.enrolled}];
-  const neutral='style="background:var(--surface-2);color:var(--ink-2)"';
-  $("funnel").innerHTML=steps.map((s,i)=>{
-    const solid=100*s.nest/base, extra=100*Math.max(0,s.val-s.nest)/base;
-    let badges="";
-    // the enrolled step's own conversion is C2P; a raw enrolled ÷ counselled would inflate it ~3x
-    if(i>0 && i<4){ const prev=steps[i-1].val, conv=prev?Math.round(100*s.val/prev):0; badges+=` <span class="cov ${cc(conv)}">&rarr; ${conv}% step</span>`; }
-    if(i===3) badges+=` <span class="cov" ${neutral}>L2C ${pctStr(f.counselled,f.created)}</span>`;
-    if(i===4) badges+=` <span class="cov" ${neutral}>C2P ${pctStr(f.enrCns,f.counselled)}</span> <span class="cov" ${neutral}>L2P ${pctStr(f.enrolled,f.created)}</span>`;
-    const skip=s.val-s.nest, skipLine=i>0?(skip>0?`<span class="fpct">${nf(skip)} skipped an earlier step</span>`:`<span class="fpct">all on the full path</span>`):"";
-    return `<div class="fstep"><div class="flabel">${s.label}</div>
-      <div class="ftrack"><span class="bar" style="width:${solid.toFixed(1)}%;height:22px;border-radius:${extra>0?"5px 0 0 5px":"5px"}"></span><span style="display:block;height:22px;border-radius:${solid>0?"0 5px 5px 0":"5px"};width:${extra.toFixed(1)}%;background:color-mix(in srgb, var(--accent) 26%, transparent)"></span></div>
-      <div class="fval"><b>${nf(s.val)}</b><span class="fpct">${(100*s.val/base).toFixed(1)}% of leads</span>${badges}<br>${skipLine}</div></div>`;
+// ---- A · funnel table ----
+function renderFunnel(f){
+  const steps=[["Lead created",f.created],["Attempted",f.attempted],["Connected",f.connected],["Counselled",f.counselled],["Enrolled",f.enrolled]];
+  // the enrolled step's own conversion is C2P; a raw enrolled ÷ counselled would inflate it ~3x
+  const ratio=["","","",`L2C ${pctStr(f.counselled,f.created)}`,`C2P ${pctStr(f.enrCns,f.counselled)} · L2P ${pctStr(f.enrolled,f.created)}`];
+  $("funnelhead").innerHTML=`<tr><th>Step</th><th>Leads</th><th>% of leads</th><th>From the step above</th><th>Conversion</th></tr>`;
+  $("funnelrows").innerHTML=steps.map(([nm,v],i)=>{
+    const prev=i?steps[i-1][1]:0, conv=prev?100*v/prev:0;
+    return `<tr${i?"":' class="totrow"'}><td class="dim">${nm}</td><td>${nf(v)}</td><td>${pctStr(v,f.created)}</td>`
+      +`<td>${i>0&&i<4?`<span class="cov ${cc(conv)}">${conv.toFixed(0)}%</span>`:'<span class="fpct">—</span>'}</td><td>${ratio[i]?`<b>${ratio[i]}</b>`:""}</td></tr>`;
   }).join("");
 }
 
 // ---- B · path integrity ----
 function renderLeak(f,n){
-  const rows=[["Attempted","attempts &gt; 0, first call or connect",f.attempted,n.attempted],["Connected","interacted &gt; 0 or first connect",f.connected,n.connected],
+  const rows=[["Attempted","attempts &gt; 0, a first attempted call, or a connect",f.attempted,n.attempted],["Connected","interacted count &gt; 0, or a first connected call",f.connected,n.connected],
               ["Counselled","counselling-done flag",f.counselled,n.counselled],["Enrolled","lead stage class “won”",f.enrolled,n.enrolled]];
-  $("leakhead").innerHTML=`<tr><th>Step</th><th>LSQ field behind it</th><th>As reported</th><th class="grp">On the full path</th><th>Skipped an earlier step</th><th>% off-path</th></tr>`;
+  $("leakhead").innerHTML=`<tr><th>Step</th><th>LSQ field behind it</th><th>Step logged</th><th class="grp">All earlier steps logged too</th><th>Missing an earlier step</th><th>% missing</th></tr>`;
   $("leakrows").innerHTML=rows.map(([nm,fld,v,ne])=>{ const skip=Math.max(0,v-ne), sp=pctNum(skip,v);
     return `<tr><td class="dim">${nm}</td><td class="fpct">${fld}</td><td>${nf(v)}</td><td>${nf(ne)}</td><td>${nf(skip)}</td><td><span class="cov ${ccLeak(sp)}">${v?sp.toFixed(1):"0.0"}%</span></td></tr>`; }).join("");
 }
@@ -1595,7 +1609,7 @@ function renderDim(cTop,cSub,f){
     const cp=(v)=>` <span class="fpct">${pctStr(v,r.leads)}</span>`;
     return `<tr class="${cls||""}" ${extra||""}><td class="dim">${label}</td><td>${nf(r.leads)}</td>${isSrc?`<td>${poolCell(r)}</td>`:""}`
       +`<td class="ef-s">${nf(r.att)}${cp(r.att)}</td><td>${nf(r.con)} <span class="fpct">${pctStr(r.con,r.att)}</span></td><td>${nf(r.cns)}</td><td>${nf(r.enr)}</td>`
-      +`<td class="ef-s">${r.leads?(r.attSum/r.leads).toFixed(2):"—"}</td><td>${nf(r.paid)}${r.paid?cp(r.paid):""}</td>`
+      +`<td class="ef-s">${r.att?(r.attSum/r.att).toFixed(2):"—"}</td><td>${nf(r.paid)}${r.paid?cp(r.paid):""}</td>`
       +`<td class="ef-s">${badge(l2c,avgL2C)}</td><td>${badge(c2p,avgC2P,r.cns>0)}</td><td>${badge(l2p,avgL2P)}</td></tr>`;
   };
   const sumRows=rs=>rs.reduce((a,r)=>{ for(const x in a) a[x]+=r[x]||0; return a; },{leads:0,att:0,con:0,cns:0,enr:0,enrCns:0,attSum:0,paid:0,pool:0});
@@ -1640,12 +1654,12 @@ function renderStage(stage,dCol,dTop,dSub){
     $("trunc").textContent="Enrolled stage in green.";
     return;
   }
-  if(BREAK==="source"||BREAK==="program"){
-    // stages (rows) × source groups or programme groups (columns)
-    const cols=BREAK==="source"?SRC_GROUPS.filter(g=>st.some(i=>(dCol[i]||{})[g])):FPG.filter(g=>st.some(i=>(dCol[i]||{})[g]));
+  if(BREAK==="program"){
+    // stages (rows) × programme groups (columns)
+    const cols=FPG.filter(g=>st.some(i=>(dCol[i]||{})[g]));
     let cmax=1; st.forEach(i=>cols.forEach(c=>{ const v=(dCol[i]||{})[c]||0; if(v>cmax)cmax=v; }));
     const colTot=cols.map(c=>st.reduce((a,i)=>a+((dCol[i]||{})[c]||0),0));
-    thead.innerHTML=`<tr class="ef-band"><th></th><th colspan="${cols.length}" class="ef-g ef-s">${BREAK==="source"?"Source group":"Programme group"}</th><th colspan="2" class="ef-g ef-s">All</th></tr>`
+    thead.innerHTML=`<tr class="ef-band"><th></th><th colspan="${cols.length}" class="ef-g ef-s">Programme group</th><th colspan="2" class="ef-g ef-s">All</th></tr>`
       +`<tr><th>Lead stage</th>${cols.map((c,j)=>`<th${j?"":' class="ef-s"'}>${c}</th>`).join("")}<th class="ef-s">Leads</th><th>% of leads</th></tr>`;
     body.innerHTML=`<tr class="totrow stl-top"><td>Total</td>${colTot.map((v,j)=>`<td${j?"":' class="ef-s"'}>${nf(v)}</td>`).join("")}<td class="ef-s">${nf(total)}</td><td>100%</td></tr>`
       +st.map(i=>`<tr><td class="dim">${stName(i)}</td>${cols.map((c,j)=>{ const v=(dCol[i]||{})[c]||0; return `<td${j?"":' class="ef-s"'}><span class="cell" style="${heat(v,cmax)}">${v?nf(v):""}</span></td>`; }).join("")}<td class="ef-s tot">${nf(stage[i])}</td><td>${pctStr(stage[i],total)}</td></tr>`).join("")
@@ -1686,17 +1700,19 @@ function render(){
     +tile(nf(f.connected),"Connected",pctStr(f.connected,f.attempted)+" of attempted")
     +tile(nf(f.counselled),"Counselled",`<b>L2C ${pctStr(f.counselled,f.created)}</b>`)
     +tile(nf(f.enrolled),"Enrolled",`<b>C2P ${pctStr(f.enrCns,f.counselled)}</b> · <b>L2P ${pctStr(f.enrolled,f.created)}</b>`,"good");
-  renderFunnel(f,n); renderLeak(f,n); renderDim(R.cTop,R.cSub,f); renderStage(R.stage,R.dCol,R.dTop,R.dSub);
+  renderFunnel(f); renderLeak(f,n); renderDim(R.cTop,R.cSub,f); renderStage(R.stage,R.dCol,R.dTop,R.dSub);
   const off=f.enrolled-n.enrolled, e=f.enrolled||1;
   const DEFS=[
     ["Cohort",`leads created ${dmy(R.lo)} → ${dmy(R.hi)} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}. Counselled, Enrolled and the ratios are measured as of the last refresh, so a young cohort reads low — L2P is a floor, not a mature rate.`],
-    ["Attempted · Connected","the dashboard-wide rules: attempted = attempts &gt; 0, a first-call time or a connect; connected = interacted &gt; 0 or a first-connect time (a proxy, not a verified conversation)."],
+    ["Attempted · Connected","attempted = the lead was dialled at least once, whether or not they picked up (LSQ reach-out attempts &gt; 0, a first attempted call time, or a connect) · connected = the lead picked up and spoke (LSQ Interacted Count &gt; 0, i.e. at least one connected call, or a first connected call time). Connected % = connected ÷ attempted."],
     ["Counselled · Enrolled","the counselling-done flag on the lead · lead stage class “won”."],
     ["L2C · C2P · L2P","counselled ÷ leads · enrolled <i>that were also flagged counselled</i> ÷ counselled · enrolled ÷ leads."],
-    ["A · Funnel","bar length = as-reported count. <b>Solid</b> = cleared every step above it; <b>faded</b> = skipped an earlier step; badges = step conversion."],
-    ["B · Path integrity",`the five steps come from five separate LSQ fields, so they don't nest: a lead can be enrolled with no logged attempt. In this window ${nf(off)} of ${nf(f.enrolled)} enrolled leads (${pctStr(off,e)}) skipped a step — ${nf(miss.enrNoAttempt)} with no sign of an attempt, ${nf(miss.enrNoConnect)} never connected, ${nf(miss.enrNoCouns)} not flagged counselled; ${nf(miss.cnsNoConnect)} counselled leads have no connect logged. These are logging gaps, which is why the ratios use as-reported counts.`],
+    ["A · Funnel","each step counts every lead whose LSQ field for that step says yes · “from the step above” = this step ÷ the one above it."],
+    ["B · Logging gaps",`each step is read from its own LSQ field, so a lead can be marked enrolled even if no call or counselling was ever logged. <b>Step logged</b> = the lead's field for this step says yes; <b>all earlier steps logged too</b> = it also has every step above it. In this window ${nf(off)} of ${nf(f.enrolled)} enrolled leads (${pctStr(off,e)}) are missing an earlier step — ${nf(miss.enrNoAttempt)} with no attempted call, ${nf(miss.enrNoConnect)} with no connected call, ${nf(miss.enrNoCouns)} not marked counselled; ${nf(miss.cnsNoConnect)} counselled leads have no connected call. These are gaps in what counsellors log, so the funnel and ratios use the “step logged” counts.`],
     ["C · Paying · % in pool","any amount collected (mx_Total_Amount_Paid &gt; 0, part-payments included — not the same as the Enrolled stage) · a source's leads parked in the unworked pool accounts."],
-    ["C · Groups","sources: Meta, Google, Internshala, Others (expanding to raw LSQ Source values) · centres: the counsellor's LSQ admission group · programmes: the programme group, from the campaign name first, then Program of Interest."],
+    ["C · Groups","sources: Meta, Google, Internshala, Others (expanding to raw LSQ Source values) · centres: the counsellor's LSQ admission group · programmes: see below."],
+    ["Programme group · programme",PROG_LOGIC],
+    ["C · Avg att.","logged reach-out attempts (mx_Reached_Out_Attempts) ÷ leads that were attempted at least once. A floor, since attempts are under-logged."],
     ["D · Lead stage","each lead's current stage in LSQ and its lifecycle class: open = still being worked, closed = finished without enrolling, enrolled."],
     ["Cross-check in LSQ","stage counts should match Manage Leads grouped by Lead Stage, on the same created dates and sources."],
   ];
@@ -1754,8 +1770,11 @@ function init_home(){
   // ACTIVITY: each row is a DIFFERENT population keyed on its own event date (first call,
   //          first connect, counselling, payment), including backlog created earlier —
   //          counts only; a ratio between rows would not be a conversion rate.
+  // INTERESTED: population = leads whose interested-in date is in the window — new leads and
+  //          returning ones (created before the window). Same funnel as the cohort, but a
+  //          returning lead's attempts and connects only count calls made after it came back.
   function render(){
-    const MODE=$("h-view").value;
+    const MODE=$("h-view").value, FUN=MODE!=="ops", INT=MODE==="interested";
     let lo=Math.max(0,Math.min(toIdx($("h-d0").value),toIdx($("h-d1").value))), hi=Math.min(LAST,Math.max(toIdx($("h-d0").value),toIdx($("h-d1").value)));
     if(!isFinite(lo)||!isFinite(hi)){ lo=Math.max(0,LAST-29); hi=LAST; }
     const inWin=v=>{ const d=di(v); return d!=null && d>=lo && d<=hi; };
@@ -1763,33 +1782,41 @@ function init_home(){
     const span=`${dmyHome(lo)} → ${dmyHome(hi)}`, days=hi-lo+1;
     $("h-ctx-q").innerHTML = MODE==="cohort"
       ? `<span><b>Leads created in range:</b> <span class="q">how did the leads that arrived ${span} convert, whenever that happened?</span></span>`
+      : INT ? `<span><b>Leads interested in range:</b> <span class="q">how were the leads that showed interest ${span}, new or returning, worked and converted?</span></span>`
       : `<span><b>Activity in range:</b> <span class="q">what did the team do ${span}, on any lead?</span></span>`;
     $("h-ctx-body").innerHTML = MODE==="cohort"
       ? `<p>Every number counts leads <b>created</b> in the range (${days} day${days>1?"s":""}) and follows them to today — a lead created earlier and called yesterday is not here. Counselled and Enrolled are measured as of the last refresh, so they keep rising for a few weeks after the range closes.</p>`
-      : `<p>Every number counts an <b>event dated in the range</b> — first call, first connect, first counselling, first payment — whoever the lead is and whenever it was created. Each row is its own population, so there are no conversion rates between them. Switch to <b>Leads created in range</b> for a funnel.</p>`;
+      : INT ? `<p>Every number counts the leads that showed interest in the range (${days} day${days>1?"s":""}): <b>new</b> leads created in it, plus <b>returning</b> leads created earlier whose <b>Interested In Date</b> falls in it. For a returning lead, Attempted, Connected, attempts and speed count only calls made <b>after it came back</b>; its older calls belong to its first enquiry. Counselled and Enrolled are the lead's state as of the last refresh.</p>`
+      : `<p>Every number counts an <b>event dated in the range</b> — first attempted call, first connected call, first counselling, first payment — whoever the lead is and whenever it was created. Each row is its own population, so there are no conversion rates between them. Switch to <b>Leads created in range</b> for a funnel.</p>`;
     const mEl=$("h-mature");
-    mEl.hidden = !(MODE==="cohort" && hi>LAST-MATURITY);
+    mEl.hidden = !(FUN && hi>LAST-MATURITY);
     if(!mEl.hidden) mEl.innerHTML=`<b>Young cohort.</b> Leads created in the last ~${MATURITY} days haven't had time to counsel or enrol, so Counselled, Enrolled and the ratios read low. Pick <b>Mature cohort</b> in Range for a conversion rate you can quote.`;
 
     const ASOF=lastFullDay(maxDay);
-    const S=DATA.leads.filter(r=>!poolSkip(r) && inScope(r) && inWin(r[1]));
-    const blank=()=>({n:0,att:0,con:0,coun:0,enr:0,enrCns:0,attSum:0,paid:0,pool:0, wk:0,fa:0,fc:0,fcs:0,fp:0});
-    let att=0,con=0,coun=0,enr=0,enrCns=0,attSum=0,slaHit=0,slaBase=0,unmeas=0,overdue=0; const spd=[];
+    // the pool share uses the same population rule as the view
+    const inPop=r=>INT ? interestKind(r,lo,hi)>0 : inWin(r[1]);
+    const S=DATA.leads.filter(r=>!poolSkip(r) && inScope(r) && inPop(r));
+    const back=r=>INT && interestKind(r,lo,hi)===2;
+    const blank=()=>({n:0,ret:0,att:0,con:0,coun:0,enr:0,enrCns:0,attSum:0,paid:0,pool:0, wk:0,fa:0,fc:0,fcs:0,fp:0});
+    let att=0,con=0,coun=0,enr=0,enrCns=0,attSum=0,slaHit=0,slaBase=0,unmeas=0,overdue=0,nRet=0; const spd=[];
     const top={}, sub={};
     const bump=(r,f)=>{ const g=srcGroupOf(r[0]), k=r[0]+":"+(r[22]??""); f(top[g]=top[g]||blank()); const s=sub[g]=sub[g]||{}; f(s[k]=s[k]||blank()); };
     let ops=null;
-    if(MODE==="cohort"){
+    if(FUN){
       for(const r of S){
-        const a=r[7]||0, isAtt=isAttempted(r), isCon=isConnected(r), en=isEnrolled(r), cs=r[16]===1;
+        const ret=back(r), k=callFacts(r,ret), a=k.n, isAtt=k.att, isCon=k.con, en=isEnrolled(r), cs=r[16]===1;
+        if(ret) nRet++;
         if(isAtt) att++; if(isCon) con++; if(cs) coun++; if(en){ enr++; if(cs) enrCns++; } attSum+=a;
         if(isOverdue(r,ASOF)) overdue++;
-        // speed: first call minus original assignment (same clock as the scorecard); shared SLA rule
-        const [v,d]=slaOf(r,r[3],SLA);
+        // speed: first call minus original assignment (same clock as the scorecard); shared SLA rule.
+        // A returning lead's clock starts when it came back (calls from 5 min before count as 0).
+        const [v,d]=!ret ? slaOf(r,r[3],SLA) : !k.att ? ["miss",null]
+          : (m=>[m<=SLA?"hit":"miss",m])(Math.max(0,k.first-r[21]));
         if(v==="unmeas") unmeas++; else { slaBase++; if(d!=null) spd.push(d); if(v==="hit") slaHit++; }
-        bump(r,o=>{ o.n++; o.attSum+=a; if(isAtt)o.att++; if(isCon)o.con++; if((r[17]||0)>0) o.paid++; });
+        bump(r,o=>{ o.n++; if(ret)o.ret++; o.attSum+=a; if(isAtt)o.att++; if(isCon)o.con++; if((r[17]||0)>0) o.paid++; });
       }
       // a source can look strong purely because most of it is parked in the pool
-      for(const r of DATA.leads) if(r[11]===1 && inScope(r) && inWin(r[1])) bump(r,o=>o.pool++);
+      for(const r of DATA.leads) if(r[11]===1 && inScope(r) && inPop(r)) bump(r,o=>o.pool++);
     } else {
       // activity population: any tracked event whose date lands in the window
       // worked = something HAPPENED to the lead in the range; being created alone doesn't count
@@ -1801,13 +1828,13 @@ function init_home(){
     // ---- tiles: one row, each ratio under the count it comes from ----
     const tile=(v,l,sub,cls)=>`<div class="tile ${cls||""}"><div class="n">${v}</div><div class="l">${l}${sub?`<br><span style="opacity:.8">${sub}</span>`:""}</div></div>`;
     const n=S.length;
-    const poolIn=DATA.leads.filter(r=>r[11]===1 && inScope(r) && inWin(r[1])).length;   // pool leads created in this range
+    const poolIn=DATA.leads.filter(r=>r[11]===1 && inScope(r) && inPop(r)).length;   // pool leads in this view's population
     const poolTxt=poolIn?(window.__EXPOOL?`<br>+ ${num(poolIn)} in pool accounts, not counted`:`<br>incl. ${num(poolIn)} in pool accounts`):"";
-    $("kpis").innerHTML = MODE==="cohort"
-      ? tile(num(n),"Leads created",`${span}${poolTxt}`,"hi")
-        +tile(num(att),"Attempted",`${pct(att,n)} of leads · ${n?(attSum/n).toFixed(2):"—"} attempts / lead`)
+    $("kpis").innerHTML = FUN
+      ? (INT ? tile(num(n),"Leads interested",`${num(n-nRet)} new · ${num(nRet)} returning${poolTxt}`,"hi") : tile(num(n),"Leads created",`${span}${poolTxt}`,"hi"))
+        +tile(num(att),"Attempted",`${pct(att,n)} of leads · ${att?(attSum/att).toFixed(2):"—"} attempts / attempted lead`)
         +tile(num(con),"Connected",`${pct(con,att)} of attempted`)
-        +tile(dur(med(spd)),"Median speed from assignment",`<b>${pct(slaHit,slaBase)}</b> within ${SLA} min`)
+        +tile(dur(med(spd)),INT?"Median speed to first call":"Median speed from assignment",`<b>${pct(slaHit,slaBase)}</b> within ${SLA} min`)
         +tile(num(overdue),"Overdue follow-ups","callbacks nobody made","warn")
         +tile(num(enr),"Enrolled",`<b>C2P ${pct(enrCns,coun)}</b> · <b>L2P ${pct(enr,n)}</b>`,"good")
       : tile(num(ops.worked),"Leads worked",`${num(ops.backlog)} created before the range`,"hi")
@@ -1818,16 +1845,16 @@ function init_home(){
         +tile(num(ops.paid),"Paid","first payments","good");
     // ---- funnel (cohort) or activity rows ----
     const fEl=$("mfunnel"), aEl=$("macts");
-    if(MODE==="cohort"){
+    if(FUN){
       aEl.hidden=true; fEl.hidden=false; $("mftitle").textContent="Funnel";
-      const steps=[["Lead created",n],["Attempted",att],["Connected",con],["Counselled",coun],["Enrolled",enr]];
-      fEl.innerHTML=steps.map((st,i)=>{
-        const p=n?100*st[1]/n:0;
-        // the enrolled step converts as C2P: enrolled AND counselled ÷ counselled (same rule as the Funnel report)
-        const c=Math.round(100*(i===4?enrCns:st[1])/((steps[i-1]||[])[1]||1));
-        const badge=i>0?` <span class="cov ${cc(c)}">→ ${c}% ${i===4?"C2P":i===3?"step · L2C "+pct(coun,n):"step"}</span>`:"";
-        return `<div class="fstep"><div class="flabel">${st[0]}</div><div class="ftrack"><span class="bar" style="width:${p.toFixed(1)}%;height:20px;border-radius:5px"></span></div><div class="fval"><b>${num(st[1])}</b><span class="fpct">${p.toFixed(1)}%</span>${badge}</div></div>`;
-      }).join("");
+      const steps=[[INT?"Leads interested":"Lead created",n],["Attempted",att],["Connected",con],["Counselled",coun],["Enrolled",enr]];
+      // the enrolled step converts as C2P: enrolled AND counselled ÷ counselled (same rule as the Funnel report)
+      const ratio=["","","",`L2C ${pct(coun,n)}`,`C2P ${pct(enrCns,coun)} · L2P ${pct(enr,n)}`];
+      fEl.innerHTML=`<table><thead><tr><th>Step</th><th>Leads</th><th>% of leads</th><th>From the step above</th><th>Conversion</th></tr></thead><tbody>`
+        +steps.map((st,i)=>{ const prev=i?steps[i-1][1]:0, c=prev?100*st[1]/prev:0;
+          return `<tr${i?"":' class="totrow"'}><td class="dim">${st[0]}</td><td>${num(st[1])}</td><td>${pct(st[1],n)}</td>`
+            +`<td>${i>0&&i<4?`<span class="cov ${cc(c)}">${c.toFixed(0)}%</span>`:'<span class="fpct">—</span>'}</td><td>${ratio[i]?`<b>${ratio[i]}</b>`:""}</td></tr>`; }).join("")
+        +`</tbody></table>`;
     } else {
       fEl.hidden=true; aEl.hidden=false; $("mftitle").textContent="Activity in range · counts, not a funnel";
       aEl.innerHTML=[["Leads worked",ops.worked,"any tracked activity in the range, including leads created earlier"],
@@ -1837,18 +1864,18 @@ function init_home(){
         .map(r=>`<div class="actrow"><div><div class="t">${r[0]}</div><div class="d">${r[2]}</div></div><div class="v">${num(r[1])}</div></div>`).join("");
     }
     // ---- source groups, expanding to raw LSQ Source values ----
-    $("msrctitle").textContent = MODE==="cohort" ? "By source" : "By source · activity in range";
-    $("msrch").innerHTML = MODE==="cohort"
-      ? "<tr><th>Source</th><th>Leads</th><th>% in pool</th><th>Connect %</th><th>Avg att.</th><th>Paying</th></tr>"
+    $("msrctitle").textContent = FUN ? "By source" : "By source · activity in range";
+    $("msrch").innerHTML = FUN
+      ? `<tr><th>Source</th><th>Leads</th>${INT?"<th>Returning</th>":""}<th>% in pool</th><th>Connect %</th><th>Avg att.</th><th>Paying</th></tr>`
       : "<tr><th>Source</th><th>Leads worked</th><th>First attempts</th><th>First connects</th><th>Paid</th></tr>";
     const row=(label,o,cls,extra)=>{
-      if(MODE!=="cohort") return `<tr class="${cls||""}" ${extra||""}><td class="dim">${label}</td><td>${num(o.wk)}</td><td>${num(o.fa)}</td><td>${num(o.fc)}</td><td>${num(o.fp)}</td></tr>`;
+      if(!FUN) return `<tr class="${cls||""}" ${extra||""}><td class="dim">${label}</td><td>${num(o.wk)}</td><td>${num(o.fa)}</td><td>${num(o.fc)}</td><td>${num(o.fp)}</td></tr>`;
       const pb=o.n+(window.__EXPOOL?o.pool:0), pp=pb?100*o.pool/pb:0, cp=o.att?100*o.con/o.att:0;
-      return `<tr class="${cls||""}" ${extra||""}><td class="dim">${label}</td><td>${num(o.n)}</td>`
+      return `<tr class="${cls||""}" ${extra||""}><td class="dim">${label}</td><td>${num(o.n)}</td>${INT?`<td>${num(o.ret)}</td>`:""}`
         +`<td>${pb?`<span class="cov ${pp>=50?"r":pp>=20?"a":"g"}">${pp.toFixed(0)}%</span>`:'<span class="fpct">—</span>'}</td>`
-        +`<td>${o.att?`<span class="cov ${cc(cp)}">${cp.toFixed(1)}%</span>`:"—"}</td><td>${o.n?(o.attSum/o.n).toFixed(2):"—"}</td><td>${num(o.paid)}</td></tr>`;
+        +`<td>${o.att?`<span class="cov ${cc(cp)}">${cp.toFixed(1)}%</span>`:"—"}</td><td>${o.att?(o.attSum/o.att).toFixed(2):"—"}</td><td>${num(o.paid)}</td></tr>`;
     };
-    const size=o=>MODE==="cohort"?o.n:o.wk, muted=x=>` <span class="stl-sub">${x}</span>`;
+    const size=o=>FUN?o.n:o.wk, muted=x=>` <span class="stl-sub">${x}</span>`;
     let html="";
     SRC_GROUPS.filter(g=>top[g] && size(top[g])).forEach(g=>{
       const open=OPEN.has(g);
@@ -1863,17 +1890,20 @@ function init_home(){
     // ---- definitions: one fold-out, as on every report ----
     const gen=DATA.generated_at?new Date(DATA.generated_at):null, ist=gen?new Date(gen.getTime()+330*60000):null, pad=v=>String(v).padStart(2,"0");
     const stamp=ist?`${pad(ist.getUTCDate())} ${MON[ist.getUTCMonth()]} ${ist.getUTCFullYear()}, ${pad(ist.getUTCHours())}:${pad(ist.getUTCMinutes())} IST`:"unknown";
-    const enrNoCoun=MODE==="cohort"?S.filter(r=>isEnrolled(r)&&r[16]!==1).length:0;
-    const DEFS = MODE==="cohort" ? [
-      ["Leads created",`leads created ${span} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}.`],
-      ["Attempted · Connected","any sign of an attempt (attempts &gt; 0, a first-call time or a connect) · interacted &gt; 0 or a first-connect time — the same rules on every report. Connect % = connected ÷ attempted."],
+    const enrNoCoun=FUN?S.filter(r=>isEnrolled(r)&&r[16]!==1).length:0;
+    const DEFS = FUN ? [
+      INT ? ["Leads interested",`${span} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}: <b>new</b> = every lead created in the range (the same leads as “Leads created in range”); <b>returning</b> = leads created before the range whose Interested In Date (mx_Interested_In_Date, the latest enquiry) falls in it. For a returning lead, a stamp that comes after its first payment is ignored: LSQ re-stamps it automatically when the programme is changed on a paid lead, which is not a new enquiry.`]
+          : ["Leads created",`leads created ${span} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}.`],
+      ...(INT?[["Returning leads",`attempted = a counsellor call (outbound, or an answered inbound call) from 5 min before the Interested In Date onward · connected = an answered call in that time · attempts = outbound calls in that time · speed = first such call minus the Interested In Date. Read from the call log (activities 21 and 22), because the lead's own first-call and interacted fields still describe its first enquiry. New leads use the usual fields below.`]]:[]),
+      ["Attempted · Connected","any sign of an attempt (attempts &gt; 0, a first attempted call time or a connect) · connected = the lead picked up and spoke (LSQ Interacted Count &gt; 0, or a first connected call time) — the same rules on every report. Connect % = connected ÷ attempted."],
       ["Median speed · SLA",`first-call time minus the assignment date; within SLA = first attempt within ${SLA} min, uncalled leads counting as misses${unmeas?` (${num(unmeas)} attempted leads can't be timed and are left out)`:""}.`],
       ["Overdue follow-ups",`open leads whose follow-up date is before ${dmyHome(ASOF)} with no activity since it fell due.`],
       ["Funnel · C2P",`counselled = the counselling flag; enrolled = lead stage class “won”. C2P = enrolled leads that were also flagged counselled ÷ counselled${enrNoCoun?` (${num(enrNoCoun)} enrolled leads in this range were never flagged counselled)`:""}; L2C = counselled ÷ leads; L2P = enrolled ÷ leads.`],
+      ["Avg att.","logged reach-out attempts (mx_Reached_Out_Attempts) ÷ leads that were attempted at least once. A floor, since attempts are under-logged."],
       ["% in pool · Paying","a source's leads parked in the unworked pool accounts · any amount collected (mx_Total_Amount_Paid &gt; 0, part-payments included)."],
     ] : [
-      ["Leads worked",`leads with any tracked work dated ${span}: a first call, first connect, counselling, payment or last activity (being created alone doesn't count). LSQ keeps only the latest activity date, so this is exact for a range ending on the newest day and under-counts older ranges.`],
-      ["First attempts · connects","leads whose first call / first connect is dated in the range."],
+      ["Leads worked",`leads with any tracked work dated ${span}: a first attempted call, first connected call, counselling, payment or last activity (being created alone doesn't count). LSQ keeps only the latest activity date, so this is exact for a range ending on the newest day and under-counts older ranges.`],
+      ["First attempts · connects","leads whose first attempted call / first connected call is dated in the range."],
       ["Counselling sessions · Paid","leads whose first counselling / first payment is dated in the range (Paid is the payment date, not the Enrolled stage, which has no date)."],
     ];
     $("homefoot").innerHTML=`<summary>How this is measured<span>Definitions · data as of ${stamp}</span></summary>`
@@ -2127,6 +2157,18 @@ function markSide(key){
   if(window.__closeSide) window.__closeSide();
 }
 const INFO_SVG='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="4.9" r=".95" fill="currentColor"/></svg>';
+// every open fold-out gets a "Hide" button at its foot, so a long panel can be closed without scrolling
+// back up; reports re-render their fold-out bodies, so this re-checks after every DOM change
+function addHideButtons(){
+  document.querySelectorAll("details.xctx[open],details.xfold[open]").forEach(d=>{
+    if(d.querySelector(":scope > .xhide")) return;
+    const b=document.createElement("button"); b.type="button"; b.className="xhide"; b.textContent="Hide ▴";
+    b.onclick=()=>{ d.open=false; const r=d.getBoundingClientRect(); if(r.top<0) d.scrollIntoView({block:"start"}); };
+    d.appendChild(b);
+  });
+}
+document.addEventListener("toggle",addHideButtons,true);
+new MutationObserver(addHideButtons).observe(document.documentElement,{childList:true,subtree:true});
 function tipBtn(text,inl){ return text?'<button type="button" class="tipbtn'+(inl?' inl':'')+'" aria-label="What does this mean?" aria-expanded="false" data-tip="'+text.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'">'+INFO_SVG+'</button>':""; }
 const VIEWS={
   speed:{title:"Speed to Lead",init:init_speed},
