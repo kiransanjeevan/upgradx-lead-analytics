@@ -302,6 +302,10 @@ def call_log():
                         if i == 4:
                             raise
                         time.sleep(4 * (i + 1))
+                # an empty day comes back as {"RecordCount": 0, "List": null} — that is "no activities",
+                # not a fault (it failed the 17 Oct refresh); anything else without a List still raises
+                if isinstance(r, dict) and r.get("List") is None and r.get("RecordCount") == 0:
+                    r["List"] = []
                 if not (isinstance(r, dict) and isinstance(r.get("List"), list)):
                     raise RuntimeError(f"call log {ev} {day:%Y-%m-%d} page {page}: unexpected response — {str(r)[:200]}")
                 for a in r["List"]:

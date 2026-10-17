@@ -142,6 +142,10 @@ def fetch_event(event, pids, page_size, label):
                               "ActivityEvent": event, "RemoveEmptyValue": True},
                 "Paging": {"PageIndex": page, "PageSize": page_size},
                 "Sorting": {"ColumnName": "CreatedOn", "Direction": "0"}})
+            # an empty day comes back as {"RecordCount": 0, "List": null} — that is "no activities",
+            # not a fault (it failed the 17 Oct refresh); anything else without a List still raises
+            if isinstance(r, dict) and r.get("List") is None and r.get("RecordCount") == 0:
+                r["List"] = []
             if not (isinstance(r, dict) and isinstance(r.get("List"), list)):
                 raise RuntimeError(f"event {event} {d0} page {page}: unexpected response — {str(r)[:200]}")
             recs = r["List"]

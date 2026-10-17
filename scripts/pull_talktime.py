@@ -123,6 +123,10 @@ def activities(event, d):
             "Sorting": {"ColumnName": "CreatedOn", "Direction": "0"}})
         # a fault body (rate limit, transient error) has no List; treating it as "no more
         # activities" would publish a short day as if it were complete
+        # an empty day comes back as {"RecordCount": 0, "List": null} — that is "no activities",
+        # not a fault (it failed the 17 Oct refresh); anything else without a List still raises
+        if isinstance(r, dict) and r.get("List") is None and r.get("RecordCount") == 0:
+            r["List"] = []
         if not (isinstance(r, dict) and isinstance(r.get("List"), list)):
             raise RuntimeError(f"event {event} {d} page {page}: unexpected response — {str(r)[:200]}")
         L = r["List"]
