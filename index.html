@@ -2,6 +2,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+<!-- Lead Routing chart only: loaded on first open of that report. Pinned versions; ?external keeps one React. -->
+<script type="importmap">{"imports":{
+  "react":"https://esm.sh/react@18.3.1",
+  "react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime",
+  "react-dom":"https://esm.sh/react-dom@18.3.1?external=react",
+  "react-dom/client":"https://esm.sh/react-dom@18.3.1/client?external=react",
+  "@nivo/sankey":"https://esm.sh/@nivo/sankey@0.99.0?external=react,react-dom"}}</script>
 <style>:root{--bg:#f7f8fa;--surface:#fff;--surface-2:#eef1f5;--ink:#1a2230;--ink-2:#3c4859;--muted:#586472;--line:#e3e7ec;--line-2:#ccd3dc;--accent:#2560ad;--accent-2:#1c4a88;--accent-soft:#e9f0fa;--good:#15683e;--good-soft:#eaf4ee;--good-line:#a7cdb7;--warn:#875008;--warn-soft:#fbf0da;--warn-line:#e4bd80;--crit:#9c302b;--crit-soft:#f9ebe9;--crit-line:#e3aca7;--shadow:0 1px 2px rgb(20 30 45/.05),0 2px 8px rgb(20 30 45/.05);--sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;--mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
 @media(prefers-color-scheme:dark){:root{--bg:#0f141b;--surface:#171f29;--surface-2:#1d2732;--ink:#e9edf2;--ink-2:#b0bbc8;--muted:#8794a3;--line:#28323f;--line-2:#3a4653;--accent:#79a4e6;--accent-2:#9abbf0;--accent-soft:#17273e;--good:#5cc089;--good-soft:#12241c;--good-line:#2d5a43;--warn:#e3a852;--warn-soft:#2a2012;--warn-line:#5f4a22;--crit:#e0746d;--crit-soft:#2a1615;--crit-line:#5a2c29;}}
 :root[data-theme="light"]{--bg:#f7f8fa;--surface:#fff;--surface-2:#eef1f5;--ink:#1a2230;--ink-2:#3c4859;--muted:#586472;--line:#e3e7ec;--line-2:#ccd3dc;--accent:#2560ad;--accent-2:#1c4a88;--accent-soft:#e9f0fa;--good:#15683e;--good-soft:#eaf4ee;--good-line:#a7cdb7;--warn:#875008;--warn-soft:#fbf0da;--warn-line:#e4bd80;--crit:#9c302b;--crit-soft:#f9ebe9;--crit-line:#e3aca7;}
@@ -174,6 +181,15 @@ td.owncol{white-space:nowrap;}
 /* report-specific: greyed n/a cell + note */
   .na{color:var(--muted);font-style:italic;cursor:help;border-bottom:1px dotted var(--line-2);}
 .fpct{margin:0 6px;}
+/* Lead Routing: source colours = validated categorical slots 1-4; centres neutral, pool accounts darker */
+:root{--rt-s1:#2a78d6;--rt-s2:#eb6834;--rt-s3:#1baf7a;--rt-s4:#eda100;--rt-centre:#9aa3ad;--rt-owner:#bcc3cb;--rt-pool:#5d6670;}
+@media(prefers-color-scheme:dark){:root{--rt-s1:#3987e5;--rt-s2:#d95926;--rt-s3:#199e70;--rt-s4:#c98500;--rt-centre:#6c7682;--rt-owner:#55606c;--rt-pool:#a9b1ba;}}
+:root[data-theme="light"]{--rt-s1:#2a78d6;--rt-s2:#eb6834;--rt-s3:#1baf7a;--rt-s4:#eda100;--rt-centre:#9aa3ad;--rt-owner:#bcc3cb;--rt-pool:#5d6670;}
+:root[data-theme="dark"]{--rt-s1:#3987e5;--rt-s2:#d95926;--rt-s3:#199e70;--rt-s4:#c98500;--rt-centre:#6c7682;--rt-owner:#55606c;--rt-pool:#a9b1ba;}
+.rt-chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;min-height:120px;}
+.rt-msg{margin:0;padding:18px;color:var(--muted);}
+.rt-hint{margin:0 2px 8px;font-size:12.5px;color:var(--muted);}
+.rt-tip{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12.5px;box-shadow:var(--shadow);white-space:nowrap;}
 /* --- brand tokens --- */
 :root{--brand:#e01820;--brand-2:#c3141b;}
 @media(prefers-color-scheme:dark){:root{--brand:#ff5257;--brand-2:#ff7378;}}
@@ -636,6 +652,34 @@ nav.side.open{transform:none;}
   <div class="trunc" id="trunc"></div>
 
   <details class="xnote xfold" id="fn-foot"></details>
+</template>
+<template id="tpl-routing">
+  <div class="eyebrow">LSQ · Lead Routing</div>
+  <h1>Lead Routing</h1>
+  <p class="lede">Where each source's leads ended up: <b>source → centre</b>, and from a centre on to its <b>counsellors</b>. Use it to check that leads reach the right centres and how evenly a centre spreads them.</p>
+
+  <div class="fbar" id="rt-fbar">
+    <input type="date" id="rt-d0" data-label="Created from" aria-label="Created from">
+    <input type="date" id="rt-d1" data-label="To" aria-label="Created to">
+    <select id="rt-src" multiple data-label="Sources" data-all="All sources" data-noun="sources" aria-label="Sources"></select>
+    <select id="rt-ctr" multiple data-label="Centres" data-all="All centres" data-noun="centres" aria-label="Centres"></select>
+    <button type="button" class="freset" id="rt-reset" hidden>Reset</button>
+  </div>
+
+  <div class="tiles" id="rt-tiles"></div>
+
+  <div class="shrow">
+    <span class="sh">Routing</span>
+    <div class="seg" id="rt-depth" role="group" aria-label="Chart depth"><button data-v="centre" class="on">Source → centre</button><button data-v="owner">+ Counsellors</button></div>
+  </div>
+  <p class="rt-hint" id="rt-hint" hidden></p>
+  <div class="rt-chart" id="rt-chart"></div>
+
+  <div class="shrow"><span class="sh">By centre and counsellor</span></div>
+  <div class="tblwrap"><table id="rt-tbl" class="banded"><thead id="rt-head"></thead><tbody id="rt-rows"></tbody></table></div>
+  <div class="trunc" id="rt-trunc"></div>
+
+  <details class="xnote xfold" id="rt-foot"></details>
 </template>
 <template id="tpl-internshala">
   <div class="mature" id="is-stale" hidden></div>
@@ -2090,6 +2134,177 @@ function skinFrame(f){
     // the frame is sized to its content, so the page itself must never scroll (that was the stray scrollbar)
     +"html,body{overflow:hidden!important;background:transparent!important;margin:0;}.wrap{max-width:none!important;padding:0 0 24px!important;}";
 }
+// ---- Lead Routing report: where each source's leads sit — source → centre, optionally → counsellor ----
+// The chart is @nivo/sankey, loaded on first open from esm.sh (versions pinned in the import map at the
+// top of the page). Everything else, including the table under the chart, needs no library.
+let RT_LIBS=null, RT_ROOT=null, RT_BOX=null;
+function rtLibs(){
+  return RT_LIBS ||= Promise.all([import("react"), import("react-dom/client"), import("@nivo/sankey")])
+    .then(([R,D,N])=>({h:R.createElement, createRoot:D.createRoot, Sankey:N.Sankey}))
+    .catch(e=>{ RT_LIBS=null; throw e; });                     // let the next open retry
+}
+function init_routing(){
+
+const DATA=window.__DATA, $=id=>document.getElementById(id);
+// lead columns used: 0 src · 1 created · 4 owner · 11 pool
+const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
+const dayIdx=m=>m==null?null:Math.floor(m/1440);
+const dateToIdx=v=>Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS);
+const idxToStr=i=>new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10);
+const dmy=i=>isoToDMY(idxToStr(i));
+const nf=n=>n.toLocaleString("en-IN"), pctStr=(n,d)=>d?(100*n/d).toFixed(1)+"%":"—";
+const muted=x=>` <span class="stl-sub">${x}</span>`;
+const MAXC=3;                     // the counsellor column stays readable for up to 3 centres
+let maxDay=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>maxDay) maxDay=d; }
+const LAST=lastFullDay(maxDay);
+const SEL=new Set(DATA.sources.map((_,i)=>i)), CSEL=new Set(), OPEN=new Set();
+let DEEP=false;
+
+// one pass: centre × source-group counts, and counsellor × source-group inside each centre
+function compute(){
+  const x=dateToIdx($("rt-d0").value), y=dateToIdx($("rt-d1").value), lo=Math.min(x,y), hi=Math.max(x,y);
+  const cell={}, sub={}, ctrN={}, srcN={}; let total=0;
+  for(const L of DATA.leads){
+    const d=dayIdx(L[1]); if(d==null||d<lo||d>hi||poolSkip(L)||!SEL.has(L[0])) continue;
+    const c=centreOf(L); if(CSEL.size&&!CSEL.has(c)) continue;
+    const g=srcGroupOf(L[0]); total++;
+    srcN[g]=(srcN[g]||0)+1; ctrN[c]=(ctrN[c]||0)+1;
+    const r=cell[c]=cell[c]||{}; r[g]=(r[g]||0)+1;
+    const s=sub[c]=sub[c]||{}, o=s[L[4]]=s[L[4]]||{}; o[g]=(o[g]||0)+1;
+  }
+  // biggest centres first; "No centre" and "Pool accounts" always last
+  const centres=Object.keys(ctrN).sort((p,q)=>(CTR_LAST.has(p)-CTR_LAST.has(q))||ctrN[q]-ctrN[p]||p.localeCompare(q));
+  return {lo,hi,cell,sub,ctrN,srcN,total,centres};
+}
+const sumOf=o=>Object.values(o).reduce((p,q)=>p+q,0);
+
+// Sankey graph. Node and link order is fixed here and kept by the chart (sort:"input").
+function graph(R){
+  const deep=DEEP && CSEL.size>0 && CSEL.size<=MAXC, nodes=[], links=[];
+  SRC_GROUPS.filter(g=>R.srcN[g]).forEach(g=>nodes.push({id:"s:"+g, label:g, kind:"source", n:R.srcN[g]}));
+  R.centres.forEach(c=>nodes.push({id:"c:"+c, label:c, kind:c==="Pool accounts"?"pool":"centre", n:R.ctrN[c]}));
+  SRC_GROUPS.forEach(g=>R.centres.forEach(c=>{ const v=(R.cell[c]||{})[g]; if(v) links.push({source:"s:"+g, target:"c:"+c, value:v}); }));
+  if(deep) R.centres.forEach(c=>{ const s=R.sub[c]||{};
+    Object.keys(s).sort((p,q)=>sumOf(s[q])-sumOf(s[p])).forEach(k=>{
+      nodes.push({id:"o:"+k, label:DATA.owners[k]??"—", kind:"owner", n:sumOf(s[k])});
+      links.push({source:"c:"+c, target:"o:"+k, value:sumOf(s[k])}); }); });
+  return {nodes,links,deep};
+}
+
+let LASTG=null;
+function paintChart(G,total){
+  const box=$("rt-chart"); if(!box) return;
+  LASTG=[G,total];
+  if(RT_ROOT && RT_BOX!==box){ RT_ROOT.unmount(); RT_ROOT=null; }   // the view was re-opened: new container
+  const cols=[0,0,0]; G.nodes.forEach(n=>cols[n.kind==="source"?0:n.kind==="owner"?2:1]++);
+  // explicit size: nivo's Responsive wrapper kept the previous height when the column count changed
+  const W=box.clientWidth, narrow=W<640, H=Math.max(360, Math.max(...cols)*(G.deep?40:narrow?26:32)+40);   // room for every label
+  box.style.height=H+"px";
+  const msg=t=>{ if(RT_ROOT){ RT_ROOT.unmount(); RT_ROOT=null; } const p=document.createElement("p"); p.className="rt-msg"; p.textContent=t; box.replaceChildren(p); };
+  if(!G.nodes.length){ box.style.height=""; msg("No leads match these filters."); return; }
+  if(!RT_ROOT) msg("Loading chart…");
+  rtLibs().then(({h,createRoot,Sankey})=>{
+    if(!document.body.contains(box)) return;                   // left the report while loading
+    if(!RT_ROOT){ box.replaceChildren(); RT_ROOT=createRoot(box); RT_BOX=box; }
+    const css=getComputedStyle(box), tok=n=>css.getPropertyValue(n).trim();
+    const SC={Meta:tok("--rt-s1"), Google:tok("--rt-s2"), Internshala:tok("--rt-s3"), Others:tok("--rt-s4")};
+    const color=n=>n.kind==="source"?SC[n.label]:n.kind==="pool"?tok("--rt-pool"):n.kind==="owner"?tok("--rt-owner"):tok("--rt-centre");
+    const byId=new Map(G.nodes.map(n=>[n.id,n]));
+    const tip=t=>h("div",{className:"rt-tip"},t);
+    RT_ROOT.render(h(Sankey,{
+      width:W, height:H,
+      data:{nodes:G.nodes, links:G.links},
+      margin: narrow?{top:8,right:140,bottom:8,left:96}:{top:10,right:220,bottom:10,left:120},
+      align:"justify", sort:"input", colors:color,
+      nodeThickness:14, nodeSpacing:G.deep?14:16, nodeInnerPadding:0, nodeBorderWidth:0, nodeBorderRadius:2,
+      nodeOpacity:1, nodeHoverOthersOpacity:0.35,
+      linkOpacity:0.4, linkHoverOpacity:0.7, linkHoverOthersOpacity:0.1, linkContract:0,
+      enableLinkGradient:true, linkBlendMode:"normal",           // nivo's default (multiply) goes dark on the dark theme
+      label:n=>`${byId.get(n.id).label} · ${nf(byId.get(n.id).n)}`,
+      labelPosition:"outside", labelOrientation:"horizontal", labelPadding:9, labelTextColor:tok("--ink"),
+      nodeTooltip:({node})=>{ const n=byId.get(node.id); return tip(`${n.label}: ${nf(n.n)} leads (${pctStr(n.n,total)} of all)`); },
+      linkTooltip:({link})=>{ const s=byId.get(link.source.id), t=byId.get(link.target.id);
+        return tip(`${s.label} → ${t.label}: ${nf(link.value)} (${pctStr(link.value,s.n)} of ${s.label})`); },
+      theme:{text:{fill:tok("--ink"), fontSize:narrow?11:12, fontFamily:"Inter, system-ui, sans-serif"}},
+      animate:true, motionConfig:"gentle",
+    }));
+  }).catch(()=>msg("Couldn't load the chart library from esm.sh. The table below has the same numbers."));
+}
+
+function paintTable(R){
+  const cols=SRC_GROUPS.filter(g=>R.srcN[g]);
+  $("rt-head").innerHTML=`<tr class="ef-band"><th></th><th colspan="${cols.length}" class="ef-g ef-s">Source group</th><th colspan="2" class="ef-g ef-s">All</th></tr>`
+    +`<tr><th>Centre / counsellor</th>${cols.map((c,j)=>`<th${j?"":' class="ef-s"'}>${c}</th>`).join("")}<th class="ef-s">Leads</th><th>% of leads</th></tr>`;
+  const row=(label,o,cls,extra)=>{ const t=sumOf(o);
+    return `<tr class="${cls||""}" ${extra||""}><td class="dim">${label}</td>${cols.map((c,j)=>`<td${j?"":' class="ef-s"'}>${o[c]?nf(o[c]):""}</td>`).join("")}`
+      +`<td class="ef-s tot">${nf(t)}</td><td>${pctStr(t,R.total)}</td></tr>`; };
+  let html=row("Total",R.srcN,"totrow stl-top");
+  R.centres.forEach(c=>{ const s=R.sub[c]||{}, ks=Object.keys(s).sort((p,q)=>sumOf(s[q])-sumOf(s[p])), open=OPEN.has(c);
+    html+=row(c+muted(ks.length+" counsellor"+(ks.length>1?"s":"")),R.cell[c],"stl-g"+(open?" open":""),`data-g="${c}" tabindex="0" aria-expanded="${open}"`);
+    if(open) ks.forEach(k=>html+=row(DATA.owners[k]??"—",s[k],"stl-c")); });
+  if(!R.total) html+=`<tr><td colspan="${cols.length+3}" style="text-align:center;color:var(--muted);padding:16px">No leads match these filters.</td></tr>`;
+  $("rt-rows").innerHTML=html;
+  $("rt-rows").querySelectorAll("tr.stl-g").forEach(tr=>{ const tg=()=>{ const g=tr.dataset.g; OPEN.has(g)?OPEN.delete(g):OPEN.add(g); paintTable(R); };
+    tr.onclick=tg; tr.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tg(); } }; });
+  $("rt-trunc").textContent=R.total?`${R.centres.length} centre${R.centres.length>1?"s":""}, biggest first. Click a centre to see its counsellors.`:"";
+}
+
+function render(){
+  if(!$("rt-chart")) return;                                   // another report is open
+  const R=compute(), G=graph(R), T=R.total;
+  $("rt-reset").hidden=$("rt-d0").value===idxToStr(Math.max(0,LAST-29)) && $("rt-d1").value===idxToStr(LAST)
+    && SEL.size===DATA.sources.length && !CSEL.size && !DEEP;
+  const n=c=>R.ctrN[c]||0, routed=T-n("No centre")-n("Pool accounts"), nC=R.centres.filter(c=>!CTR_LAST.has(c)).length;
+  // pool leads are counted even when the pool switch hides them, so the tile never goes blank
+  let poolN=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(L[11]===1&&d!=null&&d>=R.lo&&d<=R.hi&&SEL.has(L[0])&&(!CSEL.size||CSEL.has("Pool accounts"))) poolN++; }
+  const tile=(v,l,sub,cls)=>`<div class="tile ${cls||""}"><div class="n">${v}</div><div class="l">${l}${sub?`<br><span style="opacity:.8">${sub}</span>`:""}</div></div>`;
+  $("rt-tiles").innerHTML=tile(nf(T),"Leads created",`${dmy(R.lo)} → ${dmy(R.hi)}`,"hi")
+    +tile(nf(routed),"With a centre",`${pctStr(routed,T)} of leads · ${nC} centre${nC!==1?"s":""}`)
+    +tile(nf(poolN),"In pool accounts",window.__EXPOOL?"not in the chart (pool switch)":`${pctStr(poolN,T)} of leads`,"warn")
+    +tile(nf(n("No centre")),"No centre",`${pctStr(n("No centre"),T)} · owner has no admission group`);
+  $("rt-hint").hidden=!(DEEP && !G.deep);
+  $("rt-hint").textContent=CSEL.size>MAXC?`Counsellors show for up to ${MAXC} centres — ${CSEL.size} are picked in Centres.`:`Pick 1–${MAXC} centres in Centres to see their counsellors.`;
+  paintChart(G,T); paintTable(R);
+  const DEFS=[
+    ["Leads",`leads created ${dmy(R.lo)} → ${dmy(R.hi)} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}.`],
+    ["Source group","Meta, Google and Internshala; every other LSQ Source is under <b>Others</b>. The Sources filter picks the source buckets behind them."],
+    ["Centre","the centre of the lead's <b>current owner</b> (their LSQ “Admission &lt;centre&gt;” user group). This is where the lead sits now, so it includes manual reassignment after LSQ's routing rules ran — not only where the rules first sent it."],
+    ["Pool accounts · No centre","the bot / vendor holding queues (Avtar LCoffline, Futworks Lc) · owners with no admission group (e.g. LC Team), so the lead has no centre yet."],
+    ["Counsellors","the owners of the selected centres' leads, for up to 3 centres at a time. Centre managers appear here too when they own leads; LSQ doesn't mark who is a manager."],
+    ["Chart","band width = number of leads. Hover a band or a node for the count and its share. The table below has the same numbers."],
+  ];
+  $("rt-foot").innerHTML=`<summary>How this is measured<span>Definitions · data ${isoToDMY(DATA.base)} to ${dmy(maxDay)}</span></summary>`
+    +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("");
+}
+
+// ---- controls ----
+const srcSel=$("rt-src"), ctrSel=$("rt-ctr"), D0=$("rt-d0"), D1=$("rt-d1");
+const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++;
+srcSel.innerHTML=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]).map(k=>`<option value="${k}">${DATA.sources[k]}</option>`).join("");
+srcSel._presets=[{label:"All except Internshala",pick:()=>[...srcSel.options].forEach(o=>o.selected=o.textContent!=="Internshala")}];
+ctrSel.innerHTML=[...new Set(DATA.owner_centre||[])].sort((a,b)=>(CTR_LAST.has(a)-CTR_LAST.has(b))||a.localeCompare(b)).map(c=>`<option>${c}</option>`).join("");
+srcSel.onchange=()=>{ const p=[...srcSel.selectedOptions].map(o=>+o.value); SEL.clear(); (p.length?p:DATA.sources.map((_,i)=>i)).forEach(k=>SEL.add(k)); render(); };
+ctrSel.onchange=()=>{ CSEL.clear(); [...ctrSel.selectedOptions].forEach(o=>CSEL.add(o.value)); render(); };
+const setDepth=v=>{ DEEP=v==="owner"; document.querySelectorAll("#rt-depth button").forEach(x=>x.classList.toggle("on",x.dataset.v===v)); };
+document.querySelectorAll("#rt-depth button").forEach(b=>b.onclick=()=>{ setDepth(b.dataset.v); render(); });
+[D0,D1].forEach(e=>{ e.min=DATA.base; e.max=idxToStr(maxDay); e.onchange=render; });
+// default: the last 30 COMPLETE days — a month of routing reads clearly; today is still arriving
+const setDefaults=()=>{ D0.value=idxToStr(Math.max(0,LAST-29)); D1.value=idxToStr(LAST); };
+setDefaults();
+$("rt-reset").onclick=()=>{ setDefaults(); syncDateText(); setDepth("centre");
+  [...srcSel.options].forEach(o=>o.selected=false); [...ctrSel.options].forEach(o=>o.selected=false);
+  srcSel.dispatchEvent(new Event("change")); ctrSel.dispatchEvent(new Event("change")); };
+// the chart is drawn at a measured width, so redraw when the box changes width (window, side menu)
+let rtW=0; new ResizeObserver(()=>{ const w=$("rt-chart")?.clientWidth||0; if(w&&w!==rtW&&LASTG){ rtW=w; paintChart(...LASTG); } }).observe($("rt-chart"));
+// colours come from theme tokens, so repaint when the theme flips
+window.__RT_PAINT=render;
+if(!window.__RT_OBS){
+  window.__RT_OBS=new MutationObserver(()=>window.__RT_PAINT&&window.__RT_PAINT());
+  window.__RT_OBS.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>window.__RT_PAINT&&window.__RT_PAINT());
+}
+render();
+}
 function init_internshala(){
   const f=document.getElementById("is-frame");
   const fit=()=>{ try{ const d=f.contentDocument; f.style.height=Math.max(d.documentElement.scrollHeight,d.body.scrollHeight)+"px"; }catch(_){} };
@@ -2112,7 +2327,7 @@ function init_internshala(){
 const NAV=[
   [null,[["home","Overview","Headline numbers for a date range or cohort."]]],
   ["Speed & effort",[["speed"],["attempts"],["talk"]]],
-  ["Pipeline",[["ageing"],["funnel"]]],
+  ["Pipeline",[["ageing"],["routing"],["funnel"]]],
   ["Performance",[["owner"]]],
   ["Channels",[["internshala"]]]
 ];
@@ -2121,6 +2336,7 @@ const NAV_TIP={
   ageing:"How long a creation cohort has sat: pending first attempt, no activity and overdue follow-up across age buckets.",
   owner:"Per-counsellor accountability, grouped by centre: coverage, attempts, speed from assignment, SLA, overdue follow-ups and enrolments.",
   attempts:"Dialling effort and connects by source, centre or owner: attempted, connected, connect %, attempts per lead and to connect, attempt buckets.",
+  routing:"Where each source's leads were routed: source → centre, and on to each counsellor.",
   funnel:"Created → Attempted → Connected → Counselled → Enrolled, with conversion rates and the full stage distribution.",
   talk:"Each counsellor's day: first and last call, talk, active and idle time, connected leads and landed leads not attempted.",
   internshala:"Internshala leads: arrivals, pooling, human vs bot calling and outcomes, on a created, interested or touched basis."
@@ -2175,6 +2391,7 @@ const VIEWS={
   ageing:{title:"Lead Ageing",init:init_ageing},
   owner:{title:"Counsellor Scorecard",init:init_owner},
   attempts:{title:"Effort & Connects",init:init_attempts},
+  routing:{title:"Lead Routing",init:init_routing},
   funnel:{title:"Funnel & Lead Stage",init:init_funnel},
   talk:{title:"Talk Time",init:init_talk},
   internshala:{title:"Internshala",init:init_internshala}
