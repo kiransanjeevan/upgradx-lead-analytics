@@ -18,7 +18,7 @@ Read-only: only calls Leads.Get, User/AdvancedSearch and
 CustomActivity/RetrieveByActivityEvent (21, 22 — the call log). Never creates/updates/deletes.
 Stdlib only — no pip install needed.
 """
-import json, os, re, sys, time, urllib.request, urllib.parse
+import bisect, json, os, re, sys, time, urllib.request, urllib.parse
 from datetime import datetime, timezone, timedelta
 
 HOST   = os.environ.get("LSQ_HOST", "https://api-in21.leadsquared.com/v2").rstrip("/")
@@ -72,6 +72,8 @@ COLS = ("ProspectID,CreatedOn,mx_First_Call_Date_and_Time,mx_Date_of_Lead_Assign
         # event dates — needed for the Operational view (what happened IN a window,
         # as opposed to how a created cohort eventually converted)
         "mx_First_Counselling_Date,mx_First_Transaction_Date,mx_Interested_In_Date,"
+        # moves with every new counselling: tells whether a returning lead was counselled AFTER it came back
+        "mx_Latest_Counselling_Date,"
         # the campaign name carries the product (…_OFFLINE-data_analytics, LearningCentre_FSD_…)
         "SourceCampaign")
 
@@ -275,16 +277,29 @@ NON_COUNSELLORS = POOL_OWNERS | {"lc team", "arrowhead lcoffline", "system", "up
 RETURN_GRACE = 5      # minutes: a call logged just before the interested-in stamp still counts
 
 
+# Conversation Log (310) outcomes that mean the counsellor spoke to the lead. "Did not Pick",
+# "Invalid Phone Number" and a blank status (LSQ automations write blank 310s as "System") do not.
+SPOKE = {"profiling done", "counseled", "coach connect done", "alumni connect done",
+         "interested in next cohort", "junk | not-interested", "call back"}
+LOG_MATCH_BEFORE, LOG_MATCH_AFTER = 60, 5   # a 310 within 60 min after (or 5 min before) a call = that call's log
+MIN_TALK_S = 10   # an "answered" call shorter than this is a hang-up / voicemail, not a conversation (18% of
+                  # answered outbound calls on 16 Oct lasted <= 5 s) — used only when no Conversation Log says otherwise
+
+
 def call_log():
-    """Every human call since START from the activity log: {lead: [(minute, event, answered)]}.
-    A lead that comes back keeps its old CreatedOn and its old first-call / interacted fields,
-    so those describe the FIRST enquiry. Only the log can say whether it was called after it
-    returned. 22 = outbound (an attempt), 21 = inbound (counts once answered: they spoke)."""
+    """Every human contact since START, as ONE attempt per real contact (Kiran, 18 Oct 2026):
+    {lead: [(minute, kind, spoke)]}, kind = "out" (outbound 22, an attempt), "in" (inbound 21, counts
+    once answered) or "log" (a counsellor's Conversation Log 310 with NO dialler call behind it — a call
+    made off the dialler). A 310 by the same counsellor on the same lead within 60 min after (or 5 min
+    before) one of their 22/21 calls is the write-up of that call, not a second attempt, so it is dropped.
+    A lead that comes back keeps its old first-call / interacted fields, so only this log can say what
+    happened after it returned; new leads are measured from the same log so both are comparable."""
     qs = urllib.parse.urlencode({"accessKey": ACCESS, "secretKey": SECRET})
     url = f"{HOST}/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent?{qs}"
-    out, day, end = {}, BASE - timedelta(minutes=IST), datetime.now(timezone.utc).replace(tzinfo=None)
+    raw, day, end = {}, BASE - timedelta(minutes=IST), datetime.now(timezone.utc).replace(tzinfo=None)
+    seen = set()                                    # activity ids: a call is never counted twice
     while day < end:
-        for ev in (22, 21):
+        for ev in (22, 21, 310):
             page = 1
             while True:
                 body = {"Parameter": {"FromDate": day.strftime("%Y-%m-%d %H:%M:%S"),
@@ -309,34 +324,83 @@ def call_log():
                 if not (isinstance(r, dict) and isinstance(r.get("List"), list)):
                     raise RuntimeError(f"call log {ev} {day:%Y-%m-%d} page {page}: unexpected response — {str(r)[:200]}")
                 for a in r["List"]:
-                    m, pid = mins(a.get("CreatedOn")), a.get("RelatedProspectId")
+                    m, pid, aid = mins(a.get("CreatedOn")), a.get("RelatedProspectId"), a.get("ProspectActivityId")
                     if m is None or not pid or (a.get("CreatedByName") or "").strip().lower() in NON_COUNSELLORS:
                         continue
-                    out.setdefault(pid, []).append((m, ev, (a.get("Status") or "").lower() == "answered"))
+                    if aid:
+                        if aid in seen:
+                            continue
+                        seen.add(aid)
+                    if ev == 310:
+                        spoke = (a.get("mx_Custom_46") or "").strip().lower() in SPOKE
+                    else:                            # answered AND long enough to be a conversation
+                        try:
+                            talk = float(a.get("mx_Custom_3") or 0)
+                        except ValueError:
+                            talk = 0
+                        spoke = (a.get("Status") or "").lower() == "answered" and talk >= MIN_TALK_S
+                    raw.setdefault(pid, []).append((m, ev, spoke, a.get("CreatedBy")))
                 if len(r["List"]) < 1000:
                     break
                 page += 1
         day += timedelta(days=1)
-    for v in out.values():
-        v.sort()
+    out, dropped, kept, overruled = {}, 0, 0, 0
+    for pid, v in raw.items():
+        calls = {}                                   # counsellor -> sorted [(minute, index into dial)] on this lead
+        dial = []                                    # [minute, kind, spoke, outcome-from-log or None]
+        for m, ev, spoke, u in v:
+            if ev != 310:
+                calls.setdefault(u, []).append((m, len(dial)))
+                dial.append([m, "out" if ev == 22 else "in", spoke, None])
+        for t in calls.values():
+            t.sort()
+        rows = []
+        for m, ev, spoke, u in v:
+            if ev != 310:
+                continue
+            t = calls.get(u, [])
+            # the counsellor's latest call on this lead from 60 min before to 5 min after the log
+            k = bisect.bisect_right(t, (m + LOG_MATCH_AFTER, len(dial))) - 1
+            if k >= 0 and t[k][0] >= m - LOG_MATCH_BEFORE:
+                dropped += 1                         # the write-up of that call: same attempt, and
+                c = dial[t[k][1]]                    # its outcome is the truth about whether they spoke
+                c[3] = spoke if c[3] is None else (c[3] or spoke)
+                continue
+            kept += 1
+            rows.append((m, "log", spoke))
+        for m, kind, spoke, outcome in dial:
+            if outcome is not None and outcome != spoke:
+                overruled += 1
+            rows.append((m, kind, spoke if outcome is None else outcome))
+        out[pid] = sorted(rows)
+    print(f"  conversation logs: {dropped:,} matched to a dialler call (not re-counted), {kept:,} off-dialler attempts; "
+          f"{overruled:,} calls' connected/not decided by the counsellor's logged outcome over the dialler")
     return out
 
 
-def since_return(calls, interested):
-    """[first attempt, first connect, outbound calls] on/after the interested-in stamp."""
-    if interested is None or not calls:
+def since(calls, t0):
+    """[first attempt, first connect, attempts] from minute t0 on. An attempt = an outbound call or an
+    off-dialler Conversation Log; an answered inbound call marks the lead attempted and connected but
+    is the lead's call, not ours, so it doesn't add to the attempt count."""
+    if t0 is None or not calls:
         return [None, None, 0]
-    t0, att, con, n = interested - RETURN_GRACE, None, None, 0
-    for m, ev, ans in calls:
+    att = con = None
+    n = 0
+    for m, kind, spoke in calls:
         if m < t0:
             continue
-        if ev == 22:
+        if kind in ("out", "log"):
             n += 1
-        if att is None and (ev == 22 or ans):
+        if att is None and (kind != "in" or spoke):
             att = m
-        if con is None and ans:
+        if con is None and spoke:
             con = m
     return [att, con, n]
+
+
+def since_return(calls, interested):
+    """[first attempt, first connect, attempts] on/after the interested-in stamp (5-min grace)."""
+    return since(calls, None if interested is None else interested - RETURN_GRACE)
 
 
 def lead_owner_centre(owner_id, owner_name, ucent):
@@ -372,7 +436,7 @@ def main():
         if pid and pid not in uni:
             uni[pid] = L
     print(f"union {len(uni)}")
-    print("pulling call log (21, 22)..."); calls = call_log()
+    print("pulling call log (22, 21, 310)..."); calls = call_log()
     print(f"  call log: {sum(len(v) for v in calls.values()):,} calls on {len(calls):,} leads")
 
     srcs, sidx = [], {}
@@ -436,6 +500,10 @@ def main():
             # 24..26: calling AFTER the latest interested-in stamp, from the call log —
             # first attempt, first connect, outbound calls (for leads that come back)
             *since_return(calls.get(L.get("ProspectID")), mins(L.get("mx_Interested_In_Date"))),
+            mins(L.get("mx_Latest_Counselling_Date")),                    # 27 latest counselling ON
+            # 28..30: the same call-log measure from creation, so new and returning leads are
+            # counted the same way (first attempt, first connect, attempts)
+            *since(calls.get(L.get("ProspectID")), None if mins(L.get("CreatedOn")) is None else mins(L.get("CreatedOn")) - RETURN_GRACE),
         ])
         camp = (L.get("SourceCampaign") or "").strip()
         if leads[-1][23] == PROG_GROUPS.index("Other") and camp and not GENERIC_CAMPAIGN.search(camp):
@@ -513,7 +581,8 @@ def main():
                     "followup", "attempts", "interacted", "stage", "qual", "pool",
                     "program", "city", "centre", "firstconnect", "counselled", "revenue",
                     "assign_cur", "counselled_on", "paid_on", "interested_on", "rawsrc", "proggroup",
-                    "call_after_int", "connect_after_int", "calls_after_int"],
+                    "call_after_int", "connect_after_int", "calls_after_int", "counselled_latest",
+                    "call_after_created", "connect_after_created", "calls_after_created"],
            "leads": leads}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:

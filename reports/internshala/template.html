@@ -141,7 +141,7 @@ const nf = n => n.toLocaleString('en-IN');
 const pf = (a,b) => b ? a/b*100 : 0;
 const p1 = (a,b) => pf(a,b).toFixed(1) + '%';
 const cc = v => v>=50?'g':v>=25?'a':'r';
-let BASIS = 'C';
+let BASIS = 'I';   // interested in window by default: sales ops read new + returning leads first (Kiran, 18 Oct 2026)
 const WKk = () => ({C:X.wkC, I:X.wkI, A:X.wkA})[BASIS];
 const DYk = () => ({C:X.dyC, I:X.dyI, A:X.dyA})[BASIS];
 const SPk = () => BASIS === 'I' ? X.spI : X.spC;
@@ -170,6 +170,7 @@ const scoped = () => R.filter(r => inWin(r) && pop().test(r));
 const pctCell = (v,b) => `${nf(v)}<span class="fpct">${p1(v,b)}</span>`;
 
 $('#basis').innerHTML = D.bases.map(b => `<option value="${b.id}">${b.label}</option>`).join('');
+$('#basis').value = BASIS;
 $('#pop').innerHTML = POPS.map(p => `<option value="${p.id}">${p.label}</option>`).join('');
 $('#lede').innerHTML = D.lede;
 
