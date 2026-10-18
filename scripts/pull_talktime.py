@@ -93,6 +93,7 @@ def ts(s):
 # ---------- users -> name, centre ----------
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pull import centre_of_user                     # one centre rule for the whole repo
+from pull import SPOKE, MIN_TALK_S                  # one "connected" rule for the whole repo (see pull.call_log)
 users = {}
 p = 1
 while True:
@@ -187,15 +188,35 @@ for d in DAY_LIST + [AS_OF + timedelta(days=1)]:
     for a in activities(310, d):
         t = ts(a.get("CreatedOn"))
         if t and a.get("RelatedProspectId"):
-            conv.setdefault((a.get("CreatedBy"), a["RelatedProspectId"]), []).append(t + IST)
+            # (time, did the counsellor record that they spoke)
+            conv.setdefault((a.get("CreatedBy"), a["RelatedProspectId"]), []).append(
+                (t + IST, (a.get("mx_Custom_46") or "").strip().lower() in SPOKE))
 for v in conv.values():
     v.sort()
 
 
-def has_log(c):
+def logs_for(c):
+    """The counsellor's Conversation Logs for this call: same counsellor, same lead, from 5 min
+    before the call to LOG_WIN (60 min) after it — the same window pull.call_log uses."""
     v = conv.get((c["user"], c["lead"]), [])
-    i = bisect.bisect_left(v, c["start"] - timedelta(minutes=5))
-    return i < len(v) and v[i] <= c["start"] + LOG_WIN
+    i = bisect.bisect_left(v, (c["start"] - timedelta(minutes=5),))
+    out = []
+    while i < len(v) and v[i][0] <= c["start"] + LOG_WIN:
+        out.append(v[i]); i += 1
+    return out
+
+
+def has_log(c):
+    return bool(logs_for(c))
+
+
+def spoke(c):
+    """Connected, the same rule as the rest of the dashboard: the counsellor's logged outcome decides;
+    with no log, the call must be answered AND last at least MIN_TALK_S (shorter = hang-up / voicemail)."""
+    logs = logs_for(c)
+    if logs:
+        return any(s for _, s in logs)
+    return c["ans"] and c["dur"] >= MIN_TALK_S
 
 
 print("median ringing (s): answered", ring[True].total_seconds(), "not answered", ring[False].total_seconds())
@@ -256,7 +277,7 @@ def union_seconds(spans, lo, hi):
 HDR = ["user", "day", "dials", "inbound", "answered", "talk_s", "on_call_s", "active_s", "hourly_active_min",
        "connected", "conn_fresh_first", "conn_fresh_created", "conn_old",
        "landed", "not_attempted", "first_call", "last_call", "no_log",
-       "longest_break_s", "longest_break_at"]
+       "longest_break_s", "longest_break_at", "answered_10s"]
 rows = []
 by = {}
 for c in calls:
@@ -295,7 +316,7 @@ for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}
         reach = c["end"] if reach is None else max(reach, c["end"])
     hourly = [round(union_seconds(on_call + work, max(first, day0 + timedelta(hours=h)), min(last, day0 + timedelta(hours=h + 1))) / 60)
               if cs and day0 + timedelta(hours=h + 1) > first and day0 + timedelta(hours=h) < last else 0 for h in range(24)]
-    conn = {c["lead"] for c in cs if c["ans"] and c["lead"]}
+    conn = {c["lead"] for c in cs if c["lead"] and spoke(c)}
     fresh_first = {l for l in conn if first_call.get(l) and first_call[l].date() == d}
     fresh_created = {l for l in conn if ist_of(leads.get(l, {}).get("CreatedOn")) and ist_of(leads[l]["CreatedOn"]).date() == d}
     old = conn - fresh_first
@@ -309,7 +330,9 @@ for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}
                  len(land), len(not_att),
                  first.strftime("%H:%M") if cs else "",
                  last.strftime("%H:%M") if cs else "",
-                 sum(1 for c in cs if c["ans"] and not has_log(c)), brk, brk_at])
+                 # a conversation (answered, >= MIN_TALK_S) with no Conversation Log; a hang-up needs no log
+                 sum(1 for c in cs if c["ans"] and c["dur"] >= MIN_TALK_S and not has_log(c)), brk, brk_at,
+                 sum(1 for c in cs if c["ans"] and c["dur"] >= MIN_TALK_S)])   # the base for No LSQ log %
 
 # ---------- calling effort by source: what was dialled each day, on new leads and older ones ----------
 from pull import grp                               # the one source-bucket table in the repo
@@ -330,7 +353,7 @@ for c in calls:
     l = c["lead"]
     if l:
         e["leads"].add(l)
-        if c["ans"]:
+        if spoke(c):
             e["conn"].add(l)
         cr = ist_of(x.get("CreatedOn"))
         if cr and cr.date() == d:

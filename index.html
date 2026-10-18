@@ -1574,7 +1574,7 @@ function renderCalls(){
   $("ef-tiles").innerHTML=tile(nf(agg.dials),`Calls made<br><span style="opacity:.75">${span}</span>`,"hi")
     +tile(nf(agg.leads),"Leads dialled (per day)")
     +tile(av(agg.leads?agg.dials/agg.leads:null),"Calls per lead")
-    +tile(pc(agg.conn,agg.leads),`Connected<br><span style="opacity:.75">${nf(agg.conn)} leads answered</span>`,"good")
+    +tile(pc(agg.conn,agg.leads),`Connected${tipBtn(CALL_RULE,true)}<br><span style="opacity:.75">${nf(agg.conn)} leads spoken to</span>`,"good")
     +tile(pc(agg.leads-agg.nw,agg.leads),`Older leads<br><span style="opacity:.75">${nf(agg.leads-agg.nw)} not created that day</span>`)
     +tile(nf(agg.first),"First-ever calls");
   $("ef-thead").innerHTML=`<tr class="ef-band"><th></th><th colspan="3" class="ef-g ef-s">Calls</th><th colspan="2" class="ef-g ef-s">Connects</th><th colspan="4" class="ef-g ef-s">Which leads</th></tr>`
@@ -1594,7 +1594,8 @@ function renderCalls(){
   const DEFS=[
     ["Calling activity",`every <b>outbound call</b> (Ameyo, activity 22) made ${span}, on any lead — including leads created long before. Counsellor = the person who <b>made</b> the call, and their centre; not the lead's owner.`],
     ["Calls · Leads dialled","calls made, and unique leads dialled <b>per caller per day</b>: a lead called on three days counts three times over a multi-day range, and a lead called by two counsellors on the same day counts once for each."],
-    ["Connected · %","leads with at least one answered outbound call that day, as a share of leads dialled."],
+    ["Connected · %","leads the counsellor spoke to that day (logged outcome, or an answered outbound call of 10 s or more), as a share of leads dialled."],
+    callsDef(),
     ["New that day · Older","leads created on the day they were called, and every other lead dialled — the work on older leads that lead-level dates can't see."],
     ["First-ever call","leads that got their first human call ever that day."],
     ["Source groups","the lead's source, grouped as on the other reports; expanding a group lists the raw LSQ Source values."],
@@ -2164,9 +2165,10 @@ function init_talk(){
       ["Idle","Total time minus Active: the gaps longer than "+T.gap_min+" minutes. Calls on personal phones, walk-in counselling and other work that leaves no call record show up as idle, so idle is an upper bound. Red when less than a quarter of the day was active."],
       ["Longest break","the longest single idle gap (over "+T.gap_min+" minutes) between two calls, and the time it began (IST). Tells one long break, like lunch or a walk-in, apart from many short ones. Daily average shows the average length only."],
       ["Dialled","outbound calls placed."],
-      ["Answered","calls that were picked up, outbound and inbound. Dialled counts outbound only, so Answered ÷ Dialled is not a connect rate."],
-      ["No LSQ log","answered calls with no Conversation Log in LSQ, by the same counsellor on the same lead, from 5 minutes before the call to "+(T.log_window_min||60)+" minutes after. The percentage is of Answered. Red at 15% or more. Ameyo's own outcome screen isn't counted: most people who skip it log in LSQ instead."],
-      ["Connected leads","unique leads with at least one answered call that day. Connected = New + Follow-up."],
+      ["Answered","calls the dialler marked picked up, outbound and inbound — including very short pickups (hang-ups, voicemail), so it is higher than Connected. Dialled counts outbound only, so Answered ÷ Dialled is not a connect rate."],
+      callsDef(),
+      ["No LSQ log","answered calls of 10 seconds or more (a real conversation — shorter ones are hang-ups or voicemail and need no log) with no Conversation Log in LSQ, by the same counsellor on the same lead, from 5 minutes before the call to "+(T.log_window_min||60)+" minutes after. The percentage is of answered calls of 10 seconds or more. Red at 15% or more. Ameyo's own outcome screen isn't counted: most people who skip it log in LSQ instead."],
+      ["Connected leads","unique leads the counsellor actually spoke to that day: the counsellor's Conversation Log says they spoke, or — with no log — the call was answered and lasted at least 10 seconds. The same rule as every report. Connected = New + Follow-up."],
       ["New: 1st call today","connected leads that had never had a human call before that day: brand-new conversations."],
       ["Created & connected today","connected leads whose record was also created that day: reached on the day they came in. Always part of New, never of Follow-up."],
       ["Follow-up","connected leads that had a human call on an earlier day."],
@@ -2193,8 +2195,9 @@ function init_talk(){
       +'<th rowspan="2" class="tt-gs">Active by hour'+tipBtn(cap(DEF["Active by hour"]),1)+'</th></tr><tr>'
       +GROUPS.map(([g,cs])=>cs.map(([l,k],i)=>'<th'+(i?'':' class="tt-gs"')+'>'+l+tipBtn(cap(DEF[k||l]),1)+'</th>').join("")).join("")+'</tr>';
     function agg(rows){ // sum rows of one counsellor (avg mode divides by days)
-      const o={dials:0,inbound:0,answered:0,talk_s:0,on_call_s:0,active_s:0,connected:0,conn_fresh_first:0,conn_fresh_created:0,conn_old:0,landed:0,not_attempted:0,no_log:0,brk:0,brk_at:"",h:Array(24).fill(0),fm:0,lm:0,cd:0,span_s:null}; // fm/lm = first/last call as minutes of the day, summed over the cd days that had calls
+      const o={dials:0,inbound:0,answered:0,talk_s:0,on_call_s:0,active_s:0,connected:0,conn_fresh_first:0,conn_fresh_created:0,conn_old:0,landed:0,not_attempted:0,no_log:0,ans10:0,brk:0,brk_at:"",h:Array(24).fill(0),fm:0,lm:0,cd:0,span_s:null}; // fm/lm = first/last call as minutes of the day, summed over the cd days that had calls
       rows.forEach(r=>{["dials","inbound","answered","talk_s","on_call_s","active_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>o[k]+=r[H[k]]);
+        o.ans10+=H.answered_10s!=null ? (r[H.answered_10s]||0) : r[H.answered];   // older files: fall back to all answered
         r[H.hourly_active_min].forEach((v,i)=>o.h[i]+=v); o.brk+=r[H.longest_break_s]||0; o.brk_at=r[H.longest_break_at]||"";
         if(r[H.first_call]){o.fm+=mins(r[H.first_call]);o.lm+=mins(r[H.last_call]);o.cd++;}});
       return o;
@@ -2207,7 +2210,7 @@ function init_talk(){
         const nd=day==="avg"?rs.length:1; // average over the days this counsellor actually worked
         // counts average over every day the counsellor appears (calls made or leads landed);
         // time columns only over days with calls, or a leads-only day would drag talk time down
-        ["dials","inbound","answered","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>o[k]=o[k]/nd);
+        ["dials","inbound","answered","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log","ans10"].forEach(k=>o[k]=o[k]/nd);
         ["talk_s","on_call_s","active_s"].forEach(k=>o[k]=o.cd?o[k]/o.cd:0);
         o.brk=o.cd?o.brk/o.cd:0; if(day==="avg") o.brk_at="";   // a clock time only means something for one day
         if(o.cd){o.fm/=o.cd;o.lm/=o.cd;o.span_s=(o.lm-o.fm)*60;} // avg mode: mean clock times, so Total = Last - First still holds
@@ -2228,8 +2231,8 @@ function init_talk(){
         [list.length,"counsellors shown","","Counsellors who placed at least "+minD+" outbound call"+(minD===1?"":"s")+(day==="avg"?" on an average working day":" that day")+", in the centres selected. Change Min dials or Centre to widen or narrow this."],
         [hm(med("talk_s")),"median talk time"+per,"",scope+"half the counsellors shown spent longer than this in conversation on answered calls, and half spent less. A median, so one very heavy caller doesn't pull it up."],
         [hm(med("active_s")),"median active time"+per+'<br><span style="opacity:.8">'+hm(med("idle_s"))+" idle</span>","","The typical counsellor's working time between their first and last call: time on calls (ringing + talking) plus every gap of up to "+T.gap_min+" minutes before the next call, which is dialling and notes. Longer gaps count as idle. Idle = Total time (first to last call) minus Active; calls from personal phones and walk-in counselling leave no call record and land in idle, so treat it as an upper bound."],
-        [r1(sum("connected")),"leads connected"+per+'<br><span style="opacity:.8">'+r1(sum("conn_fresh_first"))+" new</span>","","Unique leads that picked up at least one call, added up across the counsellors shown. New = those whose first-ever human call was that day: brand-new conversations, not follow-ups (the New column)."],
-        [sum("answered")?Math.round(100*sum("no_log")/sum("answered"))+"%":"—","answered calls with no LSQ log","unc","Share of answered calls with no Conversation Log in LSQ by the same counsellor on the same lead within "+(T.log_window_min||60)+" minutes. That form records the outcome and moves the lead's stage, so an unlogged call leaves the lead stuck. "+r1(sum("no_log"))+" of "+r1(sum("answered"))+" answered calls"+per+"."],
+        [r1(sum("connected")),"leads connected"+per+'<br><span style="opacity:.8">'+r1(sum("conn_fresh_first"))+" new</span>","","Unique leads the counsellor spoke to (logged outcome, or an answered call of 10 s or more), added up across the counsellors shown. New = those whose first-ever human call was that day: brand-new conversations, not follow-ups (the New column)."],
+        [sum("ans10")?Math.round(100*sum("no_log")/sum("ans10"))+"%":"—","conversations with no LSQ log","unc","Share of conversations (answered calls of 10 s or more) with no Conversation Log in LSQ by the same counsellor on the same lead within "+(T.log_window_min||60)+" minutes. That form records the outcome and moves the lead's stage, so an unlogged call leaves the lead stuck. "+r1(sum("no_log"))+" of "+r1(sum("answered"))+" answered calls"+per+"."],
         [r1(notAtt),"landed leads not attempted"+per+(hiddenNA?'<br><span style="opacity:.8">'+r1(hiddenNA)+" with counsellors below Min dials</span>":""),"unc",scope+"includes counsellors who made fewer than Min dials (they're hidden from the table, but their untouched leads count here). Leads that were created or assigned to the counsellor (current owner) and got no call from anyone after they landed, by midnight. Calls made before a reassignment don't count. Leads that landed after the counsellor's last call are left out. The Not attempted column shows who holds them."]
       ].map(t=>'<div class="tile '+(t[2]||"")+'"><div class="n">'+t[0]+'</div><div class="l">'+t[1]+'</div>'+tipBtn(t[3])+'</div>').join("");
       $("tt-day").closest(".dwrap").classList.toggle("off",day==="avg");
@@ -2245,7 +2248,7 @@ function init_talk(){
         +'<td class="'+(share<0.25&&!cls?"tt-low":"")+'">'+hm(idle)+'</td>'
         +'<td>'+(o.brk?hm(o.brk)+(o.brk_at?' <span class="tt-pct">'+o.brk_at+'</span>':""):"—")+'</td>'
         +'<td class="tt-gs">'+r1(o.dials)+'</td><td>'+r1(o.answered)+'</td>'
-        +'<td class="'+(o.answered&&o.no_log/o.answered>=0.15&&!cls?"crit":"")+'">'+r1(o.no_log)+(o.answered?' <span class="tt-pct">'+Math.round(100*o.no_log/o.answered)+'%</span>':"")+'</td>'
+        +'<td class="'+(o.ans10&&o.no_log/o.ans10>=0.15&&!cls?"crit":"")+'">'+r1(o.no_log)+(o.ans10?' <span class="tt-pct">'+Math.round(100*o.no_log/o.ans10)+'%</span>':"")+'</td>'
         +'<td class="tt-gs">'+r1(o.connected)+'</td><td>'+r1(o.conn_fresh_first)+'</td><td>'+r1(o.conn_fresh_created)+'</td><td>'+r1(o.conn_old)+'</td><td>'+r1(o.landed)+'</td>'
         +'<td class="'+(o.not_attempted>0&&!cls?"crit":"")+'">'+r1(o.not_attempted)+'</td>'
         +'<td class="tt-gs"><div class="tt-hours" title="Active minutes per hour, '+String(h0).padStart(2,"0")+':00 to '+String(h1+1).padStart(2,"0")+':00 IST">'+o.h.slice(h0,h1+1).map((m,i)=>'<span style="'+heat(m)+'" title="'+String(h0+i).padStart(2,"0")+':00 IST · '+Math.round(m)+' min"></span>').join("")+'</div></td></tr>';};
