@@ -53,7 +53,7 @@ input[type=date],input[type=number],input[type=text],.txt{font-family:var(--sans
 .xrow-l{-webkit-mask-image:linear-gradient(to right,transparent,#000 48px);mask-image:linear-gradient(to right,transparent,#000 48px);}
 .xrow-l.xrow-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent);}
 .tile{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:14px 16px;box-shadow:var(--shadow);}
-.tile:has(.tipbtn){padding-right:32px;}
+.tile:has(.tipbtn:not(.inl)){padding-right:32px;}
 .tile .n{font-size:22px;font-weight:750;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1;}
 .tile .l{font-size:12px;color:var(--muted);margin-top:6px;}
 .tile.hi .n{color:var(--accent-2);}
@@ -89,8 +89,12 @@ tr.totrow td{background:var(--surface-2);font-weight:700;color:var(--ink);border
 .tt-hours{display:grid;grid-auto-flow:column;grid-auto-columns:14px;gap:2px;justify-content:start;}
 .tt-hours span{width:14px;height:14px;border-radius:3px;background:var(--surface-2);border:1px solid var(--line);}
 #tt-note div{margin-top:5px;}
-.isframe{display:block;width:100%;min-height:70vh;border:0;background:transparent;}
 #tt-tbl td{white-space:nowrap;}
+/* headers on one line, so the ⓘ never wraps and every column reads the same; slightly tighter cells so Time & calls fits */
+#tt-tbl thead tr:last-child th{white-space:nowrap;}
+#tt-tbl th,#tt-tbl td{padding-left:5px;padding-right:5px;}
+#tt-tbl tbody tr:not(.tt-centre) td:first-child{white-space:normal;max-width:150px;}
+#tt-tbl tbody td:first-child,#tt-tbl thead th:first-child{padding-left:12px;}
 /* collapsible note: closed by default, opens in place */
 .xfold summary{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;list-style:none;cursor:pointer;font-weight:700;color:var(--ink-2);}
 .xfold summary::-webkit-details-marker{display:none;}
@@ -188,6 +192,16 @@ td.owncol{white-space:nowrap;}
 :root[data-theme="dark"]{--rt-s1:#3987e5;--rt-s2:#d95926;--rt-s3:#199e70;--rt-s4:#c98500;--rt-centre:#6c7682;--rt-owner:#55606c;--rt-pool:#a9b1ba;}
 .rt-chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;min-height:120px;}
 .rt-msg{margin:0;padding:18px;color:var(--muted);}
+/* loading: a tiny sankey whose ribbons flow left to right while nivo loads */
+.rt-load{display:flex;flex-direction:column;align-items:center;gap:10px;padding:clamp(96px,18vh,200px) 16px 72px;color:var(--muted);font-size:13px;}   /* upper part of the box (it is already sized to the full chart), lower on taller screens */
+.rt-load svg{width:150px;height:84px;overflow:visible;}
+.rt-load .fl{fill:none;stroke-width:7;stroke-linecap:round;opacity:.45;stroke-dasharray:22 150;animation:rtflow 1.6s ease-in-out infinite;}
+.rt-load .bs{fill:none;stroke-width:7;opacity:.14;}
+.rt-load .fl.d1{animation-delay:.2s;} .rt-load .fl.d2{animation-delay:.4s;} .rt-load .fl.d3{animation-delay:.6s;}
+.rt-load .nd{animation:rtpulse 1.6s ease-in-out infinite;}
+@keyframes rtflow{from{stroke-dashoffset:172;}to{stroke-dashoffset:0;}}
+@keyframes rtpulse{0%,100%{opacity:1;}50%{opacity:.55;}}
+@media (prefers-reduced-motion:reduce){ .rt-load .fl,.rt-load .nd{animation:none;} .rt-load .fl{stroke-dasharray:none;} }
 .rt-hint{margin:0 2px 8px;font-size:12.5px;color:var(--muted);}
 .rt-tip{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12.5px;box-shadow:var(--shadow);white-space:nowrap;}
 /* --- brand tokens --- */
@@ -369,7 +383,11 @@ nav.side.open{transform:none;}
 .tipbtn svg{width:15px;height:15px;}
 .tipbtn.inl{position:static;display:inline-grid;width:16px;height:16px;margin-left:3px;vertical-align:-4px;}
 .tipbtn.inl svg{width:13px;height:13px;}
-.tipbox{position:fixed;z-index:70;max-width:min(300px,calc(100vw - 16px));padding:10px 12px;border-radius:9px;background:var(--ink);color:var(--bg);font-size:12.5px;line-height:1.5;box-shadow:0 10px 28px rgb(10 15 25/.28);pointer-events:none;}
+.tile .tipbtn.inl{vertical-align:-2px;}   /* centres the icon on the 12px tile label */
+.tipbox .th{font-weight:700;margin-top:6px;} .tipbox .th:first-child{margin-top:0;}
+.tipbox .tli{position:relative;padding-left:12px;} .tipbox .tli::before{content:"•";position:absolute;left:1px;}
+.tipbox .tp+.tp,.tipbox .tli+.tp{margin-top:6px;opacity:.85;}
+.tipbox{position:fixed;z-index:70;max-width:min(320px,calc(100vw - 16px));padding:10px 12px;border-radius:9px;background:var(--ink);color:var(--bg);font-size:12.5px;line-height:1.5;box-shadow:0 10px 28px rgb(10 15 25/.28);pointer-events:none;}
 /* ---- Filter toolbar: label inside each control ---- */
 .fbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:20px 0 4px;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);}
 .fbar .xsel-btn{min-width:0;}
@@ -415,8 +433,9 @@ nav.side.open{transform:none;}
 .xctx .q{color:var(--accent-2);font-style:italic;}
 .xctx-more{font-size:12.5px;font-weight:600;color:var(--accent);white-space:nowrap;}
 .xctx-more::after{content:" ▾";}
-.xctx[open] .xctx-more{display:none;}
-.xctx[open] summary::after{content:"Hide ▴";font-size:12.5px;font-weight:600;color:var(--accent);white-space:nowrap;}
+.xctx[open] .xctx-more::after{content:" ▴";}   /* one toggle: the same link opens and closes the panel */
+.xctx summary{outline:none;}
+.xctx summary:focus-visible .xctx-more{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px;}
 .xfold[open] summary::after{content:"Hide";margin-left:auto;font-size:12.5px;font-weight:600;color:var(--accent);}
 .xhide{display:block;margin:10px 0 0 auto;padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--accent);font:600 12.5px var(--sans);cursor:pointer;}
 .xhide:hover{border-color:var(--accent);}
@@ -448,15 +467,14 @@ nav.side.open{transform:none;}
   <main id="view"></main>
 </div>
 <template id="tpl-home"><div class="wrap">
-  <div class="eyebrow">LSQ · Overview</div>
   <h1>Overview</h1>
   <p class="lede">Headline numbers for any date range — how the leads created in it converted, how the leads that showed interest in it (new or returning) were worked, or what the team did in it. Every other report in the menu goes deeper on one of these.</p>
 
   <div class="fbar" id="h-fbar">
     <select id="h-view" data-label="View" aria-label="View">
-      <option value="cohort" data-desc="How did the leads that arrived in the range convert?">Cohort · Leads created in range</option>
-      <option value="interested" data-desc="Leads that showed interest in the range, new or returning" selected>Cohort · Leads interested in range</option>
-      <option value="ops" data-desc="What did the team do in the range, on any lead — including payments from older leads?">Operational · Activity in range</option>
+      <option value="ops" data-desc="What did the team do in the range, on any lead — including payments from older leads?" selected>Operational · Activity in range</option>
+      <option value="cohort" data-adv data-desc="How did the leads that arrived in the range convert?">Cohort · Leads created in range</option>
+      <option value="interested" data-adv data-desc="Leads that showed interest in the range, new or returning">Cohort · Leads interested in range</option>
     </select>
     <select id="h-range" data-label="Range" aria-label="Quick range">
       <option value="7" selected>Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option>
@@ -477,7 +495,7 @@ nav.side.open{transform:none;}
   <div class="shrow"><span class="sh" id="mftitle">Funnel</span></div>
   <div class="tblwrap" id="mfunnel"></div>
   <div>
-      <div class="shrow"><span class="sh" id="msrctitle">By source</span><a class="mdlink" href="#funnel" onclick="event.preventDefault();show('funnel')">Full funnel by source →</a></div>
+      <div class="shrow"><span class="sh" id="msrctitle">By source</span></div>
       <div class="tblwrap"><table id="h-src-tbl"><thead id="msrch"></thead><tbody id="msrc"></tbody></table></div>
       <div class="trunc">Click a group to see the raw LSQ Source values behind it.</div>
   </div>
@@ -491,9 +509,8 @@ nav.side.open{transform:none;}
   <div class="fbar" id="stl-fbar">
     <select id="anchor" data-label="Analysis" aria-label="Analysis type">
       <option value="interested" data-desc="How fast a new or returning lead hears from us after showing interest" selected>Interested In</option>
-      <option value="created" data-desc="How fast a brand-new lead hears from us">Created On</option>
+      <option value="created" data-adv data-desc="How fast a brand-new lead hears from us">Created On</option>
       <option value="firstcall" data-adv data-desc="How long the leads we dialled had been waiting">First Call</option>
-      <option value="assign" data-adv data-desc="How fast a counsellor calls once a lead is first assigned">Assignment</option>
     </select>
     <input type="date" id="d0" data-label="From" aria-label="Start date">
     <input type="date" id="d1" data-label="To" aria-label="End date">
@@ -527,7 +544,7 @@ nav.side.open{transform:none;}
 <template id="tpl-ageing">
   <div class="eyebrow">LSQ · Lead Ageing</div>
   <h1>Lead Ageing</h1>
-  <p class="lede">How long leads have sat since creation, how many are still <b>pending a first attempt</b>, and which have gone quiet (<b>no activity</b>) or have an <b>overdue follow-up</b> — by source, or by centre and counsellor.</p>
+  <p class="lede">Which leads are still <b>waiting for a first attempt</b> and for how long, and which have an <b>overdue follow-up</b> — by source, or by centre and counsellor.</p>
 
   <div class="fbar" id="ag-fbar">
     <select id="ag-basis" data-label="Leads" aria-label="Which leads">
@@ -540,12 +557,6 @@ nav.side.open{transform:none;}
     <select id="ag-src" multiple data-label="Sources" data-all="All sources" data-noun="sources" aria-label="Sources"></select>
     <select id="ag-ctr" multiple data-label="Centres" data-all="All centres" data-noun="centres" aria-label="Centres"></select>
     <select id="ag-stg" multiple data-label="Stages" data-all="All stages" data-noun="stages" aria-label="Stages"></select>
-    <select id="ag-metric" data-label="Cells show" aria-label="What the age cells count">
-      <option value="all" data-desc="Every lead in the cohort, by age">All leads</option>
-      <option value="pend" data-desc="No sign of any attempt yet">Pending first attempt</option>
-      <option value="noact" data-desc="Last activity 8 or more days before the as-of date">No activity 8+ days</option>
-      <option value="over" data-desc="Follow-up date passed, nothing logged since">Overdue follow-up</option>
-    </select>
     <button type="button" class="freset" id="ag-reset" hidden>Reset</button>
   </div>
   <details class="xctx" id="ag-ctx"><summary><span id="ag-ctx-q"></span><span class="xctx-more">What counts as open</span></summary><div id="ag-ctx-body"></div></details>
@@ -600,9 +611,8 @@ nav.side.open{transform:none;}
 
   <div class="fbar" id="ef-fbar">
     <select id="ef-basis" data-label="Leads" aria-label="Which leads">
-      <option value="created" data-desc="Leads created in the date range">Created in range</option>
       <option value="interested" data-desc="Leads that showed interest in the range, new or returning" selected>Interested in range</option>
-      <option value="calls" data-desc="Every call made in the range, on new and older leads (from the call log)">Calling activity in range</option>
+      <option value="created" data-adv data-desc="Leads created in the date range">Created in range</option>
     </select>
     <input type="date" id="ef-d0" data-label="From" aria-label="Start date">
     <input type="date" id="ef-d1" data-label="To" aria-label="End date">
@@ -702,9 +712,32 @@ nav.side.open{transform:none;}
   <details class="xnote xfold" id="rt-foot"></details>
 </template>
 <template id="tpl-internshala">
-  <div class="mature" id="is-stale" hidden></div>
-  <iframe id="is-frame" class="isframe" src="data/internshala-funnel.html" title="Internshala" scrolling="no"></iframe>
-  <p class="xnote" id="is-err" hidden>Could not load the Internshala report (data/internshala-funnel.html). It is rebuilt by the daily refresh.</p>
+  <div class="eyebrow">LSQ · Internshala</div>
+  <h1>Internshala</h1>
+  <p class="lede">Where Internshala leads land — with a counsellor or in a <b>bulk pool</b> — who worked them (<b>counsellors or the bot</b>), and what came of it.</p>
+  <div class="fbar" id="is-fbar">
+    <select id="is-basis" data-label="Leads" aria-label="Which leads">
+      <option value="interested" data-desc="Leads that showed interest in the range, new or returning" selected>Interested in range</option>
+      <option value="created" data-adv data-desc="Leads created in the date range">Created in range</option>
+    </select>
+    <input type="date" id="is-d0" data-label="From" aria-label="Start date">
+    <input type="date" id="is-d1" data-label="To" aria-label="End date">
+    <select id="is-pop" data-label="Owner" aria-label="Who owns the lead">
+      <option value="all" data-desc="Counsellor-owned and pooled" selected>All leads</option>
+      <option value="named" data-desc="Owned by a counsellor or centre login">Counsellor-owned</option>
+      <option value="pool" data-desc="Parked in the bot queue or the vendor pool">In a bulk pool</option>
+    </select>
+    <button type="button" class="freset" id="is-reset" hidden>Reset</button>
+  </div>
+  <details class="xctx" id="is-ctx"><summary><span id="is-ctx-q"></span><span class="xctx-more">How it's counted</span></summary><div id="is-ctx-body"></div></details>
+  <div class="mature" id="is-young" hidden></div>
+  <div class="tiles" id="is-tiles"></div>
+  <div class="shrow"><span class="sh">Where they landed · who worked them</span></div>
+  <div class="tblwrap"><table><thead id="is-segh"></thead><tbody id="is-segb"></tbody></table></div>
+  <div class="shrow"><span class="sh" id="is-daytitle">By day</span></div>
+  <div class="tblwrap"><table><thead id="is-dayh"></thead><tbody id="is-dayb"></tbody></table></div>
+  <div class="trunc" id="is-trunc"></div>
+  <details class="xnote xfold" id="is-foot"></details>
 </template>
 <template id="tpl-talk">
   <div class="eyebrow">LSQ · TALK TIME</div>
@@ -887,12 +920,19 @@ function bizMinutes(a,b){
 function clk(a,b){ return window.__BH ? bizMinutes(a,b) : b-a; }
 // How a call becomes an attempt and a connect, in words sales ops can repeat (Kiran, 18 Oct 2026).
 // Shown as an (i) on every Attempted / Connected tile and in each report's "How this is measured".
-const CALL_RULE="Calls come from the dialler log plus counsellors' Conversation Log forms. "
-  +"A call and the Conversation Log written for it count as ONE attempt, never two. "
-  +"A Conversation Log with no dialler call behind it (e.g. a call from a personal phone) counts as one attempt. "
-  +"Connected = the counsellor's logged outcome says they spoke; with no log, the dialler shows the call answered AND it lasted at least 10 seconds (shorter 'answered' calls are hang-ups or voicemail). "
-  +"Automatic entries written by LSQ itself never count. A call on a personal phone with no Conversation Log can't be seen, so read attempts as a floor.";
-function callsDef(){ return ["How calls are counted", CALL_RULE]; }
+// one line per rule: "Heading:" lines and "• " bullets are styled by the tooltip (and the fold-out).
+// Each tile's ⓘ shows only its own rule; the definitions fold-out shows both (CALL_RULE).
+const CALL_RULE_ATT="Attempted:\n"
+  +"• Every dialler call counts.\n"
+  +"• A call + the Conversation Log written for it = one attempt, never two.\n"
+  +"• A Conversation Log with no dialler call behind it (e.g. a personal-phone call) = one attempt.\n"
+  +"• Automatic entries written by LSQ never count.\n"
+  +"Personal-phone calls with no Conversation Log can't be seen, so read attempts as a floor.";
+const CALL_RULE_CON="Connected:\n"
+  +"• The counsellor's logged outcome says they spoke.\n"
+  +"• No log? The call was answered AND lasted 10 seconds or more. Shorter 'answered' calls are hang-ups or voicemail.";
+const CALL_RULE=CALL_RULE_ATT+"\n"+CALL_RULE_CON;
+function callsDef(){ return ["How calls are counted", "<br>"+CALL_RULE.replace(/\n/g,"<br>")]; }
 function bhText(){ return window.__BH ? "business hours (Mon–Sat 10–7)" : "clock time (24×7)"; }
 function bhDef(){ return ["Clock", window.__BH
   ? "every speed and SLA figure counts <b>business hours only: Mon–Sat, 10:00–19:00 IST</b>, the same for every centre. A lead that arrives at 21:00 or on Sunday starts its clock at 10:00 the next working day; a call made outside hours before that counts as 0 minutes. Turn this off with the <b>Business hours</b> switch in the top bar to see plain clock time."
@@ -923,19 +963,18 @@ const BASE = new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
 const PROGRAMS = DATA.programs||[], RAW = DATA.raw_sources||[], OC = DATA.owner_centre||[], PG = DATA.prog_groups||[];
 // sales ops read the interested view first
 let ANCHOR="interested", DIM="source"; const SEL=new Set(), CSEL=new Set(), OPEN=new Set();
-const anchorField={interested:1,created:1,firstcall:2,assign:3};
-const clockStart ={interested:1,created:1,firstcall:1,assign:3};   // interested: returning leads clock from col 21 instead
+const anchorField={interested:1,created:1,firstcall:2};
+const clockStart ={interested:1,created:1,firstcall:1};   // interested: returning leads clock from col 21 instead
 // The three paid/partner channels that carry most volume get their own group; every other
 // bucket sits under Others. Expanding a group shows the raw LSQ Source values behind it.
 const GROUPS=SRC_GROUPS, grpOf=srcGroupOf, LAST=CTR_LAST, ctrOf=centreOf;
 const ctrSort=(a,b)=>(LAST.has(a)-LAST.has(b))||a.localeCompare(b);
 // q = the question the analysis answers (always visible under the filters); the long text sits behind "How it's measured"
-const QUESTION={interested:"how fast does a lead that showed interest — new or returning — hear from us?",created:"how fast does a brand-new lead hear from us?",firstcall:"of everything we dialled, how long had those leads been waiting?",assign:"once a lead is first assigned to a counsellor, how fast do they call?"};
+const QUESTION={interested:"how fast does a lead that showed interest — new or returning — hear from us?",created:"how fast does a brand-new lead hear from us?",firstcall:"of everything we dialled, how long had those leads been waiting?"};
 const EXPLAIN={
   interested:"<b>Interested In analysis.</b> Cohort = every lead <b>created</b> in your date range (new), plus <b>returning</b> leads — created earlier, with their Interested In Date in the range (a stamp after the first payment is ignored); the same rule as Overview, Effort, Funnel and Lead Routing. New leads are clocked from creation, as in Created On. A returning lead is clocked from its <b>Interested In Date</b> to the first call and first connect <b>after it came back</b>, from the call log; its earlier calls belong to its first enquiry and don't count. A call up to 5 min before the stamp counts as 0.",
   created:"<b>Created On analysis.</b> Cohort = every lead <b>created</b> in your date range. The clock runs creation → first attempt, so it captures the lead's full end-to-end wait — including time spent in the central pool before a counsellor picks it up.",
   firstcall:"<b>First Call analysis.</b> Cohort = every lead whose <b>first attempt</b> lands in your date range, regardless of when it was created. Everyone here was dialled, so there are no unattempted leads. The clock still runs from creation, so aged leads and reactivations lift the medians.",
-  assign:"<b>Assignment analysis.</b> Cohort = every lead <b>first assigned</b> to a counsellor in your date range (the original assignment, which a later reassignment doesn't change). The clock starts at that assignment, not creation — stripping out central-pool lag to isolate the counsellor's own response. This is the fair SLA measure."
 };
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
@@ -1006,9 +1045,9 @@ function render(){
   const sla=Math.max(1,parseFloat(document.getElementById("sla").value)||120);
   const {top,sub,agg,lo,hi}=compute();
   youngNote("stl-young",hi,lastFull);
-  const clkA={interested:"first attempt − created (new) · first attempt after return − Interested In (returning)",created:"first attempt − created",firstcall:"first attempt − created",assign:"first attempt − assignment"}[ANCHOR];
-  const clkC={interested:"first connect − created (new) · first connect after return − Interested In (returning)",created:"first connect − created",firstcall:"first connect − created",assign:"first connect − assignment"}[ANCHOR];
-  const coh={interested:"interested",created:"created",firstcall:"first-called",assign:"assigned"}[ANCHOR];
+  const clkA={interested:"first attempt − created (new) · first attempt after return − Interested In (returning)",created:"first attempt − created",firstcall:"first attempt − created"}[ANCHOR];
+  const clkC={interested:"first connect − created (new) · first connect after return − Interested In (returning)",created:"first connect − created",firstcall:"first connect − created"}[ANCHOR];
+  const coh={interested:"interested",created:"created",firstcall:"first-called"}[ANCHOR];
   const aName=document.querySelector('#anchor option[value="'+ANCHOR+'"]').textContent;
   document.getElementById("ctx-q").innerHTML=`<span><b>${aName}:</b> <span class="q">${QUESTION[ANCHOR]}</span></span>`;
   document.getElementById("ctx-body").innerHTML=`<p>${EXPLAIN[ANCHOR]}</p>`
@@ -1029,7 +1068,7 @@ function render(){
   document.getElementById("t-med").textContent=st.n?fm(st.med):"—";
   // connect rate = connected ÷ attempted, the same base on every report
   document.getElementById("t-conn").textContent=con?(100*cnn/con).toFixed(0)+"%":"—";
-  document.getElementById("t-conn-l").innerHTML='Connected · of attempted'+tipBtn(CALL_RULE,true)+(tot?'<br><span style="opacity:.75">'+nf(cnn)+" of "+nf(con)+" attempted</span>":"");
+  document.getElementById("t-conn-l").innerHTML='Connected · of attempted'+tipBtn(CALL_RULE_CON,true)+(tot?'<br><span style="opacity:.75">'+nf(cnn)+" of "+nf(con)+" attempted</span>":"");
   document.getElementById("t-cmed").textContent=cmed!=null?fm(cmed):"—";
   document.getElementById("t-sla").textContent=tot-unm>0?(100*st.hits/(tot-unm)).toFixed(0)+"%":"—";
   // one plain sentence per line: the headline share of ALL leads, then the same hits as a share of those attempted
@@ -1120,14 +1159,15 @@ function render(){
     +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("")
     +`<div>Pulled from the LeadSquared v2 API; all dates and times are IST. Attempt and connect logging are both under-recorded in LSQ, so read every figure here as a floor.</div>`;
 }
-// Sources dropdown <-> SEL. The dropdown shows "nothing ticked" as All sources, so a full SEL is shown unticked.
+// Sources dropdown <-> SEL. The dropdown offers the four source GROUPS (Meta, Google, Internshala, Others),
+// so owners can be compared on one channel; SEL still holds raw source indexes. "Nothing ticked" = All sources.
 const srcSel=document.getElementById("srcsel"), ctrSel=document.getElementById("ctrsel");
-function sync(){ const all=SEL.size===DATA.sources.length; [...srcSel.options].forEach(o=>o.selected=!all&&SEL.has(+o.value)); srcSel.dispatchEvent(new Event("change")); }
-function srcOrder(){ const cnt={}; DATA.sources.forEach((s,i)=>cnt[i]=0); for(const L of DATA.leads) cnt[L[0]]++; return Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]); }
-function chips(){ srcSel.innerHTML=srcOrder().map(k=>`<option value="${k}">${DATA.sources[k]}</option>`).join("");
-  srcSel._presets=[{label:"All except Internshala",pick:()=>[...srcSel.options].forEach(o=>o.selected=o.textContent!=="Internshala")}];
+const grpIdx=g=>DATA.sources.map((_,i)=>i).filter(i=>srcGroupOf(i)===g);
+function sync(){ const all=SEL.size===DATA.sources.length; [...srcSel.options].forEach(o=>o.selected=!all&&grpIdx(o.value).every(k=>SEL.has(k))); srcSel.dispatchEvent(new Event("change")); }
+function chips(){ srcSel.innerHTML=SRC_GROUPS.filter(g=>grpIdx(g).length).map(g=>`<option value="${g}">${g}</option>`).join("");
+  srcSel._presets=[{label:"All except Internshala",pick:()=>[...srcSel.options].forEach(o=>o.selected=o.value!=="Internshala")}];
   ctrSel.innerHTML=[...new Set(OC)].sort(ctrSort).map(c=>`<option>${c}</option>`).join(""); }
-srcSel.onchange=()=>{ const picked=[...srcSel.selectedOptions].map(o=>+o.value);
+srcSel.onchange=()=>{ const picked=[...srcSel.selectedOptions].flatMap(o=>grpIdx(o.value));
   const want=picked.length?picked:DATA.sources.map((_,i)=>i);
   if(want.length===SEL.size && want.every(k=>SEL.has(k))) return;     // our own sync() echo
   SEL.clear(); want.forEach(k=>SEL.add(k)); render(); };
@@ -1163,15 +1203,13 @@ const DATA = window.__DATA;
 const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000, RAW=DATA.raw_sources||[], OC=DATA.owner_centre||[];
 const $=id=>document.getElementById(id);
 let DIM="source"; const SEL=new Set(), CSEL=new Set(), STG=new Set(), OPEN=new Set();
-const BUCKETS=[["0 days",0,0],["1 day",1,1],["2 days",2,2],["3–7 days",3,7],["8+ days",8,9999]];
-const NOACT=8;   // "no activity" uses the same 8-day line as the oldest age bucket
-const METLABEL={all:"all leads",pend:"pending first attempt",noact:`no activity ${NOACT}+ days`,over:"overdue follow-up"};
+// pending first attempt, split by how long the lead has been waiting at the end of the as-of day (calendar hours)
+const WAIT=[["Under 1 day",0,1440],["1–3 days",1440,4320],["Over 3 days",4320,Infinity]];
 function dayIdx(min){ return min==null?null:Math.floor(min/1440); }
 function dateToIdx(v){ return Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS); }
 function idxToStr(i){ if(!isFinite(i)) return ""; return new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10); }
 function dmy(i){ return isFinite(i) ? isoToDMY(idxToStr(i)) : "—"; }   // display only; inputs stay ISO
-function bkt(age){ for(let i=0;i<BUCKETS.length;i++){ if(age>=BUCKETS[i][1]&&age<=BUCKETS[i][2]) return i; } return BUCKETS.length-1; }
-function heat(v,max){ if(!v||!max) return ""; const pct=Math.min(52,Math.round(52*v/max)); return `background:color-mix(in srgb, var(--accent) ${pct}%, transparent)`; }
+function wbkt(m){ for(let i=0;i<WAIT.length;i++){ if(m>=WAIT[i][1]&&m<WAIT[i][2]) return i; } return WAIT.length-1; }
 const nf=n=>n.toLocaleString("en-IN");
 const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=dayIdx(L[1]); if(d!=null&&d>m)m=d; } return m; })();
 const LASTFULL=lastFullDay(maxDay);
@@ -1180,17 +1218,14 @@ const STAGES=(DATA.stages||[]).map((s,i)=>i).filter(i=>stageCls(i)!=="test");
 const OPEN_STG=STAGES.filter(i=>stageCls(i)==="open");
 const CLS_NAME={open:"Open",lost:"Closed",won:"Enrolled"};
 
-function mk(){ return {b:BUCKETS.map(()=>({all:0,pend:0,noact:0,over:0})), all:0,pend:0,noact:0,over:0,att:0,atd:0}; }
-// ret = a returning lead (interested view): its age runs from when it came back (Interested In Date),
-// and "pending" means no call AFTER it came back (callFacts); last activity / overdue are current state
+function mk(){ return {all:0,pend:0,w:WAIT.map(()=>0),over:0}; }
+// ret = a returning lead (interested view): it has waited since it came back (Interested In Date),
+// and "pending" means no call AFTER it came back (callFacts); overdue is current state
 function add(r,L,asOf,ret){
-  const K=callFacts(L,ret);
-  const age=asOf-dayIdx(ret?L[21]:L[1]), c=r.b[bkt(Math.max(0,age))];
-  const pend=K.att?0:1;
-  const la=dayIdx(L[5]), noact=(la!=null && asOf-la>=NOACT)?1:0;
+  const K=callFacts(L,ret), pend=K.att?0:1;
   const over=isOverdue(L,asOf)?1:0;
-  c.all++; c.pend+=pend; c.noact+=noact; c.over+=over;
-  r.all++; r.pend+=pend; r.noact+=noact; r.over+=over; r.att+=K.n; if(!pend) r.atd++;
+  r.all++; r.pend+=pend; r.over+=over;
+  if(pend){ const from=ret?L[21]:L[1]; r.w[wbkt(Math.max(0,(asOf+1)*1440-from))]++; }
 }
 const bump=(o,k,L,asOf,ret)=>add(o[k]=o[k]||mk(),L,asOf,ret);
 function compute(){
@@ -1217,9 +1252,9 @@ function stageScope(){ return !STG.size||STG.size===STAGES.length ? "all stages"
 
 function render(){
   const {top,sub,agg,asOf,c0,c1,cohort,excl,INT,nret}=compute();
-  const METRIC=$("ag-metric").value, scope=stageScope();
+  const scope=stageScope();
   $("ag-reset").hidden = INT && $("a-c0").value===idxToStr(defaultFrom(LASTFULL)) && $("a-c1").value===idxToStr(LASTFULL) && $("asof").value===idxToStr(LASTFULL)
-    && SEL.size===DATA.sources.length && !CSEL.size && sameSet(STG,OPEN_STG) && METRIC==="all" && !$("ownfilter").value && DIM==="source";
+    && SEL.size===DATA.sources.length && !CSEL.size && sameSet(STG,OPEN_STG) && !$("ownfilter").value && DIM==="source";
   // lifecycle, said out loud: which stages are in, which are out, and why
   const list=c=>STAGES.filter(i=>stageCls(i)===c).map(i=>DATA.stages[i]).join(", ")||"—";
   $("ag-ctx-q").innerHTML = scope==="open stages only"
@@ -1230,28 +1265,24 @@ function render(){
   // Age is recomputed from the creation date, which is immutable; stage, last activity and follow-up exist only
   // as their CURRENT value, so a back-dated as-of mixes historical ages with today's flags
   const warn=$("asofwarn"); warn.hidden=asOf>=LASTFULL;
-  if(!warn.hidden) warn.innerHTML=`<b>Back-dated as-of.</b> Ages are recomputed to ${dmy(asOf)}, but stage, last activity and follow-up dates are only stored as their <b>current</b> values — so Pending, No activity, Overdue and the stage filter still reflect today. Use it to re-age a cohort, not to reconstruct a past view.`;
+  if(!warn.hidden) warn.innerHTML=`<b>Back-dated as-of.</b> Waiting times are recomputed to ${dmy(asOf)}, but stage and follow-up dates are only stored as their <b>current</b> values — so Overdue and the stage filter still reflect today. Use it to re-age a cohort, not to reconstruct a past view.`;
   // tiles
-  const T=agg, tile=(n,l,cls)=>`<div class="tile ${cls||""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  const pc=v=>T.all?` <span style="opacity:.75">· ${Math.round(100*v/T.all)}%</span>`:"";
-  $("ag-tiles").innerHTML=tile(nf(T.all),`${INT?"Leads interested":"Leads in cohort"}<br><span style="opacity:.75">${scope}${INT?` · ${nf(nret)} returning`:""}</span>`,"hi")
-    +tile(nf(T.pend),"Pending first attempt"+pc(T.pend),"unc")
-    +tile(nf(T.noact),`No activity ${NOACT}+ days`+pc(T.noact),"warn")
-    +tile(nf(T.over),"Overdue follow-up"+pc(T.over),"warn")
-    +tile(T.atd?(T.att/T.atd).toFixed(1):"—","Avg attempts / attempted lead");
+  // tiles: the Overview's shape — a count, the label, the detail underneath
+  const T=agg, pc=v=>T.all?(100*v/T.all).toFixed(1)+"%":"—";
+  const tile=(n,l,sub,cls)=>`<div class="tile ${cls||""}"><div class="n">${n}</div><div class="l">${l}${sub?`<br><span style="opacity:.8">${sub}</span>`:""}</div></div>`;
+  $("ag-tiles").innerHTML=(INT ? tile(nf(T.all),"Leads interested",`${nf(T.all-nret)} new +<br>${nf(nret)} returning (created earlier)`,"hi")
+                               : tile(nf(T.all),"New leads created",`${dmy(c0)} →<br>${dmy(c1)}`,"hi"))
+    +tile(nf(T.pend),"Pending first attempt",`${pc(T.pend)} of leads<br>${nf(T.w[2])} waiting over 3 days`,"unc")
+    +tile(nf(T.over),"Overdue follow-ups",`${pc(T.over)} of leads · callbacks nobody made`,"warn");
   // table: parent bands like Talk Time / Effort
   const own=DIM==="owner";
-  $("thead").innerHTML=`<tr class="ef-band"><th></th><th colspan="${BUCKETS.length}" class="ef-g ef-s">Age since creation · cells: ${METLABEL[METRIC]}</th><th colspan="6" class="ef-g ef-s">Pipeline flags</th></tr>`
-    +`<tr><th>${own?"Centre / counsellor":"Source"}</th>`+BUCKETS.map((b,i)=>`<th${i?"":' class="ef-s"'}>${b[0]}</th>`).join("")
-    +`<th class="ef-s">Leads</th><th>Pending</th><th>No act. ${NOACT}+d</th><th>Overdue FU</th><th>Avg att.</th><th>% pending</th></tr>`;
-  let cmax=1; Object.values(top).forEach(r=>r.b.forEach(c=>{ if(c[METRIC]>cmax) cmax=c[METRIC]; }));
-  const row=(name,r,cls,extra)=>{
-    const tot=(cls||"").includes("totrow");
-    const cells=r.b.map((c,i)=>{ const v=c[METRIC]; return `<td${i?"":' class="ef-s"'}>${tot?(v?nf(v):""):`<span class="cell" style="${heat(v,cmax)}">${v?nf(v):""}</span>`}</td>`; }).join("");
-    return `<tr class="${cls||""}" ${extra||""}><td class="dim">${name}</td>${cells}`
-      +`<td class="ef-s tot">${nf(r.all)}</td><td class="pend">${nf(r.pend)}</td><td class="warncol">${nf(r.noact)}</td><td class="warncol">${nf(r.over)}</td>`
-      +`<td>${r.atd?(r.att/r.atd).toFixed(1):"—"}</td><td>${r.all?Math.round(100*r.pend/r.all)+"%":"—"}</td></tr>`;
-  };
+  $("thead").innerHTML=`<tr class="ef-band"><th></th><th></th><th colspan="${WAIT.length+2}" class="ef-g ef-s">Pending first attempt · waiting</th><th class="ef-g ef-s">Callbacks</th></tr>`
+    +`<tr><th>${own?"Centre / counsellor":"Source"}</th><th>Leads</th>`+WAIT.map((w,i)=>`<th${i?"":' class="ef-s"'}>${w[0]}</th>`).join("")
+    +`<th>Total</th><th>% of leads</th><th class="ef-s">Overdue follow-ups</th></tr>`;
+  const row=(name,r,cls,extra)=>`<tr class="${cls||""}" ${extra||""}><td class="dim">${name}</td><td class="tot">${nf(r.all)}</td>`
+      +r.w.map((v,i)=>`<td class="${i?"":"ef-s "}${i===WAIT.length-1&&v?"pend":""}">${nf(v)}</td>`).join("")
+      +`<td class="pend">${nf(r.pend)}</td><td>${r.all?Math.round(100*r.pend/r.all)+"%":"—"}</td>`
+      +`<td class="ef-s warncol">${nf(r.over)}</td></tr>`;
   const muted=x=>` <span class="stl-sub">${x}</span>`;
   const q=own?$("ownfilter").value.trim().toLowerCase():"";
   let html="", shown=0, ng=0; const parts=[];
@@ -1269,9 +1300,9 @@ function render(){
       html+=row(raw+(g==="Others"&&raw!==bn?muted(bn):""),sub[g][k],"stl-c");
     });
   });
-  if(!shown) html+=`<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:16px">No ${own?"counsellors":"rows"} match.</td></tr>`;
+  if(!shown) html+=`<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">No ${own?"counsellors":"rows"} match.</td></tr>`;
   // during a search the total reconciles the matching counsellors only
-  const sumAg=rs=>rs.reduce((a,r)=>{ r.b.forEach((c,i)=>{ for(const m in c) a.b[i][m]+=c[m]; }); ["all","pend","noact","over","att"].forEach(k=>a[k]+=r[k]); return a; },mk());
+  const sumAg=rs=>rs.reduce((a,r)=>{ r.w.forEach((v,i)=>a.w[i]+=v); ["all","pend","over"].forEach(k=>a[k]+=r[k]); return a; },mk());
   html=row(q?`Total (${shown} matching)`:"Total",q?sumAg(parts):agg,"totrow stl-top")+html;
   const rows=$("rows"); rows.innerHTML=html;
   rows.querySelectorAll("tr.stl-g").forEach(tr=>{ const tg=()=>{ if(q) return; const g=tr.dataset.g; OPEN.has(g)?OPEN.delete(g):OPEN.add(g); render(); };
@@ -1283,18 +1314,16 @@ function render(){
   const DEFS=[
     ...(INT?[["Interested · returning","every lead created in the range (new), plus <b>returning</b> leads created before it whose Interested In Date falls in it (a stamp after the first payment is ignored). A returning lead's <b>age</b> runs from its Interested In Date, and it is <b>pending</b> until it gets a call after it came back (call log) — calls on its first enquiry don't count. No activity and Overdue use the lead's current fields."]]:[]),
     ["Cohort",`leads ${INT?"interested":"created"} ${dmy(c0)} → ${dmy(c1)} (IST), ${nf(cohort)} leads before the stage filter, for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}. Anything created before ${isoToDMY(DATA.base)} is outside the pull, so its older buckets would be incomplete.`],
-    ["Age",`as-of date (${dmy(asOf)}) − creation date${INT?" (a returning lead: − its Interested In Date)":""}, in whole IST days.`],
-    ["Pending","no sign of an attempt: no attempt count, first-call time or connect. Same rule as every report."],
-    [`No act. ${NOACT}+d`,`last activity (ProspectActivityDate_Max) ${NOACT} or more days before the as-of date — the same line as the 8+ days age bucket. Leads with no activity at all are counted as Pending, not here.`],
-    ["Overdue FU","open lead whose follow-up date (mx_Follow_Up_Date) is before the as-of date, with no activity since it fell due. Same rule as the Counsellor Scorecard and Overview."],
-    ["Avg att.","attempts from the call log (dialler calls + Conversation Logs with no dialler call behind them — each contact counted once) ÷ leads that were attempted at least once. Calls on a personal phone with no Conversation Log can't be seen, so read it as a floor."],
+    ["Pending first attempt","no attempt yet — the same rule as every report"+(INT?"; a returning lead counts as pending until it is called after it came back":"")+"."],
+    ["Waiting",`how long a pending lead has waited by the end of ${dmy(asOf)}: from its creation${INT?" (a returning lead: from its Interested In Date)":""}, in calendar hours. Under 1 day = less than 24 h · 1–3 days = 24–72 h · over 3 days = more than 72 h.`],
+    ["Overdue follow-ups","open lead whose follow-up date (mx_Follow_Up_Date) is before the as-of date, with no activity since it fell due. Same rule as the Counsellor Scorecard and Overview."],
     ["Stages",`${scope}. Lifecycle classes: open = still being worked, closed = finished without enrolling, enrolled. See “What counts as open” above.`],
     ["Source groups","Meta, Google and Internshala have their own rows; every other source is under <b>Others</b>, expanding to the raw LSQ Source values."],
     ["Centre","the counsellor's centre, from their LSQ <b>Admission(s) &lt;centre&gt;</b> user group."],
   ];
   $("ag-foot").innerHTML=`<summary>How this is measured<span>Definitions for every column · as of ${dmy(asOf)}</span></summary>`
     +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("")
-    +`<div><b>Cross-check in LSQ:</b> a bucket cell = the row's source or owner × Created On in that bucket's date range, within the selected stages.</div>`;
+    ;
 }
 
 // ---- controls ----
@@ -1314,7 +1343,6 @@ const setOpenStages=()=>{ [...stgSel.options].forEach(o=>o.selected=stageCls(+o.
 srcSel.onchange=()=>{ const p=[...srcSel.selectedOptions].map(o=>+o.value); SEL.clear(); (p.length?p:DATA.sources.map((_,i)=>i)).forEach(k=>SEL.add(k)); render(); };
 ctrSel.onchange=()=>{ CSEL.clear(); [...ctrSel.selectedOptions].forEach(o=>CSEL.add(o.value)); render(); };
 stgSel.onchange=()=>{ STG.clear(); [...stgSel.selectedOptions].forEach(o=>STG.add(+o.value)); render(); };
-$("ag-metric").onchange=render;
 $("ownfilter").oninput=render;
 document.querySelectorAll("#ag-seg button").forEach(bt=>bt.onclick=()=>{ DIM=bt.dataset.v; document.querySelectorAll("#ag-seg button").forEach(x=>x.classList.toggle("on",x===bt)); render(); });
 const AS=$("asof"), C0=$("a-c0"), C1=$("a-c1");
@@ -1324,7 +1352,6 @@ $("ag-basis").onchange=render;
 $("ag-reset").onclick=()=>{ defaults(); syncDateText(); $("ownfilter").value="";
   $("ag-basis").value="interested"; $("ag-basis").dispatchEvent(new Event("change"));
   DIM="source"; document.querySelectorAll("#ag-seg button").forEach(x=>x.classList.toggle("on",x.dataset.v==="source"));
-  $("ag-metric").value="all"; $("ag-metric").dispatchEvent(new Event("change"));
   [...srcSel.options].forEach(o=>o.selected=false); [...ctrSel.options].forEach(o=>o.selected=false); setOpenStages();
   [srcSel,ctrSel,stgSel].forEach(el=>el.dispatchEvent(new Event("change"))); };
 defaults(); DATA.sources.forEach((s,i)=>SEL.add(i)); setOpenStages(); render();
@@ -1495,7 +1522,7 @@ function compute(){
     if(!kind) continue;
     const c=centreOf(L); if(CSEL.size && !CSEL.has(c)) continue;
     const k=callFacts(L, kind===2);      // returning: created before the range
-    add(agg,k);
+    add(agg,k); if(kind===2) agg.ret=(agg.ret||0)+1;
     if(DIM==="source"){ const g=srcGroupOf(L[0]); bump(top,g,k); bump(sub[g]=sub[g]||{},L[0]+":"+(L[22]??""),k); }
     else { bump(top,c,k); bump(sub[c]=sub[c]||{},L[4],k); }
   }
@@ -1533,90 +1560,21 @@ function wireGroups(q){
     tr.onclick=tg; tr.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tg(); } }; });
 }
 
-// ---- calling activity: the call log (talktime.json), which dates the work — calls on older leads count on the day made ----
-let TT=null, TTerr=false;
-function loadTT(){ fetch("data/talktime.json",{cache:"no-cache"}).then(r=>{ if(!r.ok) throw 0; return r.json(); })
-  .then(t=>{ TT=t; render(); }).catch(()=>{ TTerr=true; render(); }); }
-function renderCalls(){
-  const own=DIM==="owner", q=own?$("ef-filter").value.trim().toLowerCase():"";
-  $("ef-filter").style.display=own?"":"none";
-  $("ef-reset").hidden=false;
-  if(!TT || !TT.effort){
-    $("ef-tiles").innerHTML=""; $("ef-thead").innerHTML="";
-    $("ef-rows").innerHTML=`<tr><td style="text-align:left;color:var(--muted);padding:18px">${TTerr?"Could not load the call log (data/talktime.json). If the dashboard was updated while this tab was open, reload the page.":TT?"The call log has no calling-activity data yet — it arrives with the next nightly refresh.":"Loading the call log…"}</td></tr>`;
-    if(!TT && !TTerr) loadTT(); return;
-  }
-  const H=TT.effort_header, ix=k=>H.indexOf(k), SN=TT.effort_sources, RN=TT.effort_raw;
-  const days=TT.days, d0=$("ef-d0").value, d1=$("ef-d1").value, lo=d0<d1?d0:d1, hi=d0<d1?d1:d0;
-  const inDays=days.filter(d=>d>=lo && d<=hi);
-  const srcIdx=n=>DATA.sources.indexOf(n);
-  const ctrOfUser=u=>{ const c=(TT.agents[u]||{}).centre; return !c||c==="No centre group"||c==="Not in user list"?"No centre":c; };
-  const blankC=()=>({dials:0,leads:0,conn:0,nw:0,first:0});
-  const addC=(r,x)=>{ r.dials+=x[ix("dials")]; r.leads+=x[ix("leads")]; r.conn+=x[ix("connected")]; r.nw+=x[ix("new_leads")]; r.first+=x[ix("first_calls")]; };
-  const top={}, sub={}, agg=blankC();
-  for(const x of TT.effort){
-    const d=x[ix("day")]; if(d<lo || d>hi) continue;
-    const sname=SN[x[ix("src")]], si=srcIdx(sname); if(si>=0 && !SEL.has(si)) continue;
-    const c=ctrOfUser(x[ix("user")]); if(CSEL.size && !CSEL.has(c)) continue;
-    addC(agg,x);
-    const g=own?c:(SRC_GROUPS.includes(sname)?sname:"Others"), k=own?x[ix("user")]:sname+""+RN[x[ix("raw")]];
-    addC(top[g]=top[g]||blankC(),x); addC((sub[g]=sub[g]||{})[k]=sub[g][k]||blankC(),x);
-  }
-  const span=inDays.length?(inDays.length===1?isoToDMY(inDays[0]):isoToDMY(inDays[0])+" → "+isoToDMY(inDays[inDays.length-1])):"none";
-  const tile=(n,l,cls)=>`<div class="tile ${cls||""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  const pc=(a,b)=>b?Math.round(100*a/b)+"%":"—";
-  $("ef-tiles").innerHTML=tile(nf(agg.dials),`Calls made<br><span style="opacity:.75">${span}</span>`,"hi")
-    +tile(nf(agg.leads),"Leads dialled (per day)")
-    +tile(av(agg.leads?agg.dials/agg.leads:null),"Calls per lead")
-    +tile(pc(agg.conn,agg.leads),`Connected${tipBtn(CALL_RULE,true)}<br><span style="opacity:.75">${nf(agg.conn)} leads spoken to</span>`,"good")
-    +tile(pc(agg.leads-agg.nw,agg.leads),`Older leads<br><span style="opacity:.75">${nf(agg.leads-agg.nw)} not created that day</span>`)
-    +tile(nf(agg.first),"First-ever calls");
-  $("ef-thead").innerHTML=`<tr class="ef-band"><th></th><th colspan="3" class="ef-g ef-s">Calls</th><th colspan="2" class="ef-g ef-s">Connects</th><th colspan="4" class="ef-g ef-s">Which leads</th></tr>`
-    +`<tr><th>${own?"Centre / caller":"Source"}</th><th class="ef-s">Calls</th><th>Leads dialled</th><th>Per lead</th>`
-    +`<th class="ef-s">Connected</th><th>%</th><th class="ef-s">New that day</th><th>Older</th><th>Older %</th><th>First-ever call</th></tr>`;
-  const row=(name,r,cls,extra)=>{ const tot=(cls||"").includes("totrow"), cp=r.leads?100*r.conn/r.leads:null;
-    return `<tr class="${cls||""}" ${extra||""}><td class="dim">${name}</td><td class="ef-s">${nf(r.dials)}</td><td>${nf(r.leads)}</td><td>${av(r.leads?r.dials/r.leads:null)}</td>`
-      +`<td class="ef-s">${nf(r.conn)}</td><td>${cp==null?"—":tot?cp.toFixed(1)+"%":`<span class="cov ${cc(cp)}">${cp.toFixed(1)}%</span>`}</td>`
-      +`<td class="ef-s">${nf(r.nw)}</td><td>${nf(r.leads-r.nw)}</td><td>${pc(r.leads-r.nw,r.leads)}</td><td>${nf(r.first)}</td></tr>`; };
-  const {html,shown,ng}=groupRows(top,sub,agg,row,own,q,r=>r.dials,
-    k=>{ const [b,raw]=k.split(""); return [raw==="—"?"(blank)":raw,b]; },
-    u=>(TT.agents[u]||{}).name||"Unknown caller", 10);
-  $("ef-rows").innerHTML=html; wireGroups(q);
-  $("ef-trunc").textContent=(own?(q?`${shown} caller${shown!==1?"s":""} matching “${q}”, in ${ng} centre${ng!==1?"s":""}.`:`${ng} centres, ranked by calls. Click a centre to see its callers.`):"Click a group to see the raw LSQ Source values behind it.")
-    +` Call log covers ${isoToDMY(days[0])} → ${isoToDMY(days[days.length-1])}; dates outside it have no calls here.`
-    +(staleNote("Call data",TT.generated_at)?` Note: the call log was last refreshed ${isoToDMY(String(TT.generated_at).slice(0,10))}, before the lead data.`:"");
-  const DEFS=[
-    ["Calling activity",`every <b>outbound call</b> (Ameyo, activity 22) made ${span}, on any lead — including leads created long before. Counsellor = the person who <b>made</b> the call, and their centre; not the lead's owner.`],
-    ["Calls · Leads dialled","calls made, and unique leads dialled <b>per caller per day</b>: a lead called on three days counts three times over a multi-day range, and a lead called by two counsellors on the same day counts once for each."],
-    ["Connected · %","leads the counsellor spoke to that day (logged outcome, or an answered outbound call of 10 s or more), as a share of leads dialled."],
-    callsDef(),
-    ["New that day · Older","leads created on the day they were called, and every other lead dialled — the work on older leads that lead-level dates can't see."],
-    ["First-ever call","leads that got their first human call ever that day."],
-    ["Source groups","the lead's source, grouped as on the other reports; expanding a group lists the raw LSQ Source values."],
-    ["vs Talk Time","Talk Time hides callers outside the LC user list by default, so its call count for the same day can be lower than here."],
-    ["Window",`the call log keeps the last ${days.length} days (${isoToDMY(days[0])} → ${isoToDMY(days[days.length-1])}), refreshed nightly with Talk Time.`],
-  ];
-  $("ef-foot").innerHTML=`<summary>How this is measured<span>Definitions for every column · call log ${isoToDMY(days[0])} to ${isoToDMY(days[days.length-1])}</span></summary>`
-    +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("");
-}
-
 function render(){
-  if($("ef-basis").value==="calls"){ $("ef-young").hidden=true; return renderCalls(); }   // calls are activity, not a cohort
   const {top,sub,agg,lo,hi}=compute();
   youngNote("ef-young",hi,lastFullDay(maxDay));
   const basis=$("ef-basis").value, verb=basis==="created"?"created":"interested";
   $("ef-reset").hidden = basis==="interested" && SEL.size===DATA.sources.length && !CSEL.size && DIM==="source"
     && $("ef-d0").value===idxToStr(defaultFrom(lastFullDay(maxDay))) && $("ef-d1").value===idxToStr(lastFullDay(maxDay)) && !$("ef-filter").value;
-  // tiles follow the table's grouping: leads · attempts · connects
-  const t=agg, ap=t.leads?100*t.att/t.leads:null, cp=t.att?100*t.conn/t.att:null;
-  const tile=(n,l,cls)=>`<div class="tile ${cls||""}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  // tiles use the Overview's wording and layout: a count on top, the ratio underneath
+  const t=agg, pc=(a,b)=>b?(100*a/b).toFixed(1)+"%":"—", nw=x=>`<span style="white-space:nowrap">${x}</span>`;
+  const tile=(n,l,sub,cls)=>`<div class="tile ${cls||""}"><div class="n">${n}</div><div class="l">${l}${sub?`<br><span style="opacity:.8">${sub}</span>`:""}</div></div>`;
   $("ef-tiles").innerHTML=
-    tile(nf(t.leads),`Leads ${verb} (selected)`,"hi")
-    +tile(ap==null?"—":ap.toFixed(0)+"%",`Attempted<br><span style="opacity:.75">${nf(t.att)} of ${nf(t.leads)} leads</span>`)
-    +tile(nf(t.total),"Total attempts (logged)")
-    +tile(av(t.att?t.total/t.att:null),"Avg attempts / attempted lead")
-    +tile(cp==null?"—":cp.toFixed(0)+"%",`Connect % (of attempted)${tipBtn(CALL_RULE,true)}<br><span style="opacity:.75">${nf(t.conn)} connected</span>`,"good")
-    +tile(av(t.conn?t.connAtt/t.conn:null),"Avg attempts to connect");
+    (basis==="created" ? tile(nf(t.leads),"New leads created",`${dmy(lo)} →<br>${dmy(hi)}`,"hi")
+                       : tile(nf(t.leads),"Leads interested",`${nf(t.leads-(t.ret||0))} new +<br>${nf(t.ret||0)} returning (created earlier)`,"hi"))
+    +tile(nf(t.att),nw("Leads attempted"+tipBtn(CALL_RULE_ATT,true)),`${nf(t.total)} attempts<br>${av(t.att?t.total/t.att:null)} attempts per lead`)
+    +tile(nf(t.conn),nw("Leads connected"+tipBtn(CALL_RULE_CON,true)),`${pc(t.conn,t.att)} of attempted leads`,"good")
+    +tile(av(t.conn?t.connAtt/t.conn:null),"Attempts per connected lead","attempts it took, on leads that connected");
 
   // header: parent bands (like Talk Time), then the columns under each
   const own=DIM==="owner";
@@ -1884,8 +1842,8 @@ function render(){
   // one row of tiles: each ratio sits under the count it comes from
   const tile=(v,l,sub,cls)=>`<div class="tile ${cls||""}"><div class="n">${v}</div><div class="l">${l}${sub?`<br><span style="opacity:.8">${sub}</span>`:""}</div></div>`;
   $("fn-tiles").innerHTML=(R.INT?tile(nf(f.created),"Leads interested",`${nf(f.created-R.ret)} new · ${nf(R.ret)} returning`,"hi"):tile(nf(f.created),"Leads created (selected)","","hi"))
-    +tile(nf(f.attempted),"Attempted"+tipBtn(CALL_RULE,true),pctStr(f.attempted,f.created)+" of leads")
-    +tile(nf(f.connected),"Connected"+tipBtn(CALL_RULE,true),pctStr(f.connected,f.attempted)+" of attempted")
+    +tile(nf(f.attempted),"Attempted"+tipBtn(CALL_RULE_ATT,true),pctStr(f.attempted,f.created)+" of leads")
+    +tile(nf(f.connected),"Connected"+tipBtn(CALL_RULE_CON,true),pctStr(f.connected,f.attempted)+" of attempted")
     +tile(nf(f.counselled),"Counselled",`<b>L2C ${pctStr(f.counselled,f.created)}</b>`)
     +tile(nf(f.enrolled),"Enrolled",`<b>C2P ${pctStr(f.enrCns,f.counselled)}</b> · <b>L2P ${pctStr(f.enrolled,f.created)}</b>`,"good");
   renderFunnel(f,R.INT);
@@ -1972,8 +1930,8 @@ function init_home(){
     let lo=Math.max(0,Math.min(toIdx($("h-d0").value),toIdx($("h-d1").value))), hi=Math.min(LAST,Math.max(toIdx($("h-d0").value),toIdx($("h-d1").value)));
     if(!isFinite(lo)||!isFinite(hi)){ lo=defaultFrom(LAST); hi=LAST; }
     const inWin=v=>{ const d=di(v); return d!=null && d>=lo && d<=hi; };
-    $("h-reset").hidden = MODE==="interested" && $("h-range").value==="7" && SEL.size===DATA.sources.length && !CSEL.size;
-    const span=`${dmyHome(lo)} → ${dmyHome(hi)}`, days=hi-lo+1;
+    $("h-reset").hidden = MODE==="ops" && $("h-range").value==="7" && SEL.size===DATA.sources.length && !CSEL.size;
+    const span=`${dmyHome(lo)} → ${dmyHome(hi)}`, spanBr=`${dmyHome(lo)} →<br>${dmyHome(hi)}`, days=hi-lo+1;
     $("h-ctx-q").innerHTML = MODE==="cohort"
       ? `<span><b>Cohort · Leads created in range:</b> <span class="q">how did the leads that arrived ${span} convert, whenever that happened?</span></span>`
       : INT ? `<span><b>Cohort · Leads interested in range:</b> <span class="q">how were the leads that showed interest ${span}, new or returning, worked and converted?</span></span>`
@@ -2005,7 +1963,7 @@ function init_home(){
         const [v,d]=!ret ? slaOf(r,r[1],SLA) : !k.att ? ["miss",null]
           : (m=>[m<=SLA?"hit":"miss",m])(Math.max(0,clk(r[21],k.first)));
         if(v==="unmeas") unmeas++; else { slaBase++; if(d!=null) spd.push(d); if(v==="hit") slaHit++; }
-        bump(r,o=>{ o.n++; if(ret)o.ret++; o.attSum+=a; if(isAtt)o.att++; if(isCon)o.con++; if((r[17]||0)>0) o.paid++; });
+        bump(r,o=>{ o.n++; if(ret)o.ret++; o.attSum+=a; if(isAtt)o.att++; if(isCon)o.con++; if(en) o.paid++; });   // Enrolled stage, the same rule as the funnel
       }
       // a source can look strong purely because most of it is parked in the pool
       for(const r of DATA.leads) if(r[11]===1 && inScope(r) && inPop(r)) bump(r,o=>o.pool++);
@@ -2029,21 +1987,22 @@ function init_home(){
       }
     }
     // ---- tiles: one row, each ratio under the count it comes from ----
+    const nw=x=>`<span style="white-space:nowrap">${x}</span>`;
     const tile=(v,l,sub,cls)=>`<div class="tile ${cls||""}"><div class="n">${v}</div><div class="l">${l}${sub?`<br><span style="opacity:.8">${sub}</span>`:""}</div></div>`;
     const n=S.length;
     const poolIn=DATA.leads.filter(r=>r[11]===1 && inScope(r) && inPop(r)).length;   // pool leads in this view's population
     const poolTxt=poolIn?(window.__EXPOOL?`<br>+ ${num(poolIn)} in pool accounts, not counted`:`<br>incl. ${num(poolIn)} in pool accounts`):"";
     $("kpis").innerHTML = FUN
-      ? (INT ? tile(num(n),"Leads interested",`${num(n-nRet)} new · ${num(nRet)} returning${poolTxt}`,"hi") : tile(num(n),"Leads created",`${span}${poolTxt}`,"hi"))
-        +tile(num(att),"Attempted"+tipBtn(CALL_RULE,true),`${pct(att,n)} of leads<br>${att?(attSum/att).toFixed(2):"—"} attempts per attempted lead`)
-        +tile(num(con),"Connected"+tipBtn(CALL_RULE,true),`${pct(con,att)} of attempted`)
-        +tile(num(coun),"Counselled",`<b>L2C ${pct(coun,n)}</b> of leads`)
-        +tile(num(enr),"Enrolled",`<b>C2P ${pct(enrCns,coun)}</b> · ${num(enrCns)} of ${num(coun)} counselled<br><b>L2P ${pct(enr,n)}</b> of leads`,"good")
-        +tile(dur(med(spd)),"Median speed to first call",`of the ${num(spd.length)} called leads${INT?" (returning: from their Interested In Date)":""}<br><b>${pct(slaHit,spd.length)}</b> of called within ${SLA} min · ${pct(slaHit,slaBase)} of all leads`)
-      : tile(num(ops.new.n),"New leads created",span,"hi")
-        +tile(num(ops.new.n+ops.ret.n),"Leads interested",`${num(ops.new.n)} new + ${num(ops.ret.n)} returning (created earlier)`)
-        +tile(num(ops.all.att),"Leads attempted"+tipBtn(CALL_RULE,true),`${num(ops.all.attSum)} attempts<br>${ops.all.att?(ops.all.attSum/ops.all.att).toFixed(2):"—"} per attempted lead`)
-        +tile(num(ops.all.con),"Leads connected"+tipBtn(CALL_RULE,true),`${pct(ops.all.con,ops.all.att)} of attempted leads`)
+      ? (INT ? tile(num(n),"Leads interested",`${num(n-nRet)} new +<br>${num(nRet)} returning (created earlier)${poolTxt}`,"hi") : tile(num(n),"New leads created",`${spanBr}${poolTxt}`,"hi"))
+        +tile(num(att),nw("Leads attempted"+tipBtn(CALL_RULE_ATT,true)),`${num(attSum)} attempts<br>${att?(attSum/att).toFixed(2):"—"} attempts per lead`)
+        +tile(num(con),nw("Leads connected"+tipBtn(CALL_RULE_CON,true)),`${pct(con,att)} of attempted leads`)
+        +tile(num(coun),"Leads counselled",`<b>L2C ${pct(coun,n)}</b>`)
+        +tile(num(enr),"Leads enrolled",`<b>C2P ${pct(enrCns,coun)}</b><br>${num(enrCns)} of ${num(coun)} counselled<br><b>L2P ${pct(enr,n)}</b>`,"good")
+        +tile(dur(med(spd)),"Median speed to first call",`of the ${num(spd.length)} called leads${INT?" (returning: from their Interested In Date)":""}`)
+      : tile(num(ops.new.n),"New leads created",spanBr,"hi")
+        +tile(num(ops.new.n+ops.ret.n),"Leads interested",`${num(ops.new.n)} new +<br>${num(ops.ret.n)} returning (created earlier)`)
+        +tile(num(ops.all.att),nw("Leads attempted"+tipBtn(CALL_RULE_ATT,true)),`${num(ops.all.attSum)} attempts<br>${ops.all.att?(ops.all.attSum/ops.all.att).toFixed(2):"—"} attempts per lead`)
+        +tile(num(ops.all.con),nw("Leads connected"+tipBtn(CALL_RULE_CON,true)),`${pct(ops.all.con,ops.all.att)} of attempted leads`)
         +tile(num(ops.all.coun),"Leads counselled",`${pct(ops.all.coun,ops.all.con)} of connected leads`)
         +tile(num(ops.all.paid),"Leads paid","first payment in the range","good");
     // ---- funnel (cohort) or activity rows ----
@@ -2058,7 +2017,9 @@ function init_home(){
           return `<tr${i?"":' class="totrow"'}><td class="dim">${st[0]}</td><td>${num(st[1])}</td><td>${pct(st[1],n)}</td>`
             +`<td>${i>0&&i<4?`<span class="cov ${cc(c)}">${c.toFixed(0)}%</span>`:'<span class="fpct">—</span>'}</td><td>${ratio[i]?`<b>${ratio[i]}</b>`:""}</td></tr>`; }).join("")
         +`</tbody></table>`
-        +(enr>enrCns?`<div class="trunc" style="padding:8px 12px">${num(enr-enrCns)} of the ${num(enr)} enrolled leads have no counselling logged, so they count in L2P but not in C2P.</div>`:"")
+        +(enr>enrCns?(()=>{ const nc=S.filter(r=>isEnrolled(r)&&!callFacts(r,back(r)).cns), fast=nc.filter(r=>r[20]!=null&&r[1]!=null&&r[20]-r[1]<=180).length;
+            // most enrolled-but-not-counselled leads were created by the payment itself (walk-in / direct pay), not missed logging
+            return `<div class="trunc" style="padding:8px 12px">${num(nc.length)} of the ${num(enr)} enrolled leads were never counselled in LSQ${fast?` — ${num(fast)} of them paid within 3 hours of the lead being created (often the payment itself created the lead: a walk-in or a direct payment)`:""}. They count in L2P; C2P covers only leads counselled in LSQ (${num(enrCns)} of ${num(coun)}).</div>`; })():"")
         +(INT?(t=>t?`<div class="trunc" style="padding:8px 12px">${t}</div>`:"")(olderPaidNote(olderPaid(lo,hi,inScope),lo,hi,dmyHome)):"");
     } else {
       $("mftitle").textContent="Activity in range · where the work went";
@@ -2075,7 +2036,7 @@ function init_home(){
     // ---- source groups, expanding to raw LSQ Source values ----
     $("msrctitle").textContent = FUN ? "By source" : "By source · activity in range";
     $("msrch").innerHTML = FUN
-      ? `<tr><th>Source</th><th>Leads</th>${INT?"<th>Returning</th>":""}<th>% in pool</th><th>Connect %</th><th>Avg att.</th><th>Paying</th></tr>`
+      ? `<tr><th>Source</th><th>Leads</th>${INT?"<th>Returning</th>":""}<th>% in pool</th><th>Connect %</th><th>Avg att.</th><th>Enrolled</th></tr>`
       : "<tr><th>Source</th><th>Leads in play</th><th>New</th><th>Attempted</th><th>Att. / lead</th><th>Connect %</th><th>Counselled</th><th>Paid</th></tr>";
     const row=(label,o,cls,extra)=>{
       if(!FUN){ const cp=o.att?100*o.con/o.att:0;
@@ -2109,10 +2070,10 @@ function init_home(){
           : ["Leads created",`leads created ${span} (IST), for the selected sources and centres${window.__EXPOOL?", pool accounts excluded":""}.`],
       ...(INT?[["Returning leads",`attempted = a counsellor call (outbound, or an answered inbound call) from 5 min before the Interested In Date onward · connected = an answered call in that time · attempts = outbound calls in that time · speed = first such call minus the Interested In Date · counselled = a counselling on or after the Interested In Date (mx_Latest_Counselling_Date). Calls come from the call log (activities 21 and 22), because the lead's own first-call, interacted and counselled fields still describe its first enquiry. New leads use the usual fields below.`]]:[]),
       ["Attempted · Connected","a dialler call, an answered inbound call, or a counsellor's Conversation Log with no dialler call behind it (from the call log; a call and its Conversation Log count once) · connected = the lead picked up and spoke (an answered call, or a Conversation Log saying they spoke — from the call log) — the same rules on every report. Connect % = connected ÷ attempted."],
-      ["Median speed · SLA",`first-call time minus the creation date (a returning lead: minus its Interested In Date) — the same clock as Speed to Lead and the Scorecard. The median is over leads that were called; uncalled leads have no speed. “Of called” = called leads whose first attempt came within ${SLA} min; “of all leads” counts the uncalled as misses, which is why it reads much lower than the median suggests${unmeas?` (${num(unmeas)} attempted leads can't be timed and are left out)`:""}.`],
+      ["Median speed",`first-call time minus the creation date (a returning lead: minus its Interested In Date) — the same clock as Speed to Lead and the Scorecard. The median is over leads that were called; uncalled leads have no speed${unmeas?` (${num(unmeas)} attempted leads can't be timed and are left out)`:""}. SLA attainment is on Speed to Lead.`],
       ["Funnel · C2P",`counselled = the counselling flag; enrolled = lead stage class “won”. C2P = enrolled leads that were also flagged counselled ÷ counselled${enrNoCoun?` (${num(enrNoCoun)} enrolled leads in this range were never flagged counselled)`:""}; L2C = counselled ÷ leads; L2P = enrolled ÷ leads.`],
       ["Avg att.","attempts from the call log (dialler calls + Conversation Logs with no dialler call behind them — each contact counted once) ÷ leads that were attempted at least once. Calls on a personal phone with no Conversation Log can't be seen, so read it as a floor."],
-      ["% in pool · Paying","a source's leads parked in the unworked pool accounts · any amount collected (mx_Total_Amount_Paid &gt; 0, part-payments included)."],
+      ["% in pool · Enrolled","a source's leads parked in the unworked pool accounts · leads at the Enrolled stage, the same rule as the funnel above, so the rows add up to its Enrolled count. A lead that only paid a small token or registration fee (₹249–₹499) and is not at Enrolled is not counted."],
     ] : [
       bhDef(),
       callsDef(),
@@ -2138,7 +2099,7 @@ function init_home(){
   $("h-view").onchange=render;
   srcSel.onchange=()=>{ const p=[...srcSel.selectedOptions].map(o=>+o.value); SEL.clear(); (p.length?p:DATA.sources.map((_,i)=>i)).forEach(k=>SEL.add(k)); render(); };
   ctrSel.onchange=()=>{ CSEL.clear(); [...ctrSel.selectedOptions].forEach(o=>CSEL.add(o.value)); render(); };
-  $("h-reset").onclick=()=>{ $("h-view").value="interested"; $("h-range").value="7"; setRange("7");
+  $("h-reset").onclick=()=>{ $("h-view").value="ops"; $("h-range").value="7"; setRange("7");
     [...srcSel.options].forEach(o=>o.selected=false); [...ctrSel.options].forEach(o=>o.selected=false);
     [$("h-view"),$("h-range"),srcSel,ctrSel].forEach(el=>el.dispatchEvent(new Event("change"))); };
   setRange("7"); DATA.sources.forEach((s,i)=>SEL.add(i)); render();
@@ -2182,7 +2143,7 @@ function init_talk(){
       ["No LSQ log","answered calls of 10 seconds or more (a real conversation — shorter ones are hang-ups or voicemail and need no log) with no Conversation Log in LSQ, by the same counsellor on the same lead, from 5 minutes before the call to "+(T.log_window_min||60)+" minutes after. The percentage is of answered calls of 10 seconds or more. Red at 15% or more. Ameyo's own outcome screen isn't counted: most people who skip it log in LSQ instead."],
       ["Connected leads","unique leads the counsellor actually spoke to that day: the counsellor's Conversation Log says they spoke, or — with no log — the call was answered and lasted at least 10 seconds. The same rule as every report. Connected = New + Follow-up."],
       ["New: 1st call today","connected leads that had never had a human call before that day: brand-new conversations."],
-      ["Created & connected today","connected leads whose record was also created that day: reached on the day they came in. Always part of New, never of Follow-up."],
+      ["Created & connected today","of the New leads, those whose record was also created that day: reached on the day they came in. Always part of New, never of Follow-up."],
       ["Follow-up","connected leads that had a human call on an earlier day."],
       ["Landed today","leads created or assigned to the counsellor that day (current owner only)."],
       ["Not attempted","of the landed leads, those with no human call from anyone after they landed, by midnight. Calls made before a reassignment don't count. Leads that landed after the counsellor's last call are left out; for someone who made no calls, every landed lead counts."],
@@ -2201,11 +2162,11 @@ function init_talk(){
     }
     // [header label, definition key]; groups give the header a band so 19 columns read as 3 questions
     const GROUPS=[["Time (IST)",[["First call","First call / Last call"],["Last call","First call / Last call"],["Total","Total time"],["Talk","Talk time"],["On calls"],["Active"],["Idle"],["Longest break"]]],
-      ["Calls",[["Dialled"],["Answered"],["No LSQ log"]]],
-      ["Leads",[["Connected","Connected leads"],["New","New: 1st call today"],["…created &amp; connected today","Created & connected today"],["Follow-up"],["Landed","Landed today"],["Not attempted"]]]];
+      ["Calls",[["Dialled"],["Answered"],["No log","No LSQ log"]]],
+      ["Leads",[["Connected","Connected leads"],["New","New: 1st call today"],["Created today","Created & connected today"],["Follow-up"],["Landed today","Landed today"],["Not attempted"]]]];
     $("tt-thead").innerHTML='<tr class="tt-band"><th rowspan="2">Counsellor</th>'+GROUPS.map(([g,cs])=>'<th class="tt-g tt-gs" colspan="'+cs.length+'">'+g+'</th>').join("")
-      +'<th rowspan="2" class="tt-gs">Active by hour'+tipBtn(cap(DEF["Active by hour"]),1)+'</th></tr><tr>'
-      +GROUPS.map(([g,cs])=>cs.map(([l,k],i)=>'<th'+(i?'':' class="tt-gs"')+'>'+l+tipBtn(cap(DEF[k||l]),1)+'</th>').join("")).join("")+'</tr>';
+      +'<th rowspan="2" class="tt-gs">'+glueTip("Active by hour",tipBtn(cap(DEF["Active by hour"]),1))+'</th></tr><tr>'
+      +GROUPS.map(([g,cs])=>cs.map(([l,k],i)=>'<th'+(i?'':' class="tt-gs"')+'>'+glueTip(l,tipBtn(cap(DEF[k||l]),1))+'</th>').join("")).join("")+'</tr>';
     function agg(rows){ // sum rows of one counsellor (avg mode divides by days)
       const o={dials:0,inbound:0,answered:0,talk_s:0,on_call_s:0,active_s:0,connected:0,conn_fresh_first:0,conn_fresh_created:0,conn_old:0,landed:0,not_attempted:0,no_log:0,ans10:0,brk:0,brk_at:"",h:Array(24).fill(0),fm:0,lm:0,cd:0,span_s:null}; // fm/lm = first/last call as minutes of the day, summed over the cd days that had calls
       rows.forEach(r=>{["dials","inbound","answered","talk_s","on_call_s","active_s","connected","conn_fresh_first","conn_fresh_created","conn_old","landed","not_attempted","no_log"].forEach(k=>o[k]+=r[H[k]]);
@@ -2239,14 +2200,16 @@ function init_talk(){
       const sum=k=>list.reduce((a,o)=>a+o[k],0), med=k=>{const v=list.map(o=>o[k]).sort((a,b)=>a-b);return v.length?v[Math.floor(v.length/2)]:0;};
       const per=day==="avg"?" / day":"";
       const scope=day==="avg"?"On an average day, ":"On this day, ";
+      // same tile shape as every report: count, then the label with its ⓘ beside it, then the sub-line
       $("tt-tiles").innerHTML=[
-        [list.length,"counsellors shown","","Counsellors who placed at least "+minD+" outbound call"+(minD===1?"":"s")+(day==="avg"?" on an average working day":" that day")+", in the centres selected. Change Min dials or Centre to widen or narrow this."],
-        [hm(med("talk_s")),"median talk time"+per,"",scope+"half the counsellors shown spent longer than this in conversation on answered calls, and half spent less. A median, so one very heavy caller doesn't pull it up."],
-        [hm(med("active_s")),"median active time"+per+'<br><span style="opacity:.8">'+hm(med("idle_s"))+" idle</span>","","The typical counsellor's working time between their first and last call: time on calls (ringing + talking) plus every gap of up to "+T.gap_min+" minutes before the next call, which is dialling and notes. Longer gaps count as idle. Idle = Total time (first to last call) minus Active; calls from personal phones and walk-in counselling leave no call record and land in idle, so treat it as an upper bound."],
-        [r1(sum("connected")),"leads connected"+per+'<br><span style="opacity:.8">'+r1(sum("conn_fresh_first"))+" new</span>","","Unique leads the counsellor spoke to (logged outcome, or an answered call of 10 s or more), added up across the counsellors shown. New = those whose first-ever human call was that day: brand-new conversations, not follow-ups (the New column)."],
-        [sum("ans10")?Math.round(100*sum("no_log")/sum("ans10"))+"%":"—","conversations with no LSQ log","unc","Share of conversations (answered calls of 10 s or more) with no Conversation Log in LSQ by the same counsellor on the same lead within "+(T.log_window_min||60)+" minutes. That form records the outcome and moves the lead's stage, so an unlogged call leaves the lead stuck. "+r1(sum("no_log"))+" of "+r1(sum("answered"))+" answered calls"+per+"."],
-        [r1(notAtt),"landed leads not attempted"+per+(hiddenNA?'<br><span style="opacity:.8">'+r1(hiddenNA)+" with counsellors below Min dials</span>":""),"unc",scope+"includes counsellors who made fewer than Min dials (they're hidden from the table, but their untouched leads count here). Leads that were created or assigned to the counsellor (current owner) and got no call from anyone after they landed, by midnight. Calls made before a reassignment don't count. Leads that landed after the counsellor's last call are left out. The Not attempted column shows who holds them."]
-      ].map(t=>'<div class="tile '+(t[2]||"")+'"><div class="n">'+t[0]+'</div><div class="l">'+t[1]+'</div>'+tipBtn(t[3])+'</div>').join("");
+        [list.length,"Counsellors shown","","Counsellors who placed at least "+minD+" outbound call"+(minD===1?"":"s")+(day==="avg"?" on an average working day":" that day")+", in the centres selected. Change Min dials or Centre to widen or narrow this."],
+        [hm(med("talk_s")),"Median talk time"+per,"",scope+"half the counsellors shown spent longer than this in conversation on answered calls, and half spent less. A median, so one very heavy caller doesn't pull it up."],
+        [hm(med("active_s")),"Median active time"+per+"\n"+hm(med("idle_s"))+" idle","","The typical counsellor's working time between their first and last call: time on calls (ringing + talking) plus every gap of up to "+T.gap_min+" minutes before the next call, which is dialling and notes. Longer gaps count as idle. Idle = Total time (first to last call) minus Active; calls from personal phones and walk-in counselling leave no call record and land in idle, so treat it as an upper bound."],
+        [r1(sum("connected")),"Leads connected"+per+"\n"+r1(sum("conn_fresh_first"))+" new","","Unique leads the counsellor spoke to (logged outcome, or an answered call of 10 s or more), added up across the counsellors shown. New = those whose first-ever human call was that day: brand-new conversations, not follow-ups (the New column)."],
+        [sum("ans10")?Math.round(100*sum("no_log")/sum("ans10"))+"%":"—","Conversations with no LSQ log","unc","Share of conversations (answered calls of 10 s or more) with no Conversation Log in LSQ by the same counsellor on the same lead within "+(T.log_window_min||60)+" minutes. That form records the outcome and moves the lead's stage, so an unlogged call leaves the lead stuck. "+r1(sum("no_log"))+" of "+r1(sum("answered"))+" answered calls"+per+"."],
+        [r1(notAtt),"Landed leads not attempted"+per+(hiddenNA?"\n"+r1(hiddenNA)+" with counsellors below Min dials":""),"unc",scope+"includes counsellors who made fewer than Min dials (they're hidden from the table, but their untouched leads count here). Leads that were created or assigned to the counsellor (current owner) and got no call from anyone after they landed, by midnight. Calls made before a reassignment don't count. Leads that landed after the counsellor's last call are left out. The Not attempted column shows who holds them."]
+      ].map(t=>{ const [lab,sub]=t[1].split("\n");
+        return '<div class="tile '+(t[2]||"")+'"><div class="n">'+t[0]+'</div><div class="l">'+glueTip(lab,tipBtn(t[3],true))+(sub?'<br><span style="opacity:.8">'+sub+'</span>':"")+'</div></div>'; }).join("");
       $("tt-day").closest(".dwrap").classList.toggle("off",day==="avg");
       $("tt-reset").hidden=day===days[0]&&!cset.size&&minD===1&&!other&&!q&&$("tt-tbl").dataset.show==="tc";
       // hour squares span the hours anyone in view was active, not fixed office hours
@@ -2289,23 +2252,6 @@ function init_talk(){
       +"<div>Data covers "+fmtDay(T.days[0])+" to "+fmtDay(T.days[T.days.length-1])+", refreshed "+isoToDMY(T.generated_at.slice(0,10))+", "+T.generated_at.slice(11)+".</div>";
     render();
   }).catch(()=>{ $("tt-tb").innerHTML='<tr><td colspan="19" style="text-align:left;color:var(--crit);padding:18px">Could not load call data. If the dashboard was updated while this tab was open, reload the page (⌘⇧R / Ctrl+Shift+R).</td></tr>'; });
-}
-// ---- Internshala funnel: a self-contained page built nightly by reports/internshala/build.py
-// into data/. Embedded same-origin, so the dashboard can size the frame to its content and
-// re-skin it with the dashboard's own colour tokens and theme (the builder's page carries
-// its own palette from when it was a standalone artifact).
-function skinFrame(f){
-  const d=f.contentDocument; if(!d||!d.documentElement) return;
-  const t=document.documentElement.getAttribute("data-theme");
-  if(t) d.documentElement.setAttribute("data-theme",t); else d.documentElement.removeAttribute("data-theme");
-  // the page is built on the dashboard's token names, so every live value passes straight through
-  const cs=getComputedStyle(document.documentElement);
-  const toks=["--bg","--surface","--surface-2","--ink","--ink-2","--muted","--line","--line-2","--accent","--accent-2","--accent-soft",
-    "--good","--good-soft","--warn","--warn-soft","--warn-line","--crit","--crit-soft","--crit-line","--shadow","--sans","--mono"];
-  let st=d.getElementById("dash-skin"); if(!st){ st=d.createElement("style"); st.id="dash-skin"; d.head.appendChild(st); }
-  st.textContent=":root,:root[data-theme]{"+toks.map(k=>{ const v=cs.getPropertyValue(k).trim(); return v?k+":"+v+";":""; }).join("")+"}"
-    // the frame is sized to its content, so the page itself must never scroll (that was the stray scrollbar)
-    +"html,body{overflow:hidden!important;background:transparent!important;margin:0;}.wrap{max-width:none!important;padding:0 0 24px!important;}";
 }
 // ---- Lead Routing report: where each source's leads sit — source → centre, optionally → counsellor ----
 // The chart is @nivo/sankey, loaded on first open from esm.sh (versions pinned in the import map at the
@@ -2378,8 +2324,19 @@ function paintChart(G,total){
   box.style.height=H+"px";
   const msg=t=>{ if(RT_ROOT){ RT_ROOT.unmount(); RT_ROOT=null; } const p=document.createElement("p"); p.className="rt-msg"; p.textContent=t; box.replaceChildren(p); };
   if(!G.nodes.length){ box.style.height=""; msg("No leads match these filters."); return; }
-  if(!RT_ROOT) msg("Loading chart…");
-  rtLibs().then(({h,createRoot,Sankey})=>{
+  // the loader stays up for at least LOADER_MIN ms, or until the chart is ready if that takes longer;
+  // a re-render (filters, resize) reuses the mounted chart and shows no loader, so it never waits
+  const LOADER_MIN=1500; let ready=Promise.resolve();
+  if(!RT_ROOT){ ready=new Promise(r=>setTimeout(r,LOADER_MIN)); const d=document.createElement("div"); d.className="rt-load"; d.setAttribute("role","status");
+    const RIB=[["M8 12 C 75 12, 75 20, 142 20","--rt-s1"],["M8 40 C 75 40, 75 22, 142 22","--rt-s2"],["M8 44 C 75 44, 75 62, 142 62","--rt-s2"],["M8 72 C 75 72, 75 64, 142 64","--rt-s4"]];
+    d.innerHTML=`<svg viewBox="0 0 150 84" aria-hidden="true">`
+      +RIB.map(([p,c])=>`<path class="bs" d="${p}" stroke="var(${c})"/>`).join("")
+      +RIB.map(([p,c],i)=>`<path class="fl${i?" d"+i:""}" d="${p}" stroke="var(${c})"/>`).join("")
+      +`<rect class="nd" x="0" y="2" width="6" height="22" rx="2" fill="var(--rt-s1)"/><rect class="nd" x="0" y="32" width="6" height="18" rx="2" fill="var(--rt-s2)"/>`
+      +`<rect class="nd" x="0" y="60" width="6" height="22" rx="2" fill="var(--rt-s4)"/><rect class="nd" x="144" y="8" width="6" height="26" rx="2" fill="var(--rt-centre)"/>`
+      +`<rect class="nd" x="144" y="50" width="6" height="26" rx="2" fill="var(--rt-centre)"/></svg><span>Loading chart…</span>`;
+    box.replaceChildren(d); }
+  Promise.all([rtLibs(),ready]).then(([{h,createRoot,Sankey}])=>{
     if(!document.body.contains(box)) return;                   // left the report while loading
     if(!RT_ROOT){ box.replaceChildren(); RT_ROOT=createRoot(box); RT_BOX=box; }
     const css=getComputedStyle(box), tok=n=>css.getPropertyValue(n).trim();
@@ -2487,23 +2444,123 @@ if(!window.__RT_OBS){
 }
 render();
 }
+// Internshala: built on the shared lead data like every report, so it uses the same date range, the same
+// interested / call / enrolled rules and the same tiles. What only this report shows: where the leads land
+// (a counsellor, or a bulk pool — the bot queue or the vendor) and the bot's calls (col 33, pull.py bot_log).
+// The top-bar pool switch doesn't apply: pooling is what this report measures; use Owner to split it.
 function init_internshala(){
-  const f=document.getElementById("is-frame");
-  const fit=()=>{ try{ const d=f.contentDocument; f.style.height=Math.max(d.documentElement.scrollHeight,d.body.scrollHeight)+"px"; }catch(_){} };
-  f.addEventListener("load",()=>{
-    const d=f.contentDocument;
-    if(!d||!/Internshala/.test(d.title||"")){   // a 404 page also "loads"
-       f.hidden=true; document.getElementById("is-err").hidden=false; return; }
-    skinFrame(f); fit();
-    const sn=staleNote("The Internshala page",f.contentWindow.__BUILT), se=document.getElementById("is-stale"); se.hidden=!sn; se.innerHTML=sn;
-    // web fonts and expanding rows change the height after load
-    if(d.fonts&&d.fonts.ready) d.fonts.ready.then(fit);
-    // resize on the next frame: setting the height inside the observer's own callback loops
-    const ro=new ResizeObserver(()=>requestAnimationFrame(fit)); ro.observe(d.documentElement); ro.observe(d.body);
-    // follow the dashboard's light/dark toggle while this view is open
-    const mo=new MutationObserver(()=>{ if(!f.isConnected){ mo.disconnect(); return; } skinFrame(f); });
-    mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
-  });
+  const DATA=window.__DATA, $=id=>document.getElementById(id);
+  const BASE=new Date(DATA.base+"T00:00:00Z"), DAYMS=86400000;
+  const di=m=>m==null?null:Math.floor(m/1440);
+  const idxToStr=i=>new Date(BASE.getTime()+i*DAYMS).toISOString().slice(0,10);
+  const dateToIdx=v=>Math.round((new Date(v+"T00:00:00Z")-BASE)/DAYMS);
+  const dmy=i=>isoToDMY(idxToStr(i));
+  const nf=n=>Math.round(n).toLocaleString("en-IN"), pct=(a,b)=>b?(100*a/b).toFixed(1)+"%":"—", cc=v=>v>=50?"g":v>=25?"a":"r";
+  const nw=x=>`<span style="white-space:nowrap">${x}</span>`;
+  const si=DATA.sources.indexOf("Internshala");
+  const L0=DATA.leads.filter(r=>r[0]===si);
+  const HASBOT=(DATA.cols||[]).includes("bot_calls");
+  const maxDay=(()=>{ let m=0; for(const L of DATA.leads){ const d=di(L[1]); if(d!=null&&d>m)m=d; } return m; })();
+  const LAST=lastFullDay(maxDay);
+  // pool accounts by name: the AI voice bot's queue, or the outsourced calling vendor's
+  const poolKind=r=>{ if(r[11]!==1) return "named"; const n=(DATA.owners[r[4]]||"").toLowerCase(); return n.includes("futwork")?"vendor":"bot"; };
+  const SEG=[["named","Counsellor-owned"],["bot","Bulk pool · Avtar LCoffline (bot queue)"],["vendor","Bulk pool · Futworks Lc (vendor)"]];
+  const OPEN=new Set();
+  const blank=()=>({n:0,ret:0,pool:0,bot:0,vendor:0,att:0,attN:0,botL:0,botN:0,none:0,con:0,cns:0,en:0,enC:0});
+  function add(o,r,ret,k){
+    o.n++; if(ret)o.ret++;
+    const pk=poolKind(r); if(pk!=="named"){ o.pool++; o[pk]++; }
+    if(k.att){ o.att++; } o.attN+=k.n;
+    if(k.bot){ o.botL++; o.botN+=k.bot; }
+    if(!k.att && !k.bot) o.none++;
+    if(k.con) o.con++; if(k.cns) o.cns++; if(k.en){ o.en++; if(k.cns) o.enC++; }
+  }
+  function render(){
+    const INT=$("is-basis").value==="interested", POP=$("is-pop").value;
+    const a=dateToIdx($("is-d0").value), b=dateToIdx($("is-d1").value);
+    let lo=Math.max(0,Math.min(a,b)), hi=Math.min(LAST,Math.max(a,b)); if(!isFinite(lo)||!isFinite(hi)){ lo=defaultFrom(LAST); hi=LAST; }
+    const span=`${dmy(lo)} → ${dmy(hi)}`, days=hi-lo+1, WEEKS=days>14;
+    $("is-reset").hidden = INT && POP==="all" && $("is-d0").value===idxToStr(defaultFrom(LAST)) && $("is-d1").value===idxToStr(LAST);
+    youngNote("is-young",hi,LAST);
+    const agg=blank(), seg={named:blank(),bot:blank(),vendor:blank()}, byDay={};
+    for(const r of L0){
+      const kind=INT?interestKind(r,lo,hi):(d=>d!=null&&d>=lo&&d<=hi?1:0)(di(r[1]));
+      if(!kind) continue;
+      const pk=poolKind(r); if(POP==="named"&&pk!=="named") continue; if(POP==="pool"&&pk==="named") continue;
+      const ret=kind===2, f=callFacts(r,ret), from=ret?r[21]-5:(r[1]??0);
+      const k={att:f.att, n:f.n, con:f.con, cns:f.cns, en:stageCls(r[9])==="won", bot:HASBOT?(r[33]||[]).filter(m=>m>=from).length:0};
+      add(agg,r,ret,k); add(seg[pk],r,ret,k);
+      const d=di(ret?r[21]:r[1]); add(byDay[d]=byDay[d]||blank(),r,ret,k);
+    }
+    const T=agg, bot=v=>HASBOT?nf(v):"—";
+    // ---- context ----
+    $("is-ctx-q").innerHTML=INT
+      ? `<span><b>Interested in range:</b> <span class="q">Internshala leads that showed interest ${span}, new or returning — where they landed and who worked them.</span></span>`
+      : `<span><b>Created in range:</b> <span class="q">Internshala leads created ${span} — where they landed and who worked them.</span></span>`;
+    $("is-ctx-body").innerHTML=`<p>Every number counts Internshala leads ${INT?"that showed interest":"created"} in the range (${days} day${days>1?"s":""})${INT?": <b>new</b> leads created in it, plus <b>returning</b> leads created earlier whose Interested In Date falls in it":""}, and follows them to today. Counsellor and bot calls count from the moment the lead came in${INT?" (a returning lead: from when it came back)":""}. Leads parked in the pool accounts are always included — pooling is what this report measures — so the top-bar pool switch doesn't apply here; use <b>Owner</b> to split them out.</p>`;
+    // ---- tiles: the standard shape ----
+    const tile=(v,l,sub,cls)=>`<div class="tile ${cls||""}"><div class="n">${v}</div><div class="l">${l}${sub?`<br><span style="opacity:.8">${sub}</span>`:""}</div></div>`;
+    $("is-tiles").innerHTML=(INT?tile(nf(T.n),"Leads interested",`${nf(T.n-T.ret)} new +<br>${nf(T.ret)} returning (created earlier)`,"hi")
+                                :tile(nf(T.n),"New leads created",`${dmy(lo)} →<br>${dmy(hi)}`,"hi"))
+      +tile(nf(T.pool),"In a bulk pool",`${pct(T.pool,T.n)} of leads<br>${nf(T.bot)} bot queue · ${nf(T.vendor)} vendor`,T.n&&T.pool/T.n>.5?"unc":"warn")
+      +tile(nf(T.att),nw("Leads attempted"+tipBtn(CALL_RULE_ATT,true)),`by a counsellor · ${nf(T.attN)} attempts<br>${T.att?(T.attN/T.att).toFixed(2):"—"} attempts per lead`)
+      +tile(bot(T.botL),"Leads called by the bot",HASBOT?`${nf(T.botN)} bot calls`:"arrives with the next refresh")
+      +tile(nf(T.con),nw("Leads connected"+tipBtn(CALL_RULE_CON,true)),`${pct(T.con,T.att)} of attempted leads`,"good")
+      +tile(nf(T.cns),"Leads counselled",`<b>L2C ${pct(T.cns,T.n)}</b>`)
+      +tile(nf(T.en),"Leads enrolled",`<b>C2P ${pct(T.enC,T.cns)}</b><br>${nf(T.enC)} of ${nf(T.cns)} counselled<br><b>L2P ${pct(T.en,T.n)}</b>`,"good");
+    // ---- where they landed × who worked them ----
+    const cols=`<th class="ef-s">Attempted by a counsellor</th><th>Called by the bot</th><th>Not worked</th><th class="ef-s">Connected</th><th>Counselled</th><th>Enrolled</th>`;
+    const cells=o=>`<td class="ef-s">${nf(o.att)}</td><td>${bot(o.botL)}</td><td>${o.n?`${nf(o.none)} <span class="cov ${o.none/o.n>.5?"r":o.none/o.n>.2?"a":"g"}">${pct(o.none,o.n)}</span>`:"—"}</td>`
+      +`<td class="ef-s">${nf(o.con)}</td><td>${nf(o.cns)}</td><td>${nf(o.en)}</td>`;
+    $("is-segh").innerHTML=`<tr class="ef-band"><th></th><th colspan="2"></th><th colspan="3" class="ef-g ef-s">Who worked them</th><th colspan="3" class="ef-g ef-s">Outcome</th></tr>`
+      +`<tr><th>Owner</th><th>Leads</th><th>% of leads</th>${cols}</tr>`;
+    $("is-segb").innerHTML=`<tr class="totrow"><td class="dim">Total</td><td>${nf(T.n)}</td><td>${T.n?"100%":"—"}</td>${cells(T)}</tr>`
+      +SEG.filter(([k])=>seg[k].n).map(([k,l])=>`<tr><td class="dim">${l}</td><td>${nf(seg[k].n)}</td><td>${pct(seg[k].n,T.n)}</td>${cells(seg[k])}</tr>`).join("")
+      +(T.n?"":`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">No Internshala leads in this range.</td></tr>`);
+    // ---- by day (weeks that expand to days, for a range over two weeks) ----
+    $("is-daytitle").textContent=WEEKS?"By week":"By day";
+    $("is-dayh").innerHTML=`<tr class="ef-band"><th></th><th></th><th colspan="2" class="ef-g ef-s">Where they landed</th><th colspan="3" class="ef-g ef-s">Who worked them</th><th colspan="2" class="ef-g ef-s">Outcome</th></tr>`
+      +`<tr><th>${WEEKS?"Week · day":"Day"}</th><th>Leads</th><th class="ef-s">In a bulk pool</th><th>% pooled</th><th class="ef-s">Attempted by a counsellor</th><th>Called by the bot</th><th>Not worked</th><th class="ef-s">Connected</th><th>Enrolled</th></tr>`;
+    const line=(label,o,cls,extra)=>`<tr class="${cls||""}" ${extra||""}><td class="dim">${label}</td><td>${nf(o.n)}</td>`
+      +`<td class="ef-s">${nf(o.pool)}</td><td>${o.n?`<span class="cov ${o.pool/o.n>.8?"r":o.pool/o.n>.5?"a":"g"}">${pct(o.pool,o.n)}</span>`:"—"}</td>`
+      +`<td class="ef-s">${nf(o.att)}</td><td>${bot(o.botL)}</td><td>${nf(o.none)}</td><td class="ef-s">${nf(o.con)}</td><td>${nf(o.en)}</td></tr>`;
+    const dow=d=>new Date(BASE.getTime()+d*DAYMS).toLocaleDateString("en-GB",{weekday:"short",timeZone:"UTC"});
+    let html=line("Total",T,"totrow");
+    if(!WEEKS){ for(let d=lo;d<=hi;d++) html+=line(`${dmy(d)} · ${dow(d)}`,byDay[d]||blank()); }
+    else for(let w=lo;w<=hi;w+=7){
+      const we=Math.min(hi,w+6), o=blank(); for(let d=w;d<=we;d++) if(byDay[d]) for(const k in o) o[k]+=byDay[d][k];
+      const open=OPEN.has(w);
+      html+=line(`Week of ${dmy(w)}`,o,"stl-g"+(open?" open":""),`data-w="${w}" tabindex="0" aria-expanded="${open}"`);
+      if(open) for(let d=w;d<=we;d++) html+=line(`${dmy(d)} · ${dow(d)}`,byDay[d]||blank(),"stl-c");
+    }
+    $("is-dayb").innerHTML=html;
+    $("is-dayb").querySelectorAll("tr.stl-g").forEach(tr=>{ const tg=()=>{ const w=+tr.dataset.w; OPEN.has(w)?OPEN.delete(w):OPEN.add(w); render(); };
+      tr.onclick=tg; tr.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tg(); } }; });
+    $("is-trunc").textContent=`Each lead sits on the day it ${INT?"came in (created, or came back)":"was created"}.`+(WEEKS?" Click a week to see its days.":"")
+      +" For speed, attempt depth, centres and counsellors, open the other reports with Sources = Internshala.";
+    // ---- definitions ----
+    const DEFS=[
+      bhDef(), callsDef(),
+      INT?["Leads interested",`Internshala leads ${span} (IST): <b>new</b> = created in the range · <b>returning</b> = created earlier, Interested In Date in the range (a stamp made by a payment is ignored) — the same rule as every report.`]
+         :["New leads created",`Internshala leads created ${span} (IST).`],
+      ["In a bulk pool","the lead's <b>current</b> owner is a pool account, not a counsellor: <b>Avtar LCoffline</b> (the AI voice bot's queue) or <b>Futworks Lc</b> (the outsourced calling vendor). Once the bot calls a lead, LSQ hands it to a counsellor — so a lead still in the bot queue is one the bot hasn't reached, and bot-called leads show under Counsellor-owned."],
+      ["Leads attempted","a <b>counsellor</b> call — the same call rule as every report (dialler calls plus Conversation Logs with no dialler call behind them, each contact once)"+(INT?"; a returning lead counts only calls after it came back":"")+"."],
+      ["Leads called by the bot","at least one automated call — the Aavataar AI voice bot (activity 328) or the Futwork vendor (330) — after the lead came in. Bot calls never write the lead's own call fields, so they're counted separately from counsellor attempts. Aavataar writes back completed calls only."],
+      ["Not worked","neither a counsellor attempt nor a bot call since the lead came in."],
+      ["Connected · Counselled · Enrolled","connected = a counsellor spoke to the lead (same rule as every report); counselled = the counselling flag"+(INT?" (a returning lead: a counselling after it came back)":"")+"; enrolled = lead stage “Enrolled”, not any payment. C2P = enrolled and counselled ÷ counselled · L2C = counselled ÷ leads · L2P = enrolled ÷ leads."],
+    ];
+    $("is-foot").innerHTML=`<summary>How this is measured<span>Definitions · Internshala leads only</span></summary>`
+      +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("")
+      +`<div>Pulled from the LeadSquared API (read-only); data from ${isoToDMY(DATA.base)}; every date and time is IST.${HASBOT?"":" Bot calls arrive with the next nightly refresh."}</div>`;
+  }
+  // ---- controls ----
+  const D0=$("is-d0"), D1=$("is-d1");
+  const defaults=()=>{ D0.value=idxToStr(defaultFrom(LAST)); D1.value=idxToStr(LAST); };
+  [D0,D1].forEach(e=>{ e.min=DATA.base; e.max=idxToStr(LAST); e.onchange=render; });
+  $("is-basis").onchange=()=>{ OPEN.clear(); render(); }; $("is-pop").onchange=render;
+  $("is-reset").onclick=()=>{ defaults(); syncDateText(); $("is-basis").value="interested"; $("is-pop").value="all";
+    [$("is-basis"),$("is-pop")].forEach(el=>el.dispatchEvent(new Event("change"))); };
+  defaults(); render();
 }
 // ---- Report rail: one list, grouped by the question each report answers ----
 const NAV=[
@@ -2515,13 +2572,13 @@ const NAV=[
 ];
 const NAV_TIP={
   speed:"Time from creation / first-call / assignment to first contact, by source and owner, with SLA compliance.",
-  ageing:"How long a creation cohort has sat: pending first attempt, no activity and overdue follow-up across age buckets.",
+  ageing:"Leads still waiting for a first attempt (under 1 day, 1–3 days, over 3 days) and overdue follow-ups.",
   owner:"Per-counsellor accountability, grouped by centre: coverage, attempts, speed from creation, SLA, overdue follow-ups and enrolments.",
   attempts:"Dialling effort and connects by source, centre or owner: attempted, connected, connect %, attempts per lead and to connect, attempt buckets.",
   routing:"Where each source's leads were routed: source → centre, and on to each counsellor.",
   funnel:"Created → Attempted → Connected → Counselled → Enrolled, with conversion rates and the full stage distribution.",
   talk:"Each counsellor's day: first and last call, talk, active and idle time, connected leads and landed leads not attempted.",
-  internshala:"Internshala leads: arrivals, pooling, human vs bot calling and outcomes, on a created, interested or touched basis."
+  internshala:"Internshala leads: where they land (counsellor or bulk pool), who worked them (counsellors or the bot), and the outcome."
 };
 function buildSide(){
   const side=document.getElementById("side");
@@ -2555,10 +2612,11 @@ function markSide(key){
   if(window.__closeSide) window.__closeSide();
 }
 const INFO_SVG='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="4.9" r=".95" fill="currentColor"/></svg>';
-// every open fold-out gets a "Hide" button at its foot, so a long panel can be closed without scrolling
+// every open definitions fold-out gets a "Hide" button at its foot, so a long panel can be closed without scrolling
 // back up; reports re-render their fold-out bodies, so this re-checks after every DOM change
 function addHideButtons(){
-  document.querySelectorAll("details.xctx[open],details.xfold[open]").forEach(d=>{
+  // the short "How it's counted" panels (.xctx) toggle from their own link, so they get no foot button
+  document.querySelectorAll("details.xfold[open]").forEach(d=>{
     if(d.querySelector(":scope > .xhide")) return;
     const b=document.createElement("button"); b.type="button"; b.className="xhide"; b.textContent="Hide ▴";
     b.onclick=()=>{ d.open=false; const r=d.getBoundingClientRect(); if(r.top<0) d.scrollIntoView({block:"start"}); };
@@ -2567,6 +2625,8 @@ function addHideButtons(){
 }
 document.addEventListener("toggle",addHideButtons,true);
 new MutationObserver(addHideButtons).observe(document.documentElement,{childList:true,subtree:true});
+// keep an inline ⓘ on the same line as the last word of its label, so it never wraps onto a line of its own
+function glueTip(label,tip){ if(!tip) return label; const m=String(label).match(/^(.*\s)?(\S+)$/); return m?(m[1]||"")+'<span style="white-space:nowrap">'+m[2]+tip+'</span>':label+tip; }
 function tipBtn(text,inl){ return text?'<button type="button" class="tipbtn'+(inl?' inl':'')+'" aria-label="What does this mean?" aria-expanded="false" data-tip="'+text.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'">'+INFO_SVG+'</button>':""; }
 const VIEWS={
   speed:{title:"Speed to Lead",init:init_speed},
@@ -2807,7 +2867,8 @@ new MutationObserver(fadeAll).observe(document.getElementById('view'),{childList
   const hide=()=>{ box.hidden=true; if(cur){ cur.setAttribute('aria-expanded','false'); cur=null; } };
   const tip=el=>{
     if(cur&&cur!==el) cur.setAttribute('aria-expanded','false');
-    cur=el; el.setAttribute('aria-expanded','true'); box.textContent=el.dataset.tip; box.hidden=false;
+    cur=el; el.setAttribute('aria-expanded','true'); box.replaceChildren(...el.dataset.tip.split("\n").map(t=>{ const d=document.createElement('div');
+      d.className=/:$/.test(t)?'th':t.startsWith('• ')?'tli':'tp'; d.textContent=t.replace(/^• /,''); return d; })); box.hidden=false;
     const r=el.getBoundingClientRect(), w=box.offsetWidth, h=box.offsetHeight;
     box.style.left=Math.max(8,Math.min(r.left+r.width/2-w/2,innerWidth-8-w))+'px';
     box.style.top=(r.bottom+8+h>innerHeight-8?r.top-8-h:r.bottom+8)+'px';

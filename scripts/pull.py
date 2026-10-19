@@ -378,6 +378,53 @@ def call_log():
     return out
 
 
+def bot_log():
+    """{lead: [minute, ...]} for every AUTOMATED call since START: the Aavataar AI voice bot (activity 328,
+    created by System) and the Futwork vendor (330). These never write the lead's call fields and are left
+    out of call_log() (System is not a counsellor), so this is the only record of bot effort. Used by the
+    Internshala report, whose pooled leads are the bot's queue. Custom activities carry ~30 fields each,
+    so pages of 100 (a 1000-row page times out)."""
+    qs = urllib.parse.urlencode({"accessKey": ACCESS, "secretKey": SECRET})
+    url = f"{HOST}/ProspectActivity.svc/CustomActivity/RetrieveByActivityEvent?{qs}"
+    out, seen = {}, set()
+    day, end = BASE - timedelta(minutes=IST), datetime.now(timezone.utc).replace(tzinfo=None)
+    while day < end:
+        for ev in (328, 330):
+            page = 1
+            while True:
+                body = {"Parameter": {"FromDate": day.strftime("%Y-%m-%d %H:%M:%S"),
+                                      "ToDate": (day + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S"),
+                                      "ActivityEvent": ev, "RemoveEmptyValue": True},
+                        "Paging": {"PageIndex": page, "PageSize": 100},
+                        "Sorting": {"ColumnName": "CreatedOn", "Direction": "0"}}
+                for i in range(5):
+                    try:
+                        req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                                     headers={"Content-Type": "application/json"})
+                        r = json.loads(urllib.request.urlopen(req, timeout=180).read())
+                        break
+                    except Exception:
+                        if i == 4:
+                            raise
+                        time.sleep(4 * (i + 1))
+                if isinstance(r, dict) and r.get("List") is None and r.get("RecordCount") == 0:
+                    r["List"] = []
+                if not (isinstance(r, dict) and isinstance(r.get("List"), list)):
+                    raise RuntimeError(f"bot log {ev} {day:%Y-%m-%d} page {page}: unexpected response — {str(r)[:200]}")
+                for a in r["List"]:
+                    m, pid, aid = mins(a.get("CreatedOn")), a.get("RelatedProspectId"), a.get("ProspectActivityId")
+                    if m is None or not pid or (aid and aid in seen):
+                        continue
+                    if aid:
+                        seen.add(aid)
+                    out.setdefault(pid, []).append(m)
+                if len(r["List"]) < 100:
+                    break
+                page += 1
+        day += timedelta(days=1)
+    return {k: sorted(v) for k, v in out.items()}
+
+
 def since(calls, t0):
     """[first attempt, first connect, attempts] from minute t0 on. An attempt = an outbound call or an
     off-dialler Conversation Log; an answered inbound call marks the lead attempted and connected but
@@ -453,6 +500,8 @@ def main():
     print(f"union {len(uni)}")
     print("pulling call log (22, 21, 310)..."); calls = call_log()
     print(f"  call log: {sum(len(v) for v in calls.values()):,} calls on {len(calls):,} leads")
+    print("pulling bot calls (328, 330)..."); bots = bot_log()
+    print(f"  bot log: {sum(len(v) for v in bots.values()):,} automated calls on {len(bots):,} leads")
 
     srcs, sidx = [], {}
     # one owner entry per (name, centre): the same counsellor in two centres is two rows, each
@@ -521,6 +570,7 @@ def main():
             *since(calls.get(L.get("ProspectID")), None if mins(L.get("CreatedOn")) is None else mins(L.get("CreatedOn")) - RETURN_GRACE),
             # 31, 32: attempt days [day, n, day, n, ...] and connect days — any lead, any day since START
             *by_day(calls.get(L.get("ProspectID"))),
+            bots.get(L.get("ProspectID"), []),                            # 33 bot / vendor call minutes (328, 330)
         ])
         camp = (L.get("SourceCampaign") or "").strip()
         if leads[-1][23] == PROG_GROUPS.index("Other") and camp and not GENERIC_CAMPAIGN.search(camp):
@@ -600,7 +650,7 @@ def main():
                     "assign_cur", "counselled_on", "paid_on", "interested_on", "rawsrc", "proggroup",
                     "call_after_int", "connect_after_int", "calls_after_int", "counselled_latest",
                     "call_after_created", "connect_after_created", "calls_after_created",
-                    "attempt_days", "connect_days"],
+                    "attempt_days", "connect_days", "bot_calls"],
            "leads": leads}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:

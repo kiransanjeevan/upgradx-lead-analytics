@@ -97,12 +97,12 @@ Each `reports/<name>/` holds `build.py` + `template.html` (committed) and writes
 - Paths resolve relative to the script via `Path(__file__).resolve().parent`, so the
   builder runs from any working directory.
 - Inputs that live outside the repo are env-var overridable with a sensible default
-  (`INTERNSHALA_DATA_DIR`, `INTERNSHALA_OUT_DIR`, `INTERNSHALA_WINDOW_START`,
-  `INTERNSHALA_AS_OF`, `ROUTING_WORKBOOK`).
+  (e.g. `ROUTING_WORKBOOK`).
 - Large raw API pulls and generated HTML are **not** committed. Only code is.
-- One exception, written by CI not by hand: the daily Action builds the Internshala
-  funnel into `data/internshala-funnel.html`, which the dashboard embeds. Like
-  `universe.json` it is machine-written; on a conflict take the remote copy.
+- The Internshala report is a native dashboard view (`init_internshala`) on `universe.json`
+  since 19 Oct 2026; its bot calls (activities 328 / 330) come from `pull.py` `bot_log()` as
+  column 33. The old standalone builder (`reports/internshala/`, `data/internshala-funnel.html`)
+  was retired.
 
 ## 8. Publishing artifacts
 
