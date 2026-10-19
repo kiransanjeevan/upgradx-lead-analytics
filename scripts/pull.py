@@ -398,6 +398,21 @@ def since(calls, t0):
     return [att, con, n]
 
 
+def by_day(calls):
+    """[[day, attempts, ...flattened], [connect days]] for the Overview's activity view: which IST days
+    (index from BASE) the lead was attempted (and how often) and spoke, from the de-duplicated log."""
+    if not calls:
+        return [[], []]
+    att, con = {}, set()
+    for m, kind, spoke in calls:
+        d = m // 1440
+        if kind in ("out", "log"):
+            att[d] = att.get(d, 0) + 1
+        if spoke:
+            con.add(d)
+    return [[x for d in sorted(att) for x in (d, att[d])], sorted(con)]
+
+
 def since_return(calls, interested):
     """[first attempt, first connect, attempts] on/after the interested-in stamp (5-min grace)."""
     return since(calls, None if interested is None else interested - RETURN_GRACE)
@@ -504,6 +519,8 @@ def main():
             # 28..30: the same call-log measure from creation, so new and returning leads are
             # counted the same way (first attempt, first connect, attempts)
             *since(calls.get(L.get("ProspectID")), None if mins(L.get("CreatedOn")) is None else mins(L.get("CreatedOn")) - RETURN_GRACE),
+            # 31, 32: attempt days [day, n, day, n, ...] and connect days — any lead, any day since START
+            *by_day(calls.get(L.get("ProspectID"))),
         ])
         camp = (L.get("SourceCampaign") or "").strip()
         if leads[-1][23] == PROG_GROUPS.index("Other") and camp and not GENERIC_CAMPAIGN.search(camp):
@@ -582,7 +599,8 @@ def main():
                     "program", "city", "centre", "firstconnect", "counselled", "revenue",
                     "assign_cur", "counselled_on", "paid_on", "interested_on", "rawsrc", "proggroup",
                     "call_after_int", "connect_after_int", "calls_after_int", "counselled_latest",
-                    "call_after_created", "connect_after_created", "calls_after_created"],
+                    "call_after_created", "connect_after_created", "calls_after_created",
+                    "attempt_days", "connect_days"],
            "leads": leads}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
