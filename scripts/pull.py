@@ -92,9 +92,18 @@ def pull(lookup):
                 "Columns": {"Include_CSV": COLS},
                 "Sorting": {"ColumnName": lookup, "Direction": "0"},
                 "Paging": {"PageIndex": page, "PageSize": 1000}}
-        req = urllib.request.Request(url, data=json.dumps(body).encode(),
-                                     headers={"Content-Type": "application/json"})
-        d = json.loads(urllib.request.urlopen(req, timeout=90).read().decode())
+        # a dropped connection or timeout is retried with backoff (as the activity pulls are); a page
+        # that still fails after 5 tries raises, so the run fails loudly instead of publishing short data
+        for i in range(5):
+            try:
+                req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                             headers={"Content-Type": "application/json"})
+                d = json.loads(urllib.request.urlopen(req, timeout=90).read().decode())
+                break
+            except (OSError, ValueError):
+                if i == 4:
+                    raise
+                time.sleep(4 * (i + 1))
         # A non-list is LeadSquared reporting a fault (rate limit, transient error).
         # The old code treated that the same as "no more data" and exited quietly.
         if not isinstance(d, list):
@@ -137,8 +146,10 @@ def num(v):
 # Stage lifecycle class, so every report shares one definition of "still open".
 #   won  = closed-won            lost = closed-lost / disqualified
 #   test = test data (excluded)  open = genuinely live pipeline
-LOST_KEYS = ("junk", "not intere", "interetsed", "did not pick", "dnp",
-             "cold", "disqualified", "lost")
+# "B2C : Did Not Pick" is OPEN (Kiran, 20 Oct 2026): it is set after one unanswered call and the lead is
+# meant to be called again. The terminal stages stay lost through other keys: "Cold (Multiple DNPs)"
+# (cold) and "Disqualified - DNP" / "Disqualified - DNP (Cold)" (disqualified).
+LOST_KEYS = ("junk", "not intere", "interetsed", "cold", "disqualified", "lost")
 
 
 def stage_class(label):
@@ -286,6 +297,12 @@ MIN_TALK_S = 10   # an "answered" call shorter than this is a hang-up / voicemai
                   # answered outbound calls on 16 Oct lasted <= 5 s) — used only when no Conversation Log says otherwise
 
 
+# Filled by call_log() for the Daily shares report: walk-ins a counsellor logged (Conversation Log 310,
+# mode "Offline Centre Walkin Done") as {lead: [minute]}, and talk seconds on answered dialler calls as
+# {(IST day index, caller UserId): seconds}. Same activities, so no extra API calls.
+WALKINS, TALK = {}, {}
+
+
 def call_log():
     """Every human contact since START, as ONE attempt per real contact (Kiran, 18 Oct 2026):
     {lead: [(minute, kind, spoke)]}, kind = "out" (outbound 22, an attempt), "in" (inbound 21, counts
@@ -333,12 +350,17 @@ def call_log():
                         seen.add(aid)
                     if ev == 310:
                         spoke = (a.get("mx_Custom_46") or "").strip().lower() in SPOKE
+                        if "walkin" in (a.get("mx_Custom_58") or "").lower().replace(" ", "").replace("-", ""):
+                            WALKINS.setdefault(pid, []).append(m)
                     else:                            # answered AND long enough to be a conversation
                         try:
                             talk = float(a.get("mx_Custom_3") or 0)
                         except ValueError:
                             talk = 0
                         spoke = (a.get("Status") or "").lower() == "answered" and talk >= MIN_TALK_S
+                        if (a.get("Status") or "").lower() == "answered" and talk > 0:
+                            k = (m // 1440, a.get("CreatedBy"))
+                            TALK[k] = TALK.get(k, 0) + talk
                     raw.setdefault(pid, []).append((m, ev, spoke, a.get("CreatedBy")))
                 if len(r["List"]) < 1000:
                     break
@@ -375,6 +397,18 @@ def call_log():
         out[pid] = sorted(rows)
     print(f"  conversation logs: {dropped:,} matched to a dialler call (not re-counted), {kept:,} off-dialler attempts; "
           f"{overruled:,} calls' connected/not decided by the counsellor's logged outcome over the dialler")
+    return out
+
+
+def talk_by_day(ucent):
+    """{day index: {centre: seconds}} from TALK (filled by call_log)."""
+    out = {}
+    for (day, user), sec in TALK.items():
+        if day < 0:                       # a few activities carry a CreatedOn before START
+            continue
+        c = ucent.get(user) or "No centre"
+        d = out.setdefault(str(day), {})
+        d[c] = d.get(c, 0) + round(sec)
     return out
 
 
@@ -500,8 +534,9 @@ def main():
     print(f"union {len(uni)}")
     print("pulling call log (22, 21, 310)..."); calls = call_log()
     print(f"  call log: {sum(len(v) for v in calls.values()):,} calls on {len(calls):,} leads")
-    print("pulling bot calls (328, 330)..."); bots = bot_log()
-    print(f"  bot log: {sum(len(v) for v in bots.values()):,} automated calls on {len(bots):,} leads")
+    # bot calls (328/330) fed the Internshala report, removed 20 Oct 2026; col 33 stays as an empty list
+    # so later columns keep their index. bot_log() is kept for when bot effort is wanted again.
+    bots = {}
 
     srcs, sidx = [], {}
     # one owner entry per (name, centre): the same counsellor in two centres is two rows, each
@@ -570,7 +605,8 @@ def main():
             *since(calls.get(L.get("ProspectID")), None if mins(L.get("CreatedOn")) is None else mins(L.get("CreatedOn")) - RETURN_GRACE),
             # 31, 32: attempt days [day, n, day, n, ...] and connect days — any lead, any day since START
             *by_day(calls.get(L.get("ProspectID"))),
-            bots.get(L.get("ProspectID"), []),                            # 33 bot / vendor call minutes (328, 330)
+            bots.get(L.get("ProspectID"), []),                            # 33 bot / vendor call minutes (328, 330) — not pulled; empty
+            sorted(WALKINS.get(L.get("ProspectID"), [])),                 # 34 walk-in minutes (310 "Walkin Done")
         ])
         camp = (L.get("SourceCampaign") or "").strip()
         if leads[-1][23] == PROG_GROUPS.index("Other") and camp and not GENERIC_CAMPAIGN.search(camp):
@@ -650,7 +686,10 @@ def main():
                     "assign_cur", "counselled_on", "paid_on", "interested_on", "rawsrc", "proggroup",
                     "call_after_int", "connect_after_int", "calls_after_int", "counselled_latest",
                     "call_after_created", "connect_after_created", "calls_after_created",
-                    "attempt_days", "connect_days", "bot_calls"],
+                    "attempt_days", "connect_days", "bot_calls", "walkins"],
+           # Daily shares: talk seconds on answered dialler calls, by IST day index and the CALLER's
+           # centre (their Admission(s) <centre> user group; a deactivated caller -> "No centre")
+           "talk_by_day": talk_by_day(ucent),
            "leads": leads}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:

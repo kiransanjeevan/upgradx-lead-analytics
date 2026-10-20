@@ -2,7 +2,7 @@
 
 Project-specific rules. These are not style preferences; each one below exists
 because getting it wrong has already produced a wrong number in a published
-report. Read this before touching `scripts/pull.py` or anything under `reports/`.
+report. Read this before touching `scripts/`, `index.html` or anything under `reports/`.
 
 ---
 
@@ -68,9 +68,10 @@ The API filters in **UTC**; the business reads everything in **IST**.
 | Code | Activity | Note |
 |---|---|---|
 | 22 | Outbound Phone Call | **human** calling |
+| 21 | Inbound Phone Call | counts as attempted only once connected; never adds to the attempt count |
 | 310 | Conversation Log Form_B2C | the form that drives stage automations |
-| 328 | Aavataar ai LC Calling Activity | **bot** calling |
-| 330 | Futwork LC Lead Qualification | vendor calling |
+| 328 | Aavataar ai LC Calling Activity | **bot** calling (not pulled since 20 Oct 2026) |
+| 330 | Futwork LC Lead Qualification | vendor calling (not pulled since 20 Oct 2026) |
 | 232 | Ownership Changed | how leads move between owners |
 | 3002 | StageChange | system activity — **cannot** be bulk-retrieved |
 
@@ -99,10 +100,10 @@ Each `reports/<name>/` holds `build.py` + `template.html` (committed) and writes
 - Inputs that live outside the repo are env-var overridable with a sensible default
   (e.g. `ROUTING_WORKBOOK`).
 - Large raw API pulls and generated HTML are **not** committed. Only code is.
-- The Internshala report is a native dashboard view (`init_internshala`) on `universe.json`
-  since 19 Oct 2026; its bot calls (activities 328 / 330) come from `pull.py` `bot_log()` as
-  column 33. The old standalone builder (`reports/internshala/`, `data/internshala-funnel.html`)
-  was retired.
+- The Internshala report was removed on 20 Oct 2026 (use the Sources filter on any report;
+  `#internshala` opens the Overview). The old builder (`reports/internshala/`,
+  `data/internshala-funnel.html`) is gone; any `reports/internshala/` folder left locally is
+  gitignored leftovers. `pull.py bot_log()` is kept but no longer called (see §9, col 33).
 
 ## 8. Publishing artifacts
 
@@ -112,17 +113,25 @@ shared link goes stale.
 
 | Report | Artifact URL |
 |---|---|
-| Internshala funnel | https://claude.ai/artifact/FvCLwTGY61fKQhzUEoAnB9 |
+| Internshala funnel (retired 20 Oct 2026; don't republish) | https://claude.ai/artifact/FvCLwTGY61fKQhzUEoAnB9 |
 | LSQ routing map | https://claude.ai/artifact/3ghUWW1wFjdfm6FMVb9gco |
 
 Do not put PII in an artifact — no learner names, phone numbers or email
 addresses. Counsellor and owner names are fine; they are internal staff.
 
-## 9. `data/universe.json` is machine-written — take the remote copy on conflict
+## 9. `data/*.json` is machine-written — take the remote copy on conflict
 
-The daily GitHub Action (`.github/workflows/refresh.yml`, 01:11 IST, with a backup run at 07:53 IST) runs
-`scripts/pull.py`, rewrites `data/universe.json` and pushes. Vercel is
-git-connected and redeploys on that push.
+Two workflows write data and push; Vercel is git-connected and redeploys on each push.
+
+| Workflow | Trigger | Runs | Writes |
+|---|---|---|---|
+| `.github/workflows/refresh.yml` | cron 01:11 IST + backup 07:53 IST (backup no-ops if today's data landed) + manual | `scripts/pull.py`, then `scripts/pull_talktime.py` (continue-on-error) | `data/universe.json`, `data/talktime.json` |
+| `.github/workflows/today.yml` | `workflow_dispatch` **only** — started by an external timer (e.g. cron-job.org) at 11:40 / 14:40 / 17:40 IST via the GitHub API, with a fine-grained token scoped to this repo (Actions: read & write) | `scripts/pull_today.py` (~10 s, today only) | `data/today.json` |
+
+`today.json` feeds the Centre hygiene report's 12pm / 3pm / 6pm shares; past days come from
+`universe.json`. There is no midday full pull any more (removed 20 Oct 2026) — GitHub starts this
+repo's crons 4.5–5.5 h late, which is why the intraday run is triggered from outside. Both
+workflows `git pull --rebase` before pushing so they don't reject each other.
 
 This means a local push is often rejected as behind. Rebase, and resolve
 `data/universe.json` in favour of the **remote's** newer data:
@@ -136,11 +145,34 @@ git add data/universe.json && git rebase --continue
 Then re-apply any local schema change (e.g. re-flagging pool owners) as a fresh
 commit rather than keeping the stale local file.
 
-`universe.json` is compact **arrays, not objects** — 24 columns per lead, order
-defined by the header list in `pull.py`. If you add a column, append it at the end
-and update both the header list and `index.html`'s index constants together.
+`universe.json` is compact **arrays, not objects** — 35 columns per lead (0–34), order
+defined by the `cols` list in `pull.py`. If you add a column, append it at the end
+and update both the header list and `index.html`'s index constants together. Never
+remove one: col 33 `bot_calls` is kept as an empty list (the bot pull stopped 20 Oct 2026)
+so 34 `walkins` keeps its index. Top-level `talk_by_day` (talk seconds by IST day × the
+caller's centre) feeds Centre hygiene.
 
-## 10. Do not auto-commit
+## 10. `index.html` conventions the code relies on
+
+- **Reports:** Overview (`home`), Speed to Lead (`speed`), Talk Time (`talk`), Lead Routing
+  (`routing`), Funnel & Lead Stage (`funnel`), Counsellor Scorecard (`owner`), Centre hygiene
+  (`daily`, "Daily shares"). Retired hashes resolve through `ALIAS` (`attempts`/`connect` →
+  Overview on Calling depth, `internshala` → Overview, `ageing` → Speed, `source` → Funnel).
+  Keep old aliases; shared links depend on them.
+- **One shared helper per idea — reuse, don't re-implement:** `tile(value,label,sub,cls,tip)`
+  for every KPI tile; `srcGroupFilter()` for every Sources filter; `PG_NAME` / `progNameOf` for
+  programme names; `INT_DEF` for the Interested definition; `CALL_RULE_ATT` / `CALL_RULE_CON`
+  for the call-counting rule; `SMALL=5` small-sample rule. Use the shared label set (Attempted,
+  % of leads, Uncalled, Attempts per lead, Connected, Connect %, Median 1st attempt, Within SLA,
+  Overdue follow-ups, Counselled, Enrolled, Share of leads).
+- **Every report's `render()` sets `window.__RERENDER=render`** — the global pool and
+  business-hours switches call it to redraw in place. A new report must do the same.
+- **No `//` comment on a line whose statement continues on the next line** (it comments out
+  the rest of the expression). Put the comment on its own line.
+- **Tooltip text keeps a literal `\n`** inside JS strings (the tip renderer splits on it);
+  don't turn it into a real newline or `<br>`.
+
+## 11. Do not auto-commit
 
 Commit only when asked. This repo pushes to a git-connected Vercel project, so a
 commit is a deploy.

@@ -15,6 +15,8 @@ on:
     # normal day is still one pull and one commit. Whichever lands first wins; the
     # other stands down, so the order does not matter if both are delayed.
     - cron: "23 2 * * *"
+    # The Centre hygiene report's intraday numbers (12pm / 3pm / 6pm shares) come from today.yml,
+    # a ~10 s today-only pull started by an external timer — not from extra runs of this full pull.
   workflow_dispatch: {}   # lets you trigger a refresh manually from the Actions tab
 
 # The dashboard reads this to show "next refresh in ..." and to flag a missed run.
@@ -89,5 +91,7 @@ jobs:
             echo "No data change."
           else
             git commit -m "chore: daily LSQ data refresh"
+            # a today.yml run (or a code push) may have landed meanwhile: replay on top of it
+            git pull --rebase origin main
             git push
           fi

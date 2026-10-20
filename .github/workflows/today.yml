@@ -1,0 +1,58 @@
+name: Today's activity (Centre hygiene)
+
+# Refreshes data/today.json — today's calls, connects, talk time, counselling, walk-ins and bookings by
+# centre — for the Centre hygiene report, which is shared at 12pm, 3pm and 6pm IST.
+#
+# Started from OUTSIDE GitHub at 11:40, 14:40 and 17:40 IST: GitHub starts this repo's scheduled runs
+# 4.5–5.5 h late, so a cron here can't hit a 12pm share. An external timer (e.g. cron-job.org) calls the
+# GitHub API to dispatch this workflow:
+#   POST https://api.github.com/repos/<owner>/<repo>/actions/workflows/today.yml/dispatches
+#   headers: Authorization: Bearer <fine-grained token, this repo only, Actions: read & write>
+#            Accept: application/vnd.github+json
+#   body:    {"ref":"main"}
+# You can also run it by hand from the Actions tab ("Run workflow") before a share.
+# The pull reads only today's activity: ~10 s and a few dozen read-only API calls.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+# its own group: it must not wait behind a long nightly run, and two of these never overlap
+concurrency:
+  group: lsq-today
+  cancel-in-progress: false
+
+jobs:
+  today:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Pull today's activity
+        env:
+          LSQ_HOST: ${{ secrets.LSQ_HOST }}
+          LSQ_ACCESS: ${{ secrets.LSQ_ACCESS }}
+          LSQ_SECRET: ${{ secrets.LSQ_SECRET }}
+          LSQ_POOLS: ${{ vars.LSQ_POOLS }}
+        run: python scripts/pull_today.py
+
+      - name: Commit today's data
+        run: |
+          # authored as the owner's noreply address: Vercel's Hobby plan only deploys owner commits
+          git config user.name  "lsq-refresh-bot"
+          git config user.email "268988764+kiransanjeevan@users.noreply.github.com"
+          git add data/today.json
+          if git diff --staged --quiet; then
+            echo "No change."
+          else
+            git commit -m "chore: today's activity refresh"
+            # another run (or a code push) may have landed meanwhile: replay on top of it
+            git pull --rebase origin main
+            git push
+          fi

@@ -19,7 +19,6 @@ For every counsellor and every IST day in the window it writes one row:
                                     call (answered or not) padded fast diallers' active time.
   longest_break_s / _at             the longest idle gap (> GAP_MIN) between calls and the HH:MM it
                                     began - tells one long break apart from many short ones
-  hourly_active_min                 active minutes in each IST hour 00-23 (24 values)
   no_log                            answered calls with no LSQ Conversation Log (activity 310) by the
                                     same counsellor on the same lead from 5 min before the call to
                                     LOG_WINDOW_MIN (60) after it. The 310 form drives stage
@@ -34,11 +33,6 @@ For every counsellor and every IST day in the window it writes one row:
                                     reassignment don't count. Leads that landed after the
                                     counsellor's last call are left out (they had no chance);
                                     for someone who made no calls, every landed lead counts.
-
-Calling effort (the Effort report's "calling activity" view): every outbound call (22) in the
-window, totalled per IST day x caller x lead source — calls, unique leads dialled, leads
-connected (answered), leads created that day, and leads getting their first-ever call that day.
-Unlike the lead-level fields, this dates the work, so calls on older leads count on the day made.
 
 Output: data/talktime.json (compact rows; header lists in the file).
 
@@ -274,7 +268,7 @@ def union_seconds(spans, lo, hi):
     return int(total)
 
 
-HDR = ["user", "day", "dials", "inbound", "answered", "talk_s", "on_call_s", "active_s", "hourly_active_min",
+HDR = ["user", "day", "dials", "inbound", "answered", "talk_s", "on_call_s", "active_s",
        "connected", "conn_fresh_first", "conn_fresh_created", "conn_old",
        "landed", "not_attempted", "first_call", "last_call", "no_log",
        "longest_break_s", "longest_break_at", "answered_10s"]
@@ -314,8 +308,6 @@ for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}
         if reach is not None and (c["start"] - reach) > GAP and (c["start"] - reach).total_seconds() > brk:
             brk, brk_at = int((c["start"] - reach).total_seconds()), reach.strftime("%H:%M")
         reach = c["end"] if reach is None else max(reach, c["end"])
-    hourly = [round(union_seconds(on_call + work, max(first, day0 + timedelta(hours=h)), min(last, day0 + timedelta(hours=h + 1))) / 60)
-              if cs and day0 + timedelta(hours=h + 1) > first and day0 + timedelta(hours=h) < last else 0 for h in range(24)]
     conn = {c["lead"] for c in cs if c["lead"] and spoke(c)}
     fresh_first = {l for l in conn if first_call.get(l) and first_call[l].date() == d}
     fresh_created = {l for l in conn if ist_of(leads.get(l, {}).get("CreatedOn")) and ist_of(leads[l]["CreatedOn"]).date() == d}
@@ -325,7 +317,7 @@ for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}
                and not any(t <= ct < eod for ct in call_times.get(l, []))}
     dials = [c for c in cs if c["ev"] == 22]
     rows.append([uid, str(d), len(dials), sum(1 for c in cs if c["ev"] == 21), sum(1 for c in cs if c["ans"]),
-                 sum(c["dur"] for c in cs if c["ans"]), union_seconds(on_call, day0, eod + timedelta(hours=6)), active, hourly,
+                 sum(c["dur"] for c in cs if c["ans"]), union_seconds(on_call, day0, eod + timedelta(hours=6)), active,
                  len(conn), len(fresh_first), len(fresh_created), len(old),
                  len(land), len(not_att),
                  first.strftime("%H:%M") if cs else "",
@@ -333,36 +325,6 @@ for key in sorted(set(by) | set(landed), key=lambda k: (k[1], users.get(k[0], {}
                  # a conversation (answered, >= MIN_TALK_S) with no Conversation Log; a hang-up needs no log
                  sum(1 for c in cs if c["ans"] and c["dur"] >= MIN_TALK_S and not has_log(c)), brk, brk_at,
                  sum(1 for c in cs if c["ans"] and c["dur"] >= MIN_TALK_S)])   # the base for No LSQ log %
-
-# ---------- calling effort by source: what was dialled each day, on new leads and older ones ----------
-from pull import grp                               # the one source-bucket table in the repo
-eff_src, eff_raw, eff = [], [], {}
-def _ix(arr, v):
-    if v not in arr:
-        arr.append(v)
-    return arr.index(v)
-for c in calls:
-    d = c["start"].date()
-    if c["ev"] != 22 or d not in DAY_LIST or not c["user"]:
-        continue
-    x = leads.get(c["lead"]) or {}
-    raw = (x.get("Source") or "").strip()
-    e = eff.setdefault((str(d), c["user"], _ix(eff_src, grp(raw)), _ix(eff_raw, raw or "—")),
-                       {"dials": 0, "leads": set(), "conn": set(), "new": set(), "first": set()})
-    e["dials"] += 1
-    l = c["lead"]
-    if l:
-        e["leads"].add(l)
-        if spoke(c):
-            e["conn"].add(l)
-        cr = ist_of(x.get("CreatedOn"))
-        if cr and cr.date() == d:
-            e["new"].add(l)
-        if first_call.get(l) and first_call[l].date() == d:
-            e["first"].add(l)
-EFF_HDR = ["day", "user", "src", "raw", "dials", "leads", "connected", "new_leads", "first_calls"]
-eff_rows = [[*k, e["dials"], len(e["leads"]), len(e["conn"]), len(e["new"]), len(e["first"])]
-            for k, e in sorted(eff.items())]
 
 agents = {uid: users[uid] for uid in {r[0] for r in rows} if uid in users}
 for uid in {r[0] for r in rows} - set(agents):
@@ -373,8 +335,7 @@ OUT.write_text(json.dumps({
     "generated_at": (datetime.now(timezone.utc).replace(tzinfo=None) + IST).strftime("%Y-%m-%d %H:%M IST"),
     "days": [str(d) for d in DAY_LIST], "gap_min": int(GAP.total_seconds() // 60),
     "log_window_min": int(LOG_WIN.total_seconds() // 60),
-    "header": HDR, "agents": agents, "rows": rows, "api_calls": calls_api,
-    "effort_header": EFF_HDR, "effort_sources": eff_src, "effort_raw": eff_raw, "effort": eff_rows},
+    "header": HDR, "agents": agents, "rows": rows, "api_calls": calls_api},
     separators=(",", ":")))
 print(f"wrote {OUT.name}: {len(rows)} counsellor-days, {len(agents)} counsellors, {len(calls)} calls, "
-      f"{len(eff_rows)} effort rows, {calls_api} API calls")
+      f"{calls_api} API calls")

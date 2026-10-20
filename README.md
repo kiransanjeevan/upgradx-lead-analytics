@@ -1,61 +1,64 @@
 # upGradX Lead Analytics
 
 A password-protected dashboard for the upGradX (Learning Centre / offline) vertical.
-It's a static single-page app that **fetches its data** from `data/universe.json`, which a
-**daily GitHub Action** regenerates from the LeadSquared API. Vercel is git-connected, so
-each refresh redeploys automatically.
+It's a static single-page app that **fetches its data** from `data/*.json`, which GitHub Actions
+regenerate from the LeadSquared API (read-only calls). Vercel is git-connected, so each data
+commit redeploys automatically.
 
 ```
-GitHub Action (07:00 IST daily)  ->  scripts/pull.py  ->  data/universe.json  ->  git push
-                                                                                      |
-                                                              Vercel redeploy (git-connected)
-                                                                                      |
-                                          index.html  fetch('data/universe.json')  ->  dashboard
-                                          (whole site gated by Basic Auth via middleware.js)
+refresh.yml  (01:11 IST nightly, 07:53 backup)  ->  pull.py          ->  data/universe.json
+                                                ->  pull_talktime.py ->  data/talktime.json
+today.yml    (dispatched by an external timer)  ->  pull_today.py    ->  data/today.json
+        -> git push -> Vercel redeploy -> index.html fetches data/*.json (Basic Auth via middleware.js)
 ```
+
+## Reports
+Overview · Speed to Lead · Talk Time · Lead Routing · Funnel & Lead Stage · Counsellor Scorecard ·
+Centre hygiene (Daily shares). Effort & Connects, Lead Ageing and Internshala were retired on
+19–20 Oct 2026 (folded into Overview / Speed to Lead; Internshala = the Sources filter); their old
+`#hash` links still open the report that absorbed them.
 
 ## What's here
 | File | Purpose |
 |---|---|
-| `index.html` | the dashboard (home KPIs + 7 reports), fetches `data/universe.json` |
-| `data/universe.json` | the data snapshot (refreshed daily by CI) |
+| `index.html` | the whole dashboard |
+| `data/universe.json` | one row per lead (35 columns) + `talk_by_day`; every report except Talk Time |
+| `data/talktime.json` | per counsellor × IST day, last 14 complete days; Talk Time report |
+| `data/today.json` | today's activity by centre; Centre hygiene's "today" (past days come from `universe.json`) |
+| `scripts/pull.py` | full LeadSquared pull → `universe.json` (stdlib only) |
+| `scripts/pull_talktime.py` | dialler call pull → `talktime.json` |
+| `scripts/pull_today.py` | today-only pull (~10 s) → `today.json`; reuses `pull.py`'s rules |
+| `.github/workflows/refresh.yml` | nightly cron (01:11 IST, backup 07:53 IST) + manual run |
+| `.github/workflows/today.yml` | manual / API dispatch only (see below) |
 | `middleware.js` | Basic-Auth gate for the whole site (user/pass from Vercel env) |
-| `scripts/pull.py` | LeadSquared pull → writes `data/universe.json` (stdlib only) |
-| `.github/workflows/refresh.yml` | daily cron + manual trigger |
 | `vercel.json`, `package.json` | Vercel config |
 
+## Schedule
+- **Nightly:** `refresh.yml` at 01:11 IST, with a 07:53 IST backup that no-ops if the primary landed.
+  GitHub starts this repo's scheduled runs 4.5–5.5 h late, so data usually lands ~06:30 IST.
+- **Intraday (Centre hygiene shares at 12pm / 3pm / 6pm):** `today.yml` has no cron (it would be
+  hours late). An external timer (e.g. cron-job.org) dispatches it at 11:40 / 14:40 / 17:40 IST:
+  `POST https://api.github.com/repos/<owner>/<repo>/actions/workflows/today.yml/dispatches`,
+  body `{"ref":"main"}`, with a fine-grained token limited to this repo (Actions: read & write).
+  You can also click **Run workflow** in the Actions tab before a share.
+- Both workflows `git pull --rebase` before pushing, so they don't reject each other.
+
 ## One-time setup
+1. Push the repo to GitHub, import it in Vercel (framework preset *Other*), and set Vercel env vars
+   `DASHBOARD_USER` / `DASHBOARD_PASS` (avoid `:`); redeploy.
+2. GitHub → **Settings → Secrets and variables → Actions**: secrets `LSQ_HOST`
+   (`https://api-in21.leadsquared.com/v2`), `LSQ_ACCESS`, `LSQ_SECRET`. Optional variables:
+   `LSQ_START` (default `2026-09-01`), `LSQ_POOLS` (default `Avtar LCoffline,Futworks Lc`).
+3. Set up the external timer for `today.yml` (above).
 
-### 1. Push to GitHub
-```bash
-cd upgradx-lead-analytics
-git init && git add -A && git commit -m "init: upGradX Lead Analytics"
-git branch -M main
-git remote add origin git@github.com:<you>/upgradx-lead-analytics.git
-git push -u origin main
-```
-
-### 2. Connect Vercel
-- vercel.com → **Add New… → Project** → import this repo → **Deploy** (framework preset: *Other*).
-- Vercel → Project → **Settings → Environment Variables**, add (all environments):
-  - `DASHBOARD_USER` — a username you choose
-  - `DASHBOARD_PASS` — a password you choose (avoid `:`)
-- **Redeploy** so the middleware picks up the vars. Opening the URL now prompts for user/pass.
-
-### 3. Enable the daily refresh (GitHub)
-- Repo → **Settings → Secrets and variables → Actions → New repository secret**, add:
-  - `LSQ_HOST`  = `https://api-in21.leadsquared.com/v2`
-  - `LSQ_ACCESS` = your LeadSquared access key
-  - `LSQ_SECRET` = your LeadSquared secret key
-- (Optional) add a repository **Variable** `LSQ_START` = `2026-09-01` (widen later to pull more history).
-- The workflow runs daily at 07:00 IST. To run it now: repo → **Actions → Daily LSQ refresh → Run workflow**.
-
-## Refreshing manually / locally
+## Running the pulls locally
 ```bash
 export LSQ_HOST=... LSQ_ACCESS=... LSQ_SECRET=...
-python scripts/pull.py          # rewrites data/universe.json
-git add data/universe.json && git commit -m "data refresh" && git push
+python scripts/pull.py            # ~25 min → data/universe.json
+python scripts/pull_talktime.py   # → data/talktime.json  (TT_DAYS, TT_AS_OF optional)
+python scripts/pull_today.py      # ~10 s → data/today.json
 ```
+Data files are normally committed by the workflows; commit local data only if you mean to deploy it.
 
 ## Troubleshooting the daily refresh
 
@@ -71,7 +74,7 @@ drifts by hours; a tight window would cry wolf most mornings. The cost is that a
 
 ### Why a scheduled run does not fire
 
-On 13-09-2026 the 07:00 IST run never ran. Everything that could be checked was ruled
+On 13-09-2026 the scheduled run (then at 07:00 IST) never ran. Everything that could be checked was ruled
 out, in this order:
 
 | Checked | Result |
@@ -109,7 +112,7 @@ Two mitigations are in `refresh.yml`:
 ### What to do when it is stale
 
 ```bash
-gh workflow run refresh.yml -R kiransanjeevan/upgradx-lead-analytics   # ~10 min
+gh workflow run refresh.yml -R kiransanjeevan/upgradx-lead-analytics   # ~25 min
 gh run list -R kiransanjeevan/upgradx-lead-analytics --workflow refresh.yml --limit 3
 ```
 
