@@ -79,7 +79,7 @@ jobs:
           LSQ_POOLS: ${{ vars.LSQ_POOLS }}
         run: python scripts/pull_talktime.py
 
-      # Campaign naming page: Source Campaigns of the last 30 days' leads (LSQ) and the live Meta ad sets
+      # Campaign naming page: Source Campaigns of the last 7 days' leads (LSQ) and the live Meta ad sets
       # and lead-form centre options. Without the META_* secrets it still refreshes the LSQ part and keeps
       # the last Meta pull. A failure here must not block the main refresh.
       - name: Pull campaign-naming data
