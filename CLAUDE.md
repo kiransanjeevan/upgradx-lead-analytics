@@ -125,12 +125,12 @@ Two workflows write data and push; Vercel is git-connected and redeploys on each
 
 | Workflow | Trigger | Runs | Writes |
 |---|---|---|---|
-| `.github/workflows/refresh.yml` | cron 01:11 IST + backup 07:53 IST (backup no-ops if today's data landed) + manual | `scripts/pull.py`, then `scripts/pull_talktime.py` (continue-on-error) | `data/universe.json`, `data/talktime.json` |
-| `.github/workflows/today.yml` | `workflow_dispatch` **only** — started by an external timer (e.g. cron-job.org) at 11:40 / 14:40 / 17:40 IST via the GitHub API, with a fine-grained token scoped to this repo (Actions: read & write) | `scripts/pull_today.py` (~10 s, today only) | `data/today.json` |
+| `.github/workflows/refresh.yml` | cron 01:11 IST + backup 07:53 IST (backup no-ops if today's data landed) + manual | `scripts/pull.py`, then `scripts/pull_talktime.py` and `scripts/pull_naming.py` (both continue-on-error) | `data/universe.json`, `data/talktime.json`, `data/naming.json` |
+| `.github/workflows/today.yml` | `workflow_dispatch` **only** — run by hand (Actions → Run workflow) before the 12pm / 3pm / 6pm shares. An external timer + fine-grained token was designed but Kiran declined it for now (20 Oct 2026) | `scripts/pull_today.py` (~10 s, today only) | `data/today.json` |
 
 `today.json` feeds the Centre hygiene report's 12pm / 3pm / 6pm shares; past days come from
 `universe.json`. There is no midday full pull any more (removed 20 Oct 2026) — GitHub starts this
-repo's crons 4.5–5.5 h late, which is why the intraday run is triggered from outside. Both
+repo's crons 4.5–5.5 h late, which is why the intraday run is not a cron. Both
 workflows `git pull --rebase` before pushing so they don't reject each other.
 
 This means a local push is often rejected as behind. Rebase, and resolve
@@ -152,11 +152,18 @@ remove one: col 33 `bot_calls` is kept as an empty list (the bot pull stopped 20
 so 34 `walkins` keeps its index. Top-level `talk_by_day` (talk seconds by IST day × the
 caller's centre) feeds Centre hygiene.
 
+`naming.json` (`scripts/pull_naming.py`, ~1.5 min): Source Campaigns of leads created in the last 7
+days with owner centres, plus live Meta ad sets and lead-form centre options (Marketing API, read-only).
+Its `RULES` list is a hand copy of LSQ's routing rules (export of 15 Oct 2026) and `PLANNED` holds the
+agreed fixes (Mumbai, Kolkata, "Gurgaon", drop "bengal") — update both when Sales Ops changes LSQ.
+The Meta part needs `META_ACCESS_TOKEN` / `META_AD_ACCOUNT_ID` GitHub secrets; without them the
+previous Meta block is kept.
+
 ## 10. `index.html` conventions the code relies on
 
 - **Reports:** Overview (`home`), Speed to Lead (`speed`), Talk Time (`talk`), Lead Routing
   (`routing`), Funnel & Lead Stage (`funnel`), Counsellor Scorecard (`owner`), Centre hygiene
-  (`daily`, "Daily shares"). Retired hashes resolve through `ALIAS` (`attempts`/`connect` →
+  (`daily`, "Daily shares"), Campaign naming (`naming`, from `data/naming.json`). Retired hashes resolve through `ALIAS` (`attempts`/`connect` →
   Overview on Calling depth, `internshala` → Overview, `ageing` → Speed, `source` → Funnel).
   Keep old aliases; shared links depend on them.
 - **One shared helper per idea — reuse, don't re-implement:** `tile(value,label,sub,cls,tip)`

@@ -79,6 +79,21 @@ jobs:
           LSQ_POOLS: ${{ vars.LSQ_POOLS }}
         run: python scripts/pull_talktime.py
 
+      # Campaign naming page: Source Campaigns of the last 30 days' leads (LSQ) and the live Meta ad sets
+      # and lead-form centre options. Without the META_* secrets it still refreshes the LSQ part and keeps
+      # the last Meta pull. A failure here must not block the main refresh.
+      - name: Pull campaign-naming data
+        if: steps.freshness.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          LSQ_HOST: ${{ secrets.LSQ_HOST }}
+          LSQ_ACCESS: ${{ secrets.LSQ_ACCESS }}
+          LSQ_SECRET: ${{ secrets.LSQ_SECRET }}
+          LSQ_POOLS: ${{ vars.LSQ_POOLS }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
+        run: python scripts/pull_naming.py
+
       - name: Commit refreshed data
         if: steps.freshness.outputs.skip != 'true'
         run: |
@@ -86,7 +101,7 @@ jobs:
           # project owner, so the data commit is authored as the owner's GitHub noreply address.
           git config user.name  "lsq-refresh-bot"
           git config user.email "268988764+kiransanjeevan@users.noreply.github.com"
-          git add data/universe.json data/talktime.json
+          git add data/universe.json data/talktime.json data/naming.json
           if git diff --staged --quiet; then
             echo "No data change."
           else

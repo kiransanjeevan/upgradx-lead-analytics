@@ -41,6 +41,7 @@ input[type=date],input[type=number],input[type=text],.txt{font-family:var(--sans
 .seg{display:inline-flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;flex-wrap:wrap;}
 .seg button{border:none;background:var(--surface);color:var(--muted);font-family:var(--sans);font-size:12.5px;font-weight:600;padding:6px 12px;cursor:pointer;}
 .seg button+button{border-left:1px solid var(--line-2);}
+.seg[hidden]{display:none;}
 .seg button.on{background:var(--accent-soft);color:var(--accent-2);}
 .segwrap{display:flex;gap:22px;flex-wrap:wrap;}
 /* One row of tiles on every report; it scrolls sideways instead of wrapping. */
@@ -85,6 +86,21 @@ tr.totrow td{background:var(--surface-2);font-weight:700;color:var(--ink);border
 .cov.g{background:var(--good-soft);color:var(--good);}
 .cov.a{background:var(--warn-soft);color:var(--warn);}
 .cov.r{background:var(--crit-soft);color:var(--crit);}
+.cov.n{background:var(--surface-2);color:var(--muted);}
+/* Campaign naming: builder form (one field per row), output and the check tables */
+.nm-form{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,460px);gap:10px 18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:16px;margin:10px 0 0;}
+.nm-form>label{font-size:13px;font-weight:600;color:var(--ink);}
+.nm-form>label span{display:block;font-size:11.5px;font-weight:400;color:var(--muted);margin-top:2px;}
+.nm-form .xsel,.nm-form .xsel-btn{width:100%;}
+.nm-form [hidden]{display:none;}
+@media(max-width:560px){.nm-form{grid-template-columns:minmax(0,1fr);gap:4px;}.nm-form>label{margin-top:8px;}}
+.nm-out{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px 14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:14px 16px;margin:12px 0 6px;}
+.nm-out .nm-k{font-size:12px;font-weight:600;color:var(--muted);}
+.nm-out code{font-family:var(--mono);font-size:13px;color:var(--ink);word-break:break-all;}
+.nm-route{font-size:13px;color:var(--ink-2);margin:6px 2px 4px;line-height:1.5;}
+th.l,td.l{text-align:left;}
+td.nm-name{font-family:var(--mono);font-size:12px;color:var(--ink);word-break:break-all;min-width:260px;}
+.nm-fmt{display:block;font-family:var(--sans);font-size:11px;color:var(--muted);margin-top:3px;}
 .trunc{font-size:12px;color:var(--muted);margin:8px 2px 0;}
 #tt-note div{margin-top:5px;}
 #tt-tbl td{white-space:nowrap;}
@@ -176,6 +192,13 @@ tr.stl-c td.dim{white-space:normal;max-width:340px;line-height:1.35;}
 .os-swap:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
 .os-swap:disabled,.xsel-btn:disabled{opacity:.45;cursor:not-allowed;}
 .xsel-opt.xsel-dis{opacity:.45;cursor:not-allowed;}
+/* multi-select at its cap: unticked rows greyed, and a warning when one more is tried */
+.xsel-pop.full .xsel-opt.xo[aria-selected="false"]{opacity:.45;cursor:not-allowed;}
+.xsel-warn{position:sticky;top:0;z-index:1;margin:2px 2px 6px;padding:8px 10px;border-radius:7px;background:var(--warn-soft);border:1px solid var(--warn-line);color:var(--warn);font-size:12.5px;font-weight:600;line-height:1.35;white-space:normal;max-width:300px;}
+.xsel-warn[hidden]{display:none;}
+.xsel-warn.shake{animation:xshake .32s ease-in-out;}
+@keyframes xshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){.xsel-warn.shake{animation:none;}}
 table.banded tr.stl-l3 td,table.banded tr.stl-l4 td{font-size:12px;}
 table.banded tr.stl-l3 td.dim{padding-left:54px;color:var(--muted);}
 table.banded tr.stl-l4 td.dim{padding-left:76px;color:var(--muted);}
@@ -695,6 +718,58 @@ nav.side.open{transform:none;}
   <div class="tblwrap"><table id="dy-flc"></table></div>
   <div class="trunc" id="dy-trunc"></div>
   <details class="xnote xfold" id="dy-foot"></details>
+  <h1 style="margin-top:40px">Calling TAT &amp; hygiene</h1>
+  <p class="lede">The OLC / FLC Calling TAT and Hygiene tables from the Sales Dashboard sheet, built from LSQ: leads created in the range, how fast their first call came, how many were never dialed, attempts per lead and overdue follow-ups.</p>
+  <div class="fbar" id="tat-fbar">
+    <input type="date" id="tat-d0" data-label="Created from" aria-label="Created from">
+    <input type="date" id="tat-d1" data-label="To" aria-label="Created to">
+    <div class="seg" id="tat-clk" aria-label="Clock"><button data-v="plain" class="on">Plain clock</button><button data-v="biz">Business hours</button></div>
+    <div class="seg" id="tat-ver" aria-label="Version"><button data-v="fixed" class="on">Corrected</button><button data-v="sheet">As the sheet computes it</button></div>
+    <button type="button" class="freset" id="tat-copy" style="display:inline-block">Copy tables</button>
+  </div>
+  <div class="mature" id="tat-note"></div>
+  <div class="shrow"><span class="sh" id="tat-t1">OLC · Calling TAT</span></div>
+  <div class="tblwrap"><table id="tat-olc"></table></div>
+  <div class="shrow"><span class="sh" id="tat-t2">FLC · Calling TAT</span></div>
+  <div class="tblwrap"><table id="tat-flc"></table></div>
+  <div class="shrow"><span class="sh" id="tat-t3">OLC · Hygiene</span></div>
+  <div class="tblwrap"><table id="hyg-olc"></table></div>
+  <div class="shrow"><span class="sh" id="tat-t4">FLC · Hygiene</span></div>
+  <div class="tblwrap"><table id="hyg-flc"></table></div>
+  <div class="trunc" id="tat-trunc"></div>
+  <details class="xnote xfold" id="tat-foot"></details>
+</template>
+<template id="tpl-naming">
+  <h1>Campaign naming</h1>
+  <p class="lede">LSQ sends a new lead to a centre by looking for the centre's name inside its Source Campaign, so a misspelt or missing centre sends the lead to the wrong place or to LC Team. Build names here from fixed lists, then check the names already arriving.</p>
+  <div class="mature" id="nm-asof"></div>
+  <div class="shrow"><span class="sh">Build a name</span></div>
+  <div class="nm-form" id="nm-form">
+    <label for="nm-plat">Platform</label><select id="nm-plat"><option value="Meta">Meta</option><option value="Google">Google</option></select>
+    <label for="nm-set" id="nm-set-l">Meta ad set <span>optional · fills in the rest</span></label><select id="nm-set"></select>
+    <label for="nm-ctr">Centre</label><select id="nm-ctr"></select>
+    <label for="nm-vert">Vertical</label><select id="nm-vert"><option value="Tech">Tech</option><option value="Finance">Finance</option></select>
+    <label for="nm-prog">Programme</label><select id="nm-prog"></select>
+  </div>
+  <div class="nm-out" id="nm-out"></div>
+  <div class="nm-route" id="nm-route"></div>
+  <div class="shrow"><span class="sh" id="nm-chk-h">Names arriving in LSQ</span></div>
+  <div class="fbar">
+    <select id="nm-src" multiple data-label="Sources" data-all="All sources" data-noun="sources" aria-label="Sources"></select>
+    <div class="seg" id="nm-show" aria-label="Show"><button data-v="fix" class="on">Needs a fix</button><button data-v="all">All campaigns</button></div>
+  </div>
+  <div class="tiles" id="nm-tiles"></div>
+  <div class="tblwrap"><table id="nm-tbl"></table></div>
+  <div class="trunc" id="nm-trunc"></div>
+  <div class="shrow"><span class="sh">LSQ rule changes for Sales Ops</span></div>
+  <div class="tblwrap"><table id="nm-plan"></table></div>
+  <div class="shrow"><span class="sh" id="nm-sets-h">Live Meta ad sets</span></div>
+  <div class="tblwrap"><table id="nm-sets"></table></div>
+  <div class="trunc" id="nm-sets-n"></div>
+  <div class="shrow"><span class="sh">Lead-form centre options</span></div>
+  <div class="tblwrap"><table id="nm-forms"></table></div>
+  <div class="trunc" id="nm-forms-n"></div>
+  <details class="xnote xfold" id="nm-foot"></details>
 </template>
 <template id="tpl-talk">
   <h1>Talk Time</h1>
@@ -2155,6 +2230,8 @@ function paintChart(G,total){
     const byId=new Map(G.nodes.map(n=>[n.id,n]));
     const tip=t=>h("div",{className:"rt-tip"},t);
     RT_ROOT.render(h(Sankey,{
+      // a new key = a fresh chart: morphing centre-only into centre → counsellor left stray ribbons
+      key:`${G.deep?"d":""}${G.prog?"p":""}${MODE}`,
       width:W, height:H,
       data:{nodes:G.nodes, links:G.links},
       margin: narrow?{top:8,right:140,bottom:8,left:96}:{top:10,right:220,bottom:10,left:120},
@@ -2250,6 +2327,10 @@ const srcSel=$("rt-src"), ctrSel=$("rt-ctr"), D0=$("rt-d0"), D1=$("rt-d1");
 srcGroupFilter(srcSel,SEL,render);
 ctrSel.innerHTML=[...new Set(DATA.owner_centre||[])].sort((a,b)=>(CTR_LAST.has(a)-CTR_LAST.has(b))||a.localeCompare(b)).map(c=>`<option>${c}</option>`).join("");
 ctrSel.onchange=()=>{ CSEL.clear(); [...ctrSel.selectedOptions].forEach(o=>CSEL.add(o.value)); render(); };
+// the counsellor views can't take a 6th centre: the list stops it and says why (Kiran, 21 Oct 2026). Centre only and
+// the programme views take any number; more than 5 picked before switching to Counsellors keeps the nudge.
+ctrSel._max=()=>MODE==="owner"?MAXCTR:0;
+ctrSel._maxMsg=`Counsellor views show up to ${MAXCTR} centres, so every name stays readable. Untick one to pick another.`;
 $("rt-basis").onchange=()=>{ INT=$("rt-basis").value==="interested"; render(); };
 // "Counsellors → Programme" is counsellor mode with the 4th column (counsellor → programme group) switched on
 const setDepth=v=>{ MODE=v==="ownprog"?"owner":v; THENP=v==="ownprog"; document.querySelectorAll("#rt-depth button").forEach(x=>x.classList.toggle("on",x.dataset.v===v)); };
@@ -2361,23 +2442,7 @@ function init_daily(){
       +DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("");
   }
   // copy both tables as a real table (email, Sheets) with a tab-separated fallback (WhatsApp, plain text)
-  $("dy-copy").onclick=async()=>{
-    if(!LAST) return;
-    const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;");
-    const one=t=>`<p><b>${esc(t.title)}</b></p><table border="1" cellpadding="4" style="border-collapse:collapse;font-family:Arial;font-size:12px">`
-      +`<tr>${t.head.map(h=>`<th style="background:#3c4859;color:#fff">${esc(h)}</th>`).join("")}</tr>`
-      +t.rows.map(r=>`<tr>${r.map((v,i)=>`<td${i?' align="right"':""}>${esc(v)}</td>`).join("")}</tr>`).join("")
-      +`<tr>${t.total.map((v,i)=>`<td${i?' align="right"':""}><b>${esc(v)}</b></td>`).join("")}</tr></table>`;
-    // plain text (WhatsApp): title, then the table in a ``` block so it shows monospace, columns padded to line up
-    const tsv=t=>{ const all=[t.head,...t.rows,t.total], w=t.head.map((_,i)=>Math.max(...all.map(r=>String(r[i]).length)));
-      const line=r=>r.map((v,i)=>i?String(v).padStart(w[i]):String(v).padEnd(w[i])).join("  ");
-      return [t.title,"```",...all.map(line),"```"].join("\n"); };
-    const htmlS=LAST.map(one).join("<br>"), text=LAST.map(tsv).join("\n\n");
-    const b=$("dy-copy");
-    try{ await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([htmlS],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]); b.textContent="Copied"; }
-    catch(_){ try{ await navigator.clipboard.writeText(text); b.textContent="Copied (text)"; }catch(__){ b.textContent="Copy failed"; } }
-    setTimeout(()=>b.textContent="Copy tables",1600);
-  };
+  $("dy-copy").onclick=()=>{ if(LAST) copyTables(LAST,$("dy-copy")); };
   const DY=$("dy-day"); DY.min=DATA.base; DY.max=idxToStr(genIdx); DY.value=idxToStr(Math.max(0,DEF)); DY.onchange=render;
   render();
   // today's file: use it only if it is for today (IST); then open on today
@@ -2386,11 +2451,293 @@ function init_daily(){
     const i=dateToIdx(t.day); if(i!==todayIdx) return;
     TD=t; TDI=i; DY.max=idxToStr(Math.max(genIdx,i)); DY.value=idxToStr(i); syncDateText(); render();
   }).catch(()=>{});
+  // ---- Calling TAT & hygiene (Kiran, 21 Oct 2026): the OLC / FLC tables of Ajay's "Sales Dashboard" sheet,
+  // built from LSQ. Two versions: "Corrected" computes what each header says; "As the sheet computes it" copies
+  // the sheet's formulas so the two can be reconciled (its "1 Hour / 2 Hours / > 3 Hours" are leads with 1 / 2 / 3+
+  // reach-out attempts, Speed to Lead is days shown as hours-of-day, LNC > 7 Days = never dialed, Overdue = open
+  // stage). Leads = created in the range (as the sheet), by the owner's centre.
+  const TB=[["≤ 1 h",60],["1–2 h",120],["2–3 h",180],["> 3 h",Infinity]];
+  const SHEET_OPEN=new Set(["B2C : Prospect (Hot)","B2C : Follow Up (Lead Called)","B2C : Did Not Pick","B2C : New Lead","Prospect"]);
+  const T0=$("tat-d0"), T1=$("tat-d1"), LASTF=lastFullDay(genIdx);
+  let TCLK="plain", TVER="fixed", TLAST=null;
+  const med=a=>{ if(!a.length) return null; const b=[...a].sort((x,y)=>x-y), m=b.length>>1; return b.length%2?b[m]:(b[m-1]+b[m])/2; };
+  const avg=a=>a.length?a.reduce((p,q)=>p+q,0)/a.length:null;
+  const blankT=()=>({rcv:0,dial:0,b:[0,0,0,0],untimed:0,spd:[],att:0,lnc:0,over:0});
+  const addT=(t,o)=>{ for(const k of ["rcv","dial","untimed","att","lnc","over"]) t[k]+=o[k]; o.b.forEach((v,i)=>t.b[i]+=v); t.spd.push(...o.spd); return t; };
+  function renderTat(){
+    const x=dateToIdx(T0.value), y=dateToIdx(T1.value), lo=Math.min(x,y), hi=Math.max(x,y), sheet=TVER==="sheet";
+    // the sheet puts LC Team, pool accounts and every unlisted centre in Rest of India; corrected leaves pools / no centre out
+    const grpOf=c=>sheet?(OLC_SET.has(c)||FLC_SET.has(c)?c:"Rest of India"):group(c);
+    const per={}, stg=DATA.stages||[];
+    for(const L of DATA.leads){
+      const d=L[1]==null?null:Math.floor(L[1]/1440); if(d==null||d<lo||d>hi) continue;
+      const c=grpOf(centreOf(L)); if(!c) continue;
+      const o=per[c]=per[c]||blankT(); o.rcv++;
+      if(sheet){
+        // the sheet's columns, from LSQ's own fields: Total Reached Out Count (col 7) and First Call Date (col 2)
+        const n=L[7]||0;
+        if(n>=1){ o.dial++; o.att+=n; o.b[Math.min(n,3)-1]++; } else o.lnc++;
+        if(L[2]!=null) o.spd.push((L[2]-L[1])/1440);
+        if(SHEET_OPEN.has(stg[L[9]])) o.over++;
+      } else {
+        if(isAttempted(L)){
+          o.dial++; o.att+=attemptsOf(L);
+          const fa=firstAttemptAt(L), m=fa==null?null:(TCLK==="biz"?bizMinutes(L[1],fa):fa-L[1]);
+          if(m==null||m<0) o.untimed++; else { o.b[TB.findIndex(t=>m<=t[1])]++; o.spd.push(m); }
+        } else if(LASTF-d>=7) o.lnc++;
+        if(isOverdue(L,LASTF)) o.over++;
+      }
+    }
+    const nfx=v=>v==null?"—":nf(v);
+    const tatCells=o=>sheet
+      ? [nf(o.b[0]),nf(o.b[1]),nf(o.b[2]),nf(o.rcv),nf(o.dial),nf(o.rcv-o.dial),pct2(o.dial,o.rcv)]
+      : [...o.b.map(nf),nf(o.rcv),nf(o.dial),nf(o.rcv-o.dial),pct2(o.b[0]+o.b[1],o.rcv)];
+    const hygCells=o=>{ if(sheet){ const a=avg(o.spd); return [a==null?"—":`${(a*24).toFixed(1)} h (sheet shows ${String(Math.floor((a%1)*24)).padStart(2,"0")})`,nf(o.lnc),o.dial?(o.att/o.dial).toFixed(1):"—",nf(o.over)]; }
+      const m=med(o.spd); return [m==null?"—":hm(m*60),nf(o.lnc),o.dial?(o.att/o.dial).toFixed(1):"—",nf(o.over)]; };
+    const tatHead=sheet?["Centre","1 Hour","2 Hours","> 3 Hours","Total Leads Rcvd","Total Leads Dialed","Leads Not Dialed","Compliant TAT"]
+      :["Centre","≤ 1 h","1–2 h","2–3 h","> 3 h","Leads received","Dialed","Not dialed","Dialed within 2 h"];
+    const hygHead=sheet?["Centre","Speed to Lead","LNC >7 Days","Avg Attempts","Overdue Follow-Ups"]
+      :["Centre","Speed to lead (median)","Not contacted, 7+ days old","Avg attempts","Overdue follow-ups"];
+    const rng=`${isoToDMY(idxToStr(lo))} → ${isoToDMY(idxToStr(hi))}`, tag=sheet?" · as the sheet computes it":TCLK==="biz"?" · business hours":" · plain clock";
+    const mk=(title,list,rest,head,cells)=>{ const rows=list.map(([c,l])=>[l,per[c]||blankT()]); if(rest) rows.push(["Rest of India",per["Rest of India"]||blankT()]);
+      const T=rows.reduce((t,[,o])=>addT(t,o),blankT());
+      return {title:`${title} · leads created ${rng}${tag}`,head,rows:rows.map(([l,o])=>[l,...cells(o)]),total:["Total",...cells(T)],T}; };
+    const A=mk("OLC · Calling TAT",OLC,false,tatHead,tatCells), B=mk("FLC · Calling TAT",FLC,true,tatHead,tatCells);
+    B.extra=[["Grand",...tatCells(addT(addT(blankT(),A.T),B.T))]];
+    const C=mk("OLC · Hygiene",OLC,false,hygHead,hygCells), D=mk("FLC · Hygiene",FLC,true,hygHead,hygCells);
+    const html=t=>`<thead><tr>${t.head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>`
+      +t.rows.map(r=>`<tr>${r.map((v,i)=>i?`<td>${v}</td>`:`<td class="dim">${v}</td>`).join("")}</tr>`).join("")
+      +[t.total,...(t.extra||[])].map(r=>`<tr class="totrow">${r.map((v,i)=>i?`<td>${v}</td>`:`<td class="dim">${v}</td>`).join("")}</tr>`).join("")+`</tbody>`;
+    [[A,"tat-olc","tat-t1"],[B,"tat-flc","tat-t2"],[C,"hyg-olc","tat-t3"],[D,"hyg-flc","tat-t4"]].forEach(([t,id,h])=>{ $(id).innerHTML=html(t); $(h).textContent=t.title; });
+    TLAST=[A,B,C,D];
+    const unt=A.T.untimed+B.T.untimed;
+    $("tat-note").innerHTML=sheet
+      ? `<b>As the sheet computes it.</b> Its formulas copied as they are, for reconciling with Ajay's sheet: the hour columns count leads with 1 / 2 / 3+ reach-out attempts, Speed to Lead is an average in days, LNC > 7 Days equals Leads Not Dialed, and Overdue Follow-Ups counts open-stage leads. Centres can differ slightly: the sheet maps owners by its own email list.`
+      : `Leads created ${rng} (IST), by their owner's centre. TAT = created → first attempt, ${TCLK==="biz"?"<b>business hours</b> (Mon–Sat 10:00–19:00)":"<b>plain clock</b> (24×7)"}. Overdue and the 7-day rule are judged as of ${isoToDMY(idxToStr(LASTF))}.`;
+    $("tat-trunc").textContent=sheet?"Rest of India here includes LC Team and the pool accounts, as in the sheet."
+      :`Rest of India = every other centre; pool accounts and owners with no centre are left out.${unt?` ${nf(unt)} dialed lead${unt>1?"s":""} had no timeable first call and sit in Dialed only.`:""}`;
+    const DEFS=[
+      ["Leads received","leads <b>created</b> in the range, by the lead owner's centre (their LSQ admission group). The sheet counts leads created this month."],
+      ["≤ 1 h · 1–2 h · 2–3 h · > 3 h","dialed leads by the time from creation to the <b>first attempt</b>, on the chosen clock. They add up to Dialed (minus any untimeable first call). The sheet's “1 Hour / 2 Hours / > 3 Hours” are not times: they are leads with 1, 2 and 3+ reach-out attempts."],
+      ["Dialed · Not dialed","at least one counsellor attempt (dialler call or Conversation Log, counted once) · none yet. "+"The sheet uses LSQ's Total Reached Out Count, which counts a call and its log twice."],
+      ["Dialed within 2 h","share of leads received whose first attempt came within 2 hours: the 120-minute SLA used across the dashboard. The sheet's “Compliant TAT” is just Dialed ÷ Received."],
+      ["Speed to lead","median time from creation to the first attempt, dialed leads only. The sheet shows an average in days formatted as hours-of-day, so 1.95 days reads “22”."],
+      ["Not contacted, 7+ days old","leads at least 7 days old (as of the last complete day) that have never been attempted. The sheet's “LNC > 7 Days” is every never-dialed lead, whatever its age."],
+      ["Avg attempts","attempts ÷ dialed leads. Totals are computed from all the rows' leads, not by adding or averaging the centre figures."],
+      ["Overdue follow-ups","open leads whose follow-up date has passed with no activity since: the same rule as every report. The sheet counts every lead in an open stage."],
+      ["Rest of India","every centre outside the OLC / FLC lists. The sheet also puts LC Team and the pool accounts here."],
+    ];
+    $("tat-foot").innerHTML=defsHead()+DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("");
+  }
+  const pct2=(n,d)=>d?(100*n/d).toFixed(2)+"%":"—";
+  T0.min=T1.min=DATA.base; T0.max=T1.max=idxToStr(genIdx);
+  // default: this month to date, as the sheet
+  T1.value=idxToStr(genIdx); T0.value=idxToStr(Math.max(0,dateToIdx(idxToStr(genIdx).slice(0,8)+"01")));
+  T0.onchange=T1.onchange=renderTat;
+  const tseg=(id,set)=>$(id).querySelectorAll("button").forEach(b=>b.onclick=()=>{ $(id).querySelectorAll("button").forEach(z=>z.classList.toggle("on",z===b)); set(b.dataset.v); renderTat(); });
+  tseg("tat-clk",v=>TCLK=v); tseg("tat-ver",v=>{ TVER=v; $("tat-clk").hidden=v==="sheet"; });
+  $("tat-copy").onclick=()=>{ if(TLAST) copyTables(TLAST,$("tat-copy")); };
+  renderTat();
+}
+// ---- Campaign naming (Option 1, Kiran 20 Oct 2026): build names from fixed lists, check the names arriving ----
+// data/naming.json (scripts/pull_naming.py): LSQ's routing rules, the agreed rule fixes, the builder's centre
+// list, the Source Campaigns of the last 30 days' leads, and the live Meta ad sets and lead-form centre options.
+// LSQ routing = the first rule whose word is INSIDE Source Campaign (any case); none -> LC Team.
+const NM_PROGS={Tech:[["DS","Data Science"],["DA","Data Analytics"],["DM","Digital Marketing"],["FSD","Full Stack Development"],["AI","AI and Gen AI"],["Multi","Several programmes"]],
+  Finance:[["IBOps","Investment Banking Operations"],["Multi","Several programmes"]]};
+// what a name says about its centre. One-centre words first; a city word (Bangalore, Hyderabad, Pune) only
+// counts when no single centre is named, and then any centre in that city is right.
+const NM_SPOT=[[/\bhsr\b/,"Bangalore"],[/jaya ?nagar/,"Bangalore Jayanagar"],[/marathahalli/,"Bangalore Marathahalli"],
+  [/ameerpet/,"Hyderabad Ameerpet"],[/madhapur|hi ?tech/,"Hyderabad Madhapur"],[/kothrud/,"Pune"],[/wakad/,"Pune 2"],
+  [/mumbai|marol|andheri/,"Mumbai Andheri"],[/kolkata|calcutta|salt ?lake|\bbengal\b/,"Kolkata 2"],[/gurugram|gurgaon/,"Gurugram"],
+  [/sambhaji/,"Sambhajinagar"],[/bhubanes?h?war/,"Bhubaneswar"],[/belgaum|belagavi/,"Belgaum"],[/ahmedabad|ahemdabad/,"Ahmedabad"],
+  [/bhopal/,"Bhopal"],[/bilaspur/,"Bilaspur"],[/coimbatore/,"Coimbatore"],[/dehradun/,"Dehradun"],[/indore/,"Indore"],
+  [/jabalpur/,"Jabalpur"],[/jaipur/,"Jaipur"],[/lucknow/,"Lucknow"],[/mangalore|mangaluru/,"Mangalore"],[/panchkula/,"Panchkula"],
+  [/raipur/,"Raipur"],[/rajkot/,"Rajkot"],[/chandigarh/,"Chandigarh"],[/noida/,"Noida"],[/panipat/,"Panipat"],[/chennai/,"Chennai"]];
+const NM_CITY=[[/bengaluru|bangalore|\bblr\b/,["Bangalore","Bangalore Jayanagar","Bangalore Marathahalli"]],
+  [/hyderabad|\bhyd\b/,["Hyderabad Ameerpet","Hyderabad Madhapur"]],[/\bpune\b/,["Pune","Pune 2"]]];
+// a learner's answer (or a name) that names no centre on purpose: these go to LC Team by design
+const NM_NONE=/no offline cent|no cent|not sure|none of these|\bindia\b|\bnot (in|it)\b|outside|\bother\b/;
+function init_naming(){
+  const $=id=>document.getElementById(id), nf=n=>Math.round(n).toLocaleString("en-IN");
+  const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+  fetch("data/naming.json",{cache:"no-cache"}).then(r=>r.ok?r.json():Promise.reject()).then(N=>{ if(document.body.contains($("nm-out"))) setup(N); })
+    .catch(()=>{ if($("nm-asof")) $("nm-asof").textContent="The naming data (data/naming.json) isn't here yet — it arrives with the next nightly refresh."; });
+  function setup(N){
+    const norm=s=>String(s).toLowerCase().replace(/[_\-–]+/g," ");
+    const says=name=>{ const t=norm(name), one=[...new Set(NM_SPOT.filter(([rx])=>rx.test(t)).map(x=>x[1]))];
+      return one.length?one:(NM_CITY.find(([rx])=>rx.test(t))||[null,[]])[1]; };
+    const router=rules=>name=>{ const t=String(name).toLowerCase(); for(const r of rules) if(r.words.some(w=>t.includes(w.toLowerCase()))) return r.centre; return "LC Team"; };
+    const LIVE=router(N.rules);
+    const PLAN_RULES=N.rules.map(r=>({centre:r.centre,words:[...r.words.filter(w=>!N.planned.drop.includes(w)),...(N.planned.extend[r.centre]||[])]}))
+      .filter(r=>r.words.length).concat(N.planned.add);
+    const PLAN=router(PLAN_RULES);
+    const LABEL=Object.fromEntries(N.centres.map(c=>[c.centre,c.label]));
+    const lab=c=>LABEL[c]||c;
+    // one verdict per name: does the centre it names match where LSQ sends it, today and after the fixes?
+    const ST={ok:["g","Routes right"],fix:["a","No rule yet · the fixes cover it"],fixwrong:["a","Wrong centre · the fixes cover it"],
+      norule:["r","No rule for this centre"],wrong:["r","Wrong centre"],none:["a","No centre in the name"],pan:["n","No centre on purpose"],blank:["n","No campaign"]};
+    const judge=name=>{ if(name==="(blank)") return {k:"blank",s:[],live:"—",plan:"—"};
+      const s=says(name), live=LIVE(name), plan=PLAN(name);
+      const k=!s.length?(NM_NONE.test(norm(name))?"pan":"none"):s.includes(live)?"ok":live==="LC Team"?(s.includes(plan)?"fix":"norule"):(s.includes(plan)?"fixwrong":"wrong");
+      return {k,s,live,plan}; };
+    const chip=k=>`<span class="cov ${ST[k][0]}">${ST[k][1]}</span>`;
+    const fmtIssues=n=>[/\s/.test(n)&&"spaces",/__/.test(n)&&"double _",/\d{6}|\d{1,2}[_\- ]?[a-z]{3,9}[_\- ]?20\d\d/i.test(n)&&"date in name",
+      /\[[^\]]*\]|{{/.test(n)&&"unfilled placeholder"].filter(Boolean);
+    const g=new Date(N.generated_at), ist=new Date(g.getTime()+330*60000), p2=v=>String(v).padStart(2,"0");
+    const genTxt=`${p2(ist.getUTCDate())} ${MON[ist.getUTCMonth()]} ${ist.getUTCFullYear()}, ${p2(ist.getUTCHours())}:${p2(ist.getUTCMinutes())} IST`;
+    $("nm-asof").innerHTML=`LSQ names: leads created since <b>${isoToDMY(N.since)}</b>, pulled ${genTxt}. Routing rules as exported from LSQ on ${isoToDMY(N.rules_asof)}.`
+      +(N.meta?"":" Meta ad sets aren't pulled yet: the Meta token isn't set up in GitHub.");
+
+    // ---- builder ----
+    const SETS=((N.meta&&N.meta.adsets)||[]).filter(a=>/^(pap_)?lc_/i.test(a.name)).sort((a,b)=>a.name.localeCompare(b.name));
+    $("nm-set").innerHTML=`<option value="">None — pick below</option>`+SETS.map((a,i)=>`<option value="${i}" data-desc="${esc(a.campaign)}">${esc(a.name)}</option>`).join("");
+    $("nm-ctr").innerHTML=N.centres.map(c=>`<option value="${esc(c.token)}">${esc(c.label)}</option>`).join("")
+      +`<option value="PAN" data-desc="The learner picks a centre on the form; the Zap puts that answer in the name">Pan-India (learner picks)</option>`;
+    const fillProgs=keep=>{ const v=$("nm-vert").value; $("nm-prog").innerHTML=NM_PROGS[v].map(([k,l])=>`<option value="${k}">${l} (${k})</option>`).join("");
+      if(keep&&NM_PROGS[v].some(x=>x[0]===keep)) $("nm-prog").value=keep; };
+    fillProgs();
+    // picking a live ad set fills the rest from its name; anything it can't read stays as it was
+    $("nm-set").onchange=()=>{ const a=SETS[+$("nm-set").value]; if(!a){ build(); return; }
+      const t=norm(a.name), s=says(a.name), c=N.centres.find(c=>s.length===1&&c.centre===s[0]);
+      if(c) $("nm-ctr").value=c.token; else if(NM_NONE.test(t)) $("nm-ctr").value="PAN";
+      $("nm-vert").value=/financ|ibops|banking/.test(t)?"Finance":"Tech"; fillProgs();
+      const pg=NM_PROGS[$("nm-vert").value].find(([k])=>new RegExp(`\\b${k.toLowerCase()}\\b`).test(t));
+      if(pg) $("nm-prog").value=pg[0];
+      ["nm-ctr","nm-vert","nm-prog"].forEach(id=>$(id).dispatchEvent(new Event("change")));
+      build(); };
+    $("nm-vert").onchange=()=>{ fillProgs($("nm-prog").value); build(); };
+    $("nm-ctr").onchange=$("nm-prog").onchange=build;
+    // the ad-set picker is Meta only (Google has no live list here)
+    $("nm-plat").onchange=()=>{ const meta=$("nm-plat").value==="Meta";
+      $("nm-set-l").hidden=$("nm-set").closest(".xsel").hidden=!meta; build(); };
+    function build(){
+      const plat=$("nm-plat").value, tok=$("nm-ctr").value, pan=tok==="PAN";
+      const src=plat==="Meta"?"Meta Ads":"Google Ads";
+      const camp=`LearningCentre_${pan?"{{centre answer}}":tok}_Offline_${$("nm-vert").value}_${$("nm-prog").value}_${plat}-Ads`;
+      const row=(k,v,id)=>`<span class="nm-k">${k}</span><code id="${id}">${esc(v)}</code><button type="button" class="freset" style="display:inline-block" data-copy="${id}">Copy</button>`;
+      $("nm-out").innerHTML=row("Source",src,"nm-o-src")+row("Source Campaign",camp,"nm-o-camp");
+      $("nm-out").querySelectorAll("[data-copy]").forEach(b=>b.onclick=async()=>{
+        try{ await navigator.clipboard.writeText($(b.dataset.copy).textContent); b.textContent="Copied"; }catch(_){ b.textContent="Copy failed"; }
+        setTimeout(()=>b.textContent="Copy",1400); });
+      const where=plat==="Meta"?"Paste both into the Zap's drop-lead step for this form.":"Put both in the ad's final URL (utm_source, utm_campaign).";
+      if(pan){ $("nm-route").innerHTML=`${where} In the Zap, replace <code>{{centre answer}}</code> with the form's centre question. The learner's answer then decides the centre: see <b>Lead-form centre options</b> below for where each answer goes. “No offline centre near me” goes to LC Team, as intended.`; return; }
+      const want=N.centres.find(c=>c.token===tok).centre, live=LIVE(camp), plan=PLAN(camp);
+      $("nm-route").innerHTML=where+" "+(live===want?`<span class="cov g">Routes to ${esc(lab(want))}</span> under today's LSQ rules.`
+        :plan===want?`<span class="cov a">Goes to ${esc(lab(live))} today</span> — LSQ has no rule for ${esc(lab(want))} yet; it routes there once Sales Ops adds the rule below.`
+        :`<span class="cov r">Routes to ${esc(lab(live))}, not ${esc(lab(want))}</span> — tell Product: the centre word needs a rule fix.`);
+    }
+    build();
+
+    // ---- check: names arriving in LSQ ----
+    // Sources: the lead-source groups present, Meta · Google · Internshala ticked by default (the routed
+    // sources; bulk uploads are assigned by hand). A campaign counts only its leads from the ticked sources.
+    const GROUPS=Object.entries(N.campaigns.reduce((a,c)=>{ for(const [k,v] of Object.entries(c.src)) a[k]=(a[k]||0)+v; return a; },{})).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+    const DEF_SRC=new Set(["Meta","Google","Internshala"]);
+    $("nm-src").innerHTML=GROUPS.map(g=>`<option value="${esc(g)}"${DEF_SRC.has(g)?" selected":""}>${esc(g)}</option>`).join("");
+    $("nm-src")._presets=[{label:"Meta · Google · Internshala",pick:()=>[...$("nm-src").options].forEach(o=>o.selected=DEF_SRC.has(o.value))}];
+    $("nm-src").dispatchEvent(new Event("change"));
+    const ROWS=N.campaigns.map(c=>({...c,...judge(c.c),fmt:c.c==="(blank)"?[]:fmtIssues(c.c),
+      main:Object.entries(c.src).sort((a,b)=>b[1]-a[1])[0][0]}));
+    const NEEDS=new Set(["norule","wrong","fix","fixwrong","none"]);
+    const RANK={wrong:0,norule:1,fixwrong:2,fix:3,none:4,ok:5,pan:6,blank:7};
+    let SHOW="fix";
+    const now=c=>{ const tot=c.n, top=Object.entries(c.own).sort((a,b)=>b[1]-a[1]).slice(0,2);
+      return top.map(([k,v])=>`${esc(lab(k))} ${Math.round(100*v/tot)}%`).join(" · "); };
+    function render(){ window.__RERENDER=render;
+      const pick=new Set([...$("nm-src").selectedOptions].map(o=>o.value));
+      const rows=ROWS.map(r=>pick.size?{...r,n:Object.entries(r.src).reduce((s,[k,v])=>s+(pick.has(k)?v:0),0)}:r).filter(r=>r.n>0);
+      const sum=f=>rows.filter(f).reduce((s,r)=>s+r.n,0), all=sum(()=>true);
+      const ok=sum(r=>r.k==="ok"), bad=sum(r=>r.k==="norule"||r.k==="wrong"), fix=sum(r=>r.k==="fix"||r.k==="fixwrong"),
+        none=sum(r=>r.k==="none"), pan=sum(r=>r.k==="pan");
+      $("nm-chk-h").textContent=`Names arriving in LSQ · leads created in the last ${N.days} days`;
+      $("nm-tiles").innerHTML=tile(nf(all),"Leads checked",`${nf(rows.length)} campaign names`)
+        +tile(pct1(ok,all),"Name routes right",`${nf(ok)} leads`,"good")
+        +tile(nf(fix),"Fixed by the rule changes",`today: LC Team or the wrong centre`,"warn")
+        +tile(nf(bad),"Wrong centre or no rule","not covered by the agreed fixes",bad?"unc":"")
+        +tile(nf(none),"No centre in the name",`+ ${nf(pan)} with no centre on purpose (LC Team)`,"warn");
+      const list=rows.filter(r=>SHOW==="all"||NEEDS.has(r.k)).sort((a,b)=>SHOW==="all"?b.n-a.n:(RANK[a.k]-RANK[b.k])||(b.n-a.n));
+      const MAX=200;
+      $("nm-tbl").innerHTML=`<thead><tr><th>Source Campaign</th><th class="l">Source</th><th>Leads</th><th class="l">Name says</th><th class="l">Routes to today</th><th class="l">After the fixes</th><th class="l">Where the leads are now</th><th class="l">Verdict</th></tr></thead><tbody>`
+        +list.slice(0,MAX).map(r=>`<tr><td class="nm-name">${esc(r.c)}${r.fmt.length?`<span class="nm-fmt">${r.fmt.join(" · ")}</span>`:""}</td>`
+          +`<td class="l">${esc(Object.keys(r.src).filter(k=>!pick.size||pick.has(k)).sort((a,b)=>r.src[b]-r.src[a]).join(", "))}</td><td>${nf(r.n)}</td>`
+          +`<td class="l">${r.s.length?r.s.map(lab).map(esc).join(" / "):"—"}</td><td class="l">${esc(lab(r.live))}</td>`
+          +`<td class="l">${r.plan===r.live?'<span class="fpct">same</span>':esc(lab(r.plan))}</td><td class="l">${now(r)}</td><td class="l">${chip(r.k)}</td></tr>`).join("")
+        +(list.length?"":`<tr><td colspan="8" class="l">Nothing to fix in these sources.</td></tr>`)+"</tbody>";
+      $("nm-trunc").textContent=(list.length>MAX?`Showing the ${MAX} largest of ${nf(list.length)} names. `:"")
+        +"Where the leads are now = each lead's current owner's centre, so it includes hand moves after routing.";
+    }
+    const seg=(id,set)=>$(id).querySelectorAll("button").forEach(b=>b.onclick=()=>{ $(id).querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); set(b.dataset.v); render(); });
+    seg("nm-show",v=>SHOW=v);
+    $("nm-src").onchange=render;
+    render();
+
+    // ---- the agreed LSQ rule changes, with how many of the last 30 days' leads each one moves ----
+    const moved=f=>ROWS.filter(r=>r.live!==r.plan&&f(r)).reduce((s,r)=>s+r.n,0);
+    const PL=[...N.planned.add.map(a=>[`Add a rule: ${a.words.map(w=>`“${w}”`).join(" or ")}`,lab(a.centre),moved(r=>r.plan===a.centre&&r.live==="LC Team"&&a.words.some(w=>r.c.toLowerCase().includes(w.toLowerCase())))]),
+      ...Object.entries(N.planned.extend).map(([c,ws])=>[`Add ${ws.map(w=>`“${w}”`).join(", ")} to the ${lab(c)} rule`,lab(c),moved(r=>r.plan===c)]),
+      ...N.planned.drop.map(w=>{ const r0=N.rules.find(r=>r.words.includes(w)); return [`Remove “${w}” from the ${lab(r0.centre)} rule (it also matches “Bengaluru”)`,"the next matching rule",moved(r=>r.live===r0.centre)]; })];
+    $("nm-plan").innerHTML=`<thead><tr><th>Change</th><th class="l">Sends leads to</th><th>Leads it would have moved (${N.days} days)</th></tr></thead><tbody>`
+      +PL.map(([a,b,n])=>`<tr><td class="l">${esc(a)}</td><td class="l">${esc(b)}</td><td>${nf(n)}</td></tr>`).join("")+"</tbody>";
+
+    // ---- live Meta ad sets: does each name carry one centre? ----
+    if(!N.meta){ $("nm-sets").innerHTML=""; $("nm-sets-n").textContent="Not pulled yet: add META_ACCESS_TOKEN and META_AD_ACCOUNT_ID to the repo's GitHub secrets."; }
+    else{
+      const sIss=a=>{ const t=norm(a.name), s=says(a.name), out=[];
+        if(!s.length&&!NM_NONE.test(t)) out.push(["r","No centre"]);
+        else if(!s.length) out.push(["n","Pan-India"]);
+        else if(s.length>1) out.push(["a","City, not one centre"]);
+        if(/\s/.test(a.name)) out.push(["a","Spaces"]); if(/__/.test(a.name)) out.push(["a","Double _"]); if(/copy/i.test(a.name)) out.push(["a","“Copy” in name"]);
+        return out; };
+      const rows=SETS.map(a=>({a,i:sIss(a)})).sort((x,y)=>(y.i.some(z=>z[0]==="r")-x.i.some(z=>z[0]==="r"))||(y.i.length-x.i.length)||x.a.name.localeCompare(y.a.name));
+      $("nm-sets-h").textContent=`Live Meta ad sets · ${rows.length} LC ad sets`;
+      $("nm-sets").innerHTML=`<thead><tr><th>Ad set</th><th class="l">Campaign</th><th class="l">Created</th><th class="l">Name says</th><th class="l">Check</th></tr></thead><tbody>`
+        +rows.map(({a,i})=>{ const s=says(a.name); return `<tr><td class="nm-name">${esc(a.name)}</td><td class="l">${esc(a.campaign)}</td><td class="l">${a.created?isoToDMY(a.created):"—"}</td>`
+          +`<td class="l">${s.length?s.map(lab).map(esc).join(" / "):"—"}</td><td class="l">${i.length?i.map(([c,t])=>`<span class="cov ${c}">${t}</span>`).join(" "):'<span class="cov g">OK</span>'}</td></tr>`; }).join("")+"</tbody>";
+      $("nm-sets-n").textContent=`Meta pulled ${isoToDMY(N.meta.generated_at.slice(0,10))}. Ad sets outside LC (names not starting LC_) are left out. The centre belongs at ad set level: one ad set, one centre.`;
+      // ---- centre options on live lead forms: where each answer goes when a Pan-India Zap writes it into the name ----
+      const opt={};
+      (N.meta.forms||[]).forEach(f=>f.options.forEach(o=>{ const k=o.trim(); (opt[k]=opt[k]||new Set()).add(f.id); }));
+      const fr=Object.entries(opt).map(([o,ids])=>({o,n:ids.size,...judge(`LearningCentre_${o}_Offline`)}))
+        .sort((a,b)=>(RANK[a.k]-RANK[b.k])||(b.n-a.n)||a.o.localeCompare(b.o));
+      $("nm-forms").innerHTML=`<thead><tr><th>Answer on the form</th><th>Live forms</th><th class="l">Answer says</th><th class="l">Routes to today</th><th class="l">After the fixes</th><th class="l">Verdict</th></tr></thead><tbody>`
+        +fr.map(r=>`<tr><td class="l">${esc(r.o)}</td><td>${nf(r.n)}</td><td class="l">${r.s.length?r.s.map(lab).map(esc).join(" / "):"—"}</td><td class="l">${esc(lab(r.live))}</td>`
+          +`<td class="l">${r.plan===r.live?'<span class="fpct">same</span>':esc(lab(r.plan))}</td><td class="l">${chip(r.k)}</td></tr>`).join("")+"</tbody>";
+      $("nm-forms-n").textContent=`${nf(fr.length)} distinct answers on ${nf(new Set((N.meta.forms||[]).map(f=>f.id)).size)} live forms that ask for a centre. This only matters where the Zap writes the answer into Source Campaign (the Pan-India Zaps); elsewhere the name is fixed in the Zap.`;
+    }
+    const DEFS=[
+      ["Routing","LSQ checks its rules in order and sends the lead to the first centre whose word appears anywhere in Source Campaign (any case); no match goes to LC Team (lcteam@upgrad.com). The rules here are LSQ's export of "+isoToDMY(N.rules_asof)+"."],
+      ["Name says","the centre the name names. A city on its own (Bangalore, Hyderabad, Pune) counts as any centre in that city. “No offline centre near me”, “Not sure”, “India” and similar name no centre on purpose; those leads go to LC Team by design."],
+      ["After the fixes","routing once Sales Ops adds the Mumbai and Kolkata rules, adds “Gurgaon” to Gurugram and removes “bengal” (Kiran, 20 Oct 2026)."],
+      ["Where the leads are now","the centre of each lead's current owner (their LSQ admission group). It includes any hand moves after routing, so it can differ from the rule's answer."],
+      ["Builder","the centre word comes from a fixed list spelt as LSQ's rule words; programme and vertical come from fixed lists too, so the dashboard's programme grouping reads them. No dates: Meta already stores them."],
+      ["Refresh","nightly with the main refresh; leads created in the last "+N.days+" days."],
+    ];
+    $("nm-foot").innerHTML=defsHead(N.generated_at)+DEFS.map(d=>`<div><b>${d[0]}</b> = ${d[1]}</div>`).join("");
+  }
+}
+// copy report tables as a real table (email, Sheets) with a padded plain-text fallback (WhatsApp)
+// list = [{title, head, rows, total, extra?}] · b = the button that shows Copied
+async function copyTables(list,b){
+  const LAST=list, tail=t=>[t.total,...(t.extra||[])];      // total row, then any extra bold rows (a Grand total)
+  const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const one=t=>`<p><b>${esc(t.title)}</b></p><table border="1" cellpadding="4" style="border-collapse:collapse;font-family:Arial;font-size:12px">`
+    +`<tr>${t.head.map(h=>`<th style="background:#3c4859;color:#fff">${esc(h)}</th>`).join("")}</tr>`
+    +t.rows.map(r=>`<tr>${r.map((v,i)=>`<td${i?' align="right"':""}>${esc(v)}</td>`).join("")}</tr>`).join("")
+    +tail(t).map(r=>`<tr>${r.map((v,i)=>`<td${i?' align="right"':""}><b>${esc(v)}</b></td>`).join("")}</tr>`).join("")+`</table>`;
+  // plain text (WhatsApp): title, then the table in a ``` block so it shows monospace, columns padded to line up
+  const tsv=t=>{ const all=[t.head,...t.rows,...tail(t)], w=t.head.map((_,i)=>Math.max(...all.map(r=>String(r[i]).length)));
+    const line=r=>r.map((v,i)=>i?String(v).padStart(w[i]):String(v).padEnd(w[i])).join("  ");
+    return [t.title,"```",...all.map(line),"```"].join("\n"); };
+  const htmlS=LAST.map(one).join("<br>"), text=LAST.map(tsv).join("\n\n");
+  try{ await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([htmlS],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]); b.textContent="Copied"; }
+  catch(_){ try{ await navigator.clipboard.writeText(text); b.textContent="Copied (text)"; }catch(__){ b.textContent="Copy failed"; } }
+  setTimeout(()=>b.textContent="Copy tables",1600);
 }
 // ---- Report rail: one list, grouped by the question each report answers ----
 // one flat list of report names (Kiran, 20 Oct 2026: no group headings in the side panel)
 const NAV=[
-  [null,[["home","Overview","Headline numbers for a date range: leads created or interested in it (funnel, conversion, calling depth), or what the team did in it — by source or by centre and counsellor."],["speed"],["talk"],["routing"],["funnel"],["owner"],["daily"]]]
+  [null,[["home","Overview","Headline numbers for a date range: leads created or interested in it (funnel, conversion, calling depth), or what the team did in it — by source or by centre and counsellor."],["speed"],["talk"],["routing"],["funnel"],["owner"],["daily"],["naming"]]]
 ];
 const NAV_TIP={
   speed:"How fast leads that showed interest (or were created) get a first call and a first connect, by source, counsellor or programme — with SLA, how long uncalled leads have waited, and overdue follow-ups.",
@@ -2398,6 +2745,7 @@ const NAV_TIP={
   routing:"Where each source's leads ended up: source → centre, on to counsellors, or by programme.",
   funnel:"Leads → Attempted → Connected → Counselled → Enrolled with L2C / C2P / L2P and logging gaps, by source, centre or programme, plus where every lead's stage stands today.",
   talk:"Each counsellor's day: first and last call, talk, active and idle time, calls with no LSQ log, connected leads (new or follow-up) and landed leads not attempted.",
+  naming:"Build Source and Source Campaign from fixed lists so LSQ routes the lead to the right centre, and check the names arriving: where each name routes, live Meta ad sets and lead-form centre options.",
   daily:"The centre hygiene table for one day, OLC and FLC: leads called, connected, talk time, counselling, walk-ins and bookings — ready to copy."
 };
 function buildSide(){
@@ -2492,7 +2840,8 @@ const VIEWS={
   routing:{title:"Lead Routing",init:init_routing},
   funnel:{title:"Funnel & Lead Stage",init:init_funnel},
   talk:{title:"Talk Time",init:init_talk},
-  daily:{title:"Centre hygiene",init:init_daily}
+  daily:{title:"Centre hygiene",init:init_daily},
+  naming:{title:"Campaign naming",init:init_naming}
 };
 // browser Back/Forward change only the hash; follow it (show() also sets the hash, which is a no-op here)
 // pass the raw hash: show() resolves an old alias itself and replaces that history entry
@@ -2653,11 +3002,21 @@ function upgradeSelects(){
         // first row clears the selection (nothing ticked = everything shown)
         // quick picks (nat._presets: [{label, pick}]) sit under "All" and set the ticks in one go
         const pre=nat._presets||[];
-        const refresh=()=>{ [...pop.querySelectorAll('.xsel-opt')].forEach((el,i)=>{ if(i>pre.length) el.setAttribute('aria-selected', String(nat.options[i-1-pre.length].selected)); else if(!i) el.setAttribute('aria-selected', String(!nat.selectedOptions.length)); }); sync(); fire(); };
+        // nat._max (optional): a function returning the most ticks allowed now (0 = no cap); at the cap the
+        // unticked rows grey out, and trying one more shows nat._maxMsg at the top of the list instead
+        const cap=()=>nat._max?nat._max():0;
+        const warn=document.createElement('div'); warn.className='xsel-warn'; warn.setAttribute('role','alert'); warn.hidden=true;
+        const full=()=>{ const m=cap(); pop.classList.toggle('full', !!m && nat.selectedOptions.length>=m); if(!pop.classList.contains('full')) warn.hidden=true; };
+        const refresh=()=>{ [...pop.querySelectorAll('.xsel-opt')].forEach((el,i)=>{ if(i>pre.length) el.setAttribute('aria-selected', String(nat.options[i-1-pre.length].selected)); else if(!i) el.setAttribute('aria-selected', String(!nat.selectedOptions.length)); }); full(); sync(); fire(); };
         add(nat.dataset.all||'All', !nat.selectedOptions.length, ()=>{ [...nat.options].forEach(o=>o.selected=false); refresh(); });
         pre.forEach(p=>{ add(p.label, false, ()=>{ p.pick(); refresh(); }); pop.lastChild.classList.add('preset'); });
         if(pre.length) pop.appendChild(Object.assign(document.createElement('div'),{className:'xsel-sep'}));
-        [...nat.options].forEach(o=>add(o.textContent, o.selected, ()=>{ o.selected=!o.selected; refresh(); }, o.dataset.desc));
+        [...nat.options].forEach(o=>{ add(o.textContent, o.selected, ()=>{
+          const m=cap();
+          if(!o.selected && m && nat.selectedOptions.length>=m){ warn.textContent=nat._maxMsg||`You can pick up to ${m}.`; warn.hidden=false;
+            warn.classList.remove('shake'); void warn.offsetWidth; warn.classList.add('shake'); return; }
+          o.selected=!o.selected; refresh(); }, o.dataset.desc); pop.lastChild.classList.add('xo'); });
+        pop.prepend(warn); full();
       } else {
         // options marked data-adv stay behind a "Show advanced options" row (always shown if one is picked)
         const hasAdv=[...nat.options].some(o=>o.dataset.adv!=null);
